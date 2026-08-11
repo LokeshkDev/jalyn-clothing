@@ -1,0 +1,257 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #ad4a85;
+  --color-primary-soft: #c57ba3;
+  --color-primary-deep: #8e3466;
+  --color-rose-light: #efd7e3;
+  --color-rose: #dfafc7;
+  --color-bg: #faf8f8;
+  --color-section: #f7f0f3;
+  --color-text: #2a1a22;
+  --color-text-muted: #7a5a6a;
+  --color-footer: #1f1419;
+  --header-height: 80px;
+  --announcement-height: 40px;
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-heading: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'Manrope', sans-serif;
+  --font-button: 'Inter', sans-serif;
+  --font-label: 'Plus Jakarta Sans', sans-serif;
+  --ease-luxury: cubic-bezier(0.22, 1, 0.36, 1);
+  accent-color: #ad4a85;
+
+  /* Override Bootstrap blues */
+  --bs-primary: #ad4a85;
+  --bs-link-color: #ad4a85;
+  --bs-link-hover-color: #8e3466;
+  --bs-info: #c57ba3;
+  --bs-blue: #ad4a85;
+  --bs-focus-ring-color: rgba(173, 74, 133, 0.35);
+}
+
+/* Global Custom Luxury Theme Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #FFF6F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #AD4A85;
+  border-radius: 999px;
+  border: 2px solid #FFF6F9;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #8E3466;
+}
+
+/* Firefox Global Scrollbar */
+html, body {
+  scrollbar-width: thin;
+  scrollbar-color: #AD4A85 #FFF6F9;
+}
+
+/* Global Heading & Subheading Typography */
+h1, h2, h3, h4, h5, h6,
+.font-display,
+.font-heading,
+.font-subheading,
+.sub-heading,
+[class*="subheading"],
+[class*="sub-heading"] {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: auto;
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Kill default browser / Bootstrap blues site-wide */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:hover,
+a:focus,
+a:active,
+a:visited {
+  color: inherit;
+}
+
+button,
+[type='button'],
+[type='submit'],
+[type='reset'] {
+  color: inherit;
+}
+
+svg {
+  color: inherit;
+}
+
+input,
+textarea,
+select,
+button {
+  accent-color: var(--color-primary);
+}
+
+/* Bootstrap utility class overrides if present */
+.text-primary,
+.link-primary {
+  color: var(--color-primary) !important;
+}
+
+.bg-primary {
+  background-color: var(--color-primary) !important;
+}
+
+.btn-primary,
+.btn-info {
+  background-color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: #fff !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+button {
+  font-family: var(--font-button);
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--color-rose-light);
+  color: var(--color-text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+/* Autofill / link UI — keep pink family */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #fff inset;
+  -webkit-text-fill-color: var(--color-text);
+  caret-color: var(--color-primary);
+}
+
+.container-luxury {
+  width: min(1280px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+@media (min-width: 1024px) {
+  .container-luxury {
+    width: min(1280px, calc(100% - 4rem));
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-primary px-7 py-3.5 text-[13px] font-semibold uppercase tracking-[0.14em] text-white transition-all duration-500 ease-luxury;
+    background-image: linear-gradient(135deg, #ad4a85 0%, #c57ba3 100%);
+    font-family: var(--font-button);
+  }
+
+  .btn-primary:hover {
+    @apply shadow-soft -translate-y-0.5;
+    filter: brightness(1.05);
+  }
+
+  .btn-primary:active {
+    @apply translate-y-0;
+  }
+
+  .section-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.22em] text-primary;
+    font-family: var(--font-label);
+  }
+
+  .section-title {
+    @apply mt-2 text-3xl font-medium tracking-tight text-ink md:text-4xl lg:text-[2.75rem];
+    font-family: var(--font-display);
+  }
+
+  .img-zoom {
+    @apply transition-transform duration-700 ease-luxury;
+  }
+
+  .group:hover .img-zoom {
+    @apply scale-105;
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      #f0ecee 25%,
+      #f8f4f6 50%,
+      #f0ecee 75%
+    );
+    background-size: 200% 100%;
+    @apply animate-shimmer rounded-md;
+  }
+}
+
+.swiper-pagination-bullet {
+  width: 8px !important;
+  height: 8px !important;
+  background: #efd7e3 !important;
+  opacity: 1 !important;
+}
+
+.swiper-pagination-bullet-active {
+  background: var(--color-primary) !important;
+  width: 24px !important;
+  border-radius: 999px !important;
+}
+
+.row > * {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}

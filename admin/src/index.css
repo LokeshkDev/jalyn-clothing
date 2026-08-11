@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  background-color: #F9FAFB;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #111827;
+}
+
+/* Global Heading & Subheading Typography in Admin */
+h1, h2, h3, h4, h5, h6,
+.font-display,
+.font-heading,
+.font-subheading,
+.sub-heading,
+[class*="subheading"],
+[class*="sub-heading"] {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+
+/* Custom Jalyn Brand Scrollbars in Admin */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #FFF6F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #AD4A85;
+  border-radius: 999px;
+  border: 2px solid #FFF6F9;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #8E3466;
+}
+
+html, body {
+  scrollbar-width: thin;
+  scrollbar-color: #AD4A85 #FFF6F9;
+}

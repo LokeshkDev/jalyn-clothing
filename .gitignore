@@ -1,7 +1,25 @@
-node_modules
-dist
-.DS_Store
-*.local
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Production builds
+dist/
+**/dist/
+build/
+
+# Uploaded Files
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Environment variables
 .env
-.env.*
-!.env.example
+.env.local
+.env.production
+client/.env
+server/.env
+admin/.env
+
+# IDE / System files
+.DS_Store
+*.log
+.vite/
