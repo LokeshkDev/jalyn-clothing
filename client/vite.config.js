@@ -19,11 +19,31 @@ export default defineConfig({
     minify: 'esbuild',
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-ui': ['framer-motion', 'lucide-react', 'clsx', 'tailwind-merge'],
-          'vendor-swiper': ['swiper'],
-          'vendor-query': ['@tanstack/react-query', 'axios', 'zustand'],
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'vendor-react';
+            }
+            if (
+              id.includes('framer-motion') ||
+              id.includes('lucide-react') ||
+              id.includes('clsx') ||
+              id.includes('tailwind-merge')
+            ) {
+              return 'vendor-ui';
+            }
+            if (id.includes('swiper')) {
+              return 'vendor-swiper';
+            }
+            if (
+              id.includes('@tanstack') ||
+              id.includes('axios') ||
+              id.includes('zustand')
+            ) {
+              return 'vendor-query';
+            }
+            return 'vendor-other';
+          }
         },
       },
     },

@@ -12,6 +12,7 @@ export default function MobilePurchaseBar({ product, selectedSize, selectedColor
   const isWishlisted = wishStore.has(product?.id)
 
   const [showToast, setShowToast] = useState(false)
+  const isOutOfStock = product.inStock === false
 
   const handleDisabledClick = () => {
     setShowToast(true)
@@ -26,6 +27,12 @@ export default function MobilePurchaseBar({ product, selectedSize, selectedColor
   }
 
   const handleAddBag = () => {
+    if (isOutOfStock) {
+      setShowToast(true)
+      setTimeout(() => setShowToast(false), 3500)
+      return
+    }
+
     if (!deliveryStore.isVerified) {
       handleDisabledClick()
       return
@@ -109,12 +116,19 @@ export default function MobilePurchaseBar({ product, selectedSize, selectedColor
             whileTap={{ scale: 0.97 }}
             className={cn(
               'flex h-12 flex-1 items-center justify-center gap-1.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all',
-              deliveryStore.isVerified
+              isOutOfStock
+                ? 'bg-red-100 text-red-500 border border-red-300'
+                : deliveryStore.isVerified
                 ? 'bg-primary text-white active:bg-primary/90 shadow-sm'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-300'
             )}
           >
-            {deliveryStore.isVerified ? (
+            {isOutOfStock ? (
+              <>
+                <AlertCircle className="h-4 w-4" />
+                <span>OUT OF STOCK</span>
+              </>
+            ) : deliveryStore.isVerified ? (
               <>
                 <ShoppingBag className="h-4 w-4" />
                 <span>ADD TO BAG</span>
@@ -134,12 +148,14 @@ export default function MobilePurchaseBar({ product, selectedSize, selectedColor
             whileTap={{ scale: 0.97 }}
             className={cn(
               'flex h-12 flex-1 items-center justify-center rounded-xl border-2 text-[11px] font-bold uppercase tracking-wider transition-all',
-              deliveryStore.isVerified
+              isOutOfStock
+                ? 'border-red-200 bg-red-50 text-red-400'
+                : deliveryStore.isVerified
                 ? 'border-primary bg-white text-primary active:bg-primary/5'
                 : 'border-gray-200 bg-gray-100 text-gray-400'
             )}
           >
-            <span>BUY NOW</span>
+            <span>{isOutOfStock ? 'OUT OF STOCK' : 'BUY NOW'}</span>
           </motion.button>
         </div>
       </div>

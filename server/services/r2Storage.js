@@ -34,12 +34,12 @@ if (isR2Configured()) {
   });
 }
 
-export const uploadToR2 = async (fileBuffer, originalName, mimeType) => {
+export const uploadToR2 = async (fileBuffer, originalName, mimeType, extOverride) => {
   if (!s3Client || !isR2Configured()) {
     throw new Error('Cloudflare R2 is not fully configured in server/.env');
   }
 
-  const ext = path.extname(originalName).toLowerCase();
+  const ext = extOverride || path.extname(originalName).toLowerCase();
   const uniqueFilename = `uploads/img-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
 
   const command = new PutObjectCommand({

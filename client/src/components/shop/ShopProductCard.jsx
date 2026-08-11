@@ -1,6 +1,7 @@
 import { memo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Eye, ShoppingBag, Star } from 'lucide-react'
+import { motion } from 'framer-motion'
 import ProductBadge from '@/components/shop/ProductBadge'
 import WishlistButton from '@/components/shop/WishlistButton'
 import { SHOP_COLORS } from '@/constants/shopProducts'

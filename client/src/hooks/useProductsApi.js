@@ -29,17 +29,37 @@ export function normalizeProduct(p) {
   const reviews = Number(p.reviews_count || p.reviews) || 12;
   const category = p.category_slug || p.category || 'dresses';
 
-  const sizes = Array.isArray(p.sizes)
+  const variants = Array.isArray(p.variants) && p.variants.length > 0 ? p.variants : null;
+
+  const sizes = variants
+    ? [...new Set(variants.map((v) => v.size).filter(Boolean))]
+    : Array.isArray(p.sizes)
     ? p.sizes
     : typeof p.sizes === 'string'
     ? JSON.parse(p.sizes)
     : ['XS', 'S', 'M', 'L', 'XL'];
 
-  const colors = Array.isArray(p.colors)
+  const colors = variants
+    ? [...new Set(variants.map((v) => v.color).filter(Boolean))]
+    : Array.isArray(p.colors)
     ? p.colors
     : typeof p.colors === 'string'
     ? JSON.parse(p.colors)
     : ['rose', 'cream', 'black'];
+
+  const colorHexMap = variants
+    ? Object.fromEntries(
+        variants
+          .map((v) => [v.color, v.colorHex])
+          .filter(([, hex]) => hex)
+      )
+    : {};
+
+  const derivedStock = variants
+    ? variants.reduce((sum, v) => sum + (parseInt(v.stock, 10) || 0), 0)
+    : p.stock !== undefined
+    ? p.stock
+    : 15;
 
   return {
     ...p,
@@ -72,7 +92,9 @@ export function normalizeProduct(p) {
     },
     sizes,
     colors,
-    stock: p.stock !== undefined ? p.stock : 15,
+    colorHexMap,
+    variants,
+    stock: derivedStock,
     description: p.description || 'Thoughtfully designed for elegance and comfort.',
     isNew: p.is_featured || p.isNew || false,
   };

@@ -213,6 +213,79 @@ export default function ProductsPage() {
     showToast(`Generated ${newVariants.length} variants! Total stock: ${totalStock}`, 'success');
   };
 
+  // ─── Variant Matrix CRUD ───
+  const recalcTotalStock = (variants) =>
+    variants.reduce((sum, v) => sum + (parseInt(v.stock, 10) || 0), 0);
+
+  const buildVariantSku = (baseSku, colorName, size) => {
+    const colCode = (colorName || 'COL').toUpperCase().slice(0, 3);
+    return `${baseSku}-${colCode}-${size}`;
+  };
+
+  const handleAddVariant = () => {
+    const baseSku = formData.base_sku || 'JLN-' + Math.floor(100 + Math.random() * 900);
+    const colorObj = formData.colors[0] || { name: 'Rose', hex: '#AD4A85', images: [] };
+    const size = formData.sizes[0] || 'S';
+
+    const baseSkuForRow = buildVariantSku(baseSku, colorObj.name, size);
+    const used = new Set(formData.variants.map((v) => v.sku));
+    let sku = baseSkuForRow;
+    let n = 1;
+    while (used.has(sku)) {
+      sku = `${baseSkuForRow}-${n++}`;
+    }
+
+    const newVariants = [
+      ...formData.variants,
+      {
+        sku,
+        color: colorObj.name,
+        colorHex: colorObj.hex,
+        size,
+        price: formData.price || 0,
+        stock: 10,
+        low_stock_threshold: formData.low_stock_threshold || 5,
+      },
+    ];
+
+    setFormData((prev) => ({
+      ...prev,
+      variants: newVariants,
+      stock: recalcTotalStock(newVariants),
+    }));
+    showToast('Variant added to matrix. Click Save to sync it live on the website.', 'success');
+  };
+
+  const handleDeleteVariant = (idx) => {
+    const newVariants = formData.variants.filter((_, i) => i !== idx);
+    setFormData((prev) => ({
+      ...prev,
+      variants: newVariants,
+      stock: recalcTotalStock(newVariants),
+    }));
+    showToast('Variant removed from matrix. Click Save to sync it live on the website.', 'success');
+  };
+
+  const updateVariant = (idx, field, value) => {
+    const next = [...formData.variants];
+    next[idx] = { ...next[idx], [field]: field === 'stock' || field === 'price' ? Number(value) : value };
+
+    if (field === 'color' || field === 'size') {
+      const baseSku = formData.base_sku || 'JLN-' + Math.floor(100 + Math.random() * 900);
+      next[idx].sku = buildVariantSku(baseSku, next[idx].color, next[idx].size);
+      if (field === 'color') {
+        const col = formData.colors.find((c) => c.name === value);
+        next[idx].colorHex = col?.hex || next[idx].colorHex;
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      variants: next,
+      stock: recalcTotalStock(next),
+    }));
+  };
+
   // Color Management Helpers
   const handleAddColor = () => {
     setFormData((prev) => ({
@@ -557,7 +630,6 @@ export default function ProductsPage() {
             <div className="p-4 bg-gray-900 text-white flex items-center justify-between border-b border-gray-800">
               <div>
                 <h3 className="font-bold text-sm flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-brand-400" />
                   {editingId ? 'Edit Product & Lifecycle Engine' : 'Add New Product & Unified Inventory'}
                 </h3>
                 <p className="text-[10px] text-gray-400">
@@ -964,24 +1036,33 @@ export default function ProductsPage() {
                   <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl flex items-center justify-between">
                     <div>
                       <h4 className="font-bold text-purple-900 text-xs flex items-center gap-1.5">
-                        <Zap className="w-4 h-4 text-purple-600" /> Automated Variant Matrix Generator
+                       <Zap className="w-4 h-4 text-purple-600" /> Automated Variant Matrix Generator
                       </h4>
                       <p className="text-[10px] text-purple-700">
                         Multiplies {formData.colors.length} Colors × {formData.sizes.length} Sizes to generate SKUs, Prices &amp; Stock.
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleGenerateVariants}
-                      className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 py-2 rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Zap className="w-4 h-4" /> ⚡ Generate Matrix
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleAddVariant}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer text-xs"
+                      >
+                        <Plus className="w-4 h-4" /> Add Variant
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleGenerateVariants}
+                        className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 py-2 rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
+                      > <Zap className="w-4 h-4" /> Generate Matrix
+                      </button>
+                    </div>
                   </div>
 
                   {formData.variants.length === 0 ? (
                     <div className="p-8 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                      No variants generated yet. Click <strong>"Generate Matrix"</strong> above to auto-create color-size SKUs.
+                      No variants yet. Click <strong>"Add Variant"</strong> to manually create a color-size SKU or{" "}
+                      <strong>"Generate Matrix"</strong> to auto-create all combinations. Everything syncs live to the website on save.
                     </div>
                   ) : (
                     <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
@@ -993,26 +1074,56 @@ export default function ProductsPage() {
                             <th className="py-2.5 px-3">Size</th>
                             <th className="py-2.5 px-3">Price (₹)</th>
                             <th className="py-2.5 px-3">Stock Quantity</th>
+                            <th className="py-2.5 px-3 text-center">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                           {formData.variants.map((v, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50">
-                              <td className="py-2 px-3 font-mono text-[11px] text-gray-700">{v.sku}</td>
-                              <td className="py-2 px-3 flex items-center gap-1.5">
-                                <span className="w-3 h-3 rounded-full border border-gray-300" style={{ backgroundColor: v.colorHex }} />
-                                <span>{v.color}</span>
+                            <tr key={v.sku || idx} className="hover:bg-gray-50">
+                              <td className="py-2 px-3">
+                                <input
+                                  type="text"
+                                  value={v.sku}
+                                  onChange={(e) => updateVariant(idx, 'sku', e.target.value)}
+                                  className="w-32 px-2 py-1 border border-gray-300 rounded font-mono text-[11px] text-gray-700"
+                                />
                               </td>
-                              <td className="py-2 px-3 font-bold">{v.size}</td>
+                              <td className="py-2 px-3">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="w-3 h-3 rounded-full border border-gray-300 shrink-0" style={{ backgroundColor: v.colorHex }} />
+                                  <select
+                                    value={formData.colors.some((c) => c.name === v.color) ? v.color : ''}
+                                    onChange={(e) => updateVariant(idx, 'color', e.target.value)}
+                                    className="px-2 py-1 border border-gray-300 rounded text-[11px] font-medium bg-white"
+                                  >
+                                    {!formData.colors.some((c) => c.name === v.color) && (
+                                      <option value="" disabled>{v.color}</option>
+                                    )}
+                                    {formData.colors.map((c) => (
+                                      <option key={c.name} value={c.name}>{c.name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </td>
+                              <td className="py-2 px-3">
+                                <select
+                                  value={formData.sizes.includes(v.size) ? v.size : ''}
+                                  onChange={(e) => updateVariant(idx, 'size', e.target.value)}
+                                  className="px-2 py-1 border border-gray-300 rounded font-bold text-xs bg-white"
+                                >
+                                  {!formData.sizes.includes(v.size) && (
+                                    <option value="" disabled>{v.size}</option>
+                                  )}
+                                  {formData.sizes.map((s) => (
+                                    <option key={s} value={s}>{s}</option>
+                                  ))}
+                                </select>
+                              </td>
                               <td className="py-2 px-3">
                                 <input
                                   type="number"
                                   value={v.price}
-                                  onChange={(e) => {
-                                    const next = [...formData.variants];
-                                    next[idx].price = e.target.value;
-                                    setFormData({ ...formData, variants: next });
-                                  }}
+                                  onChange={(e) => updateVariant(idx, 'price', e.target.value)}
                                   className="w-20 px-2 py-1 border border-gray-300 rounded font-semibold text-xs"
                                 />
                               </td>
@@ -1020,19 +1131,28 @@ export default function ProductsPage() {
                                 <input
                                   type="number"
                                   value={v.stock}
-                                  onChange={(e) => {
-                                    const next = [...formData.variants];
-                                    next[idx].stock = Number(e.target.value);
-                                    const tot = next.reduce((s, item) => s + (parseInt(item.stock, 10) || 0), 0);
-                                    setFormData({ ...formData, variants: next, stock: tot });
-                                  }}
+                                  onChange={(e) => updateVariant(idx, 'stock', e.target.value)}
                                   className="w-20 px-2 py-1 border border-gray-300 rounded font-bold text-xs"
                                 />
+                              </td>
+                              <td className="py-2 px-3 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteVariant(idx)}
+                                  title="Delete variant"
+                                  className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
+                      <div className="px-3 py-2 bg-gray-50 border-t border-gray-200 flex items-center justify-between text-[11px] font-bold text-gray-600">
+                        <span>{formData.variants.length} variants configured</span>
+                        <span>Total stock across variants: <span className="text-brand-700">{formData.stock}</span></span>
+                      </div>
                     </div>
                   )}
                 </div>

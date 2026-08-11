@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { processAndStoreImage } from '../services/imageService.js';
 
 // Rich seed product catalog used across server DB seeding & in-memory fallbacks
 export const SEED_PRODUCTS = [
@@ -401,10 +402,12 @@ export const createProduct = async (req, res) => {
   if (req.files) {
     const serverUrl = `${req.protocol}://${req.get('host')}`;
     if (req.files.primary_image?.[0]) {
-      primary_image = `${serverUrl}/uploads/${req.files.primary_image[0].filename}`;
+      const { url, storage } = await processAndStoreImage(req.files.primary_image[0]);
+      primary_image = storage === 'local_multer' ? `${serverUrl}${url}` : url;
     }
     if (req.files.hover_image?.[0]) {
-      hover_image = `${serverUrl}/uploads/${req.files.hover_image[0].filename}`;
+      const { url, storage } = await processAndStoreImage(req.files.hover_image[0]);
+      hover_image = storage === 'local_multer' ? `${serverUrl}${url}` : url;
     }
   }
 
@@ -491,6 +494,14 @@ export const createProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
+
+  // Process newly uploaded image if present
+  if (req.file) {
+    const { url, storage } = await processAndStoreImage(req.file);
+    updates.primary_image = storage === 'local_multer'
+      ? `${req.protocol}://${req.get('host')}${url}`
+      : url;
+  }
 
   // Parse JSON fields if they come as strings
   if (typeof updates.sizes === 'string') updates.sizes = JSON.parse(updates.sizes);

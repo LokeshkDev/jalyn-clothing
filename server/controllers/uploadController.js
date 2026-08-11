@@ -1,5 +1,5 @@
-import fs from 'fs';
-import { isR2Configured, uploadToR2 } from '../services/r2Storage.js';
+import { isR2Configured } from '../services/r2Storage.js';
+import { processAndStoreImage } from '../services/imageService.js';
 
 export const uploadSingleImage = async (req, res) => {
   if (!req.file) {
@@ -10,48 +10,24 @@ export const uploadSingleImage = async (req, res) => {
   }
 
   try {
-    // If Cloudflare R2 credentials are configured in .env, upload to R2
-    if (isR2Configured()) {
-      const fileBuffer = fs.readFileSync(req.file.path);
-      const r2Url = await uploadToR2(
-        fileBuffer,
-        req.file.originalname,
-        req.file.mimetype
-      );
+    const { url, storage, size, width, height, mimetype } = await processAndStoreImage(req.file);
 
-      // Clean up local temp file
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (e) {}
-
-      return res.status(200).json({
-        success: true,
-        storage: 'cloudflare_r2',
-        message: 'Image uploaded to Cloudflare R2 successfully.',
-        file: {
-          filename: req.file.filename,
-          originalname: req.file.originalname,
-          mimetype: req.file.mimetype,
-          size: req.file.size,
-          url: r2Url,
-        },
-      });
-    }
-
-    // Fallback to local Multer static URL
-    const serverUrl = `${req.protocol}://${req.get('host')}`;
-    const imageUrl = `${serverUrl}/uploads/${req.file.filename}`;
+    const finalUrl = storage === 'local_multer'
+      ? `${req.protocol}://${req.get('host')}${url}`
+      : url;
 
     return res.status(200).json({
       success: true,
-      storage: 'local_multer',
-      message: 'Image uploaded to local storage successfully.',
+      storage,
+      message: `Image uploaded successfully (optimized to ${(size / 1024).toFixed(1)} KB).`,
       file: {
         filename: req.file.filename,
         originalname: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        url: imageUrl,
+        mimetype,
+        size,
+        width,
+        height,
+        url: finalUrl,
       },
     });
   } catch (error) {
@@ -72,39 +48,27 @@ export const uploadMultipleImages = async (req, res) => {
   }
 
   try {
-    const serverUrl = `${req.protocol}://${req.get('host')}`;
-    const useR2 = isR2Configured();
-
     const uploadedFiles = await Promise.all(
       req.files.map(async (file) => {
-        let fileUrl = `${serverUrl}/uploads/${file.filename}`;
-
-        if (useR2) {
-          try {
-            const fileBuffer = fs.readFileSync(file.path);
-            fileUrl = await uploadToR2(fileBuffer, file.originalname, file.mimetype);
-            try {
-              fs.unlinkSync(file.path);
-            } catch (e) {}
-          } catch (r2Err) {
-            console.warn('R2 upload failed for file, using local fallback:', r2Err.message);
-          }
-        }
-
+        const { url, storage, size, width, height, mimetype } = await processAndStoreImage(file);
         return {
           filename: file.filename,
           originalname: file.originalname,
-          mimetype: file.mimetype,
-          size: file.size,
-          url: fileUrl,
+          mimetype,
+          size,
+          width,
+          height,
+          url: storage === 'local_multer'
+            ? `${req.protocol}://${req.get('host')}${url}`
+            : url,
         };
       })
     );
 
     return res.status(200).json({
       success: true,
-      storage: useR2 ? 'cloudflare_r2' : 'local_multer',
-      message: `${uploadedFiles.length} images uploaded successfully.`,
+      storage: isR2Configured() ? 'cloudflare_r2' : 'local_multer',
+      message: `${uploadedFiles.length} images uploaded successfully (optimized).`,
       files: uploadedFiles,
     });
   } catch (error) {

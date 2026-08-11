@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { processAndStoreImage } from '../services/imageService.js';
 
 export const MOCK_CATEGORIES = [
   { id: 1, slug: 'all', name: 'All Categories', item_count: 120 },
@@ -68,7 +69,8 @@ export const createCategory = async (req, res) => {
 
   if (req.file) {
     const serverUrl = `${req.protocol}://${req.get('host')}`;
-    image_url = `${serverUrl}/uploads/${req.file.filename}`;
+    const { url, storage } = await processAndStoreImage(req.file);
+    image_url = storage === 'local_multer' ? `${serverUrl}${url}` : url;
   }
 
   const categorySlug = slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-');

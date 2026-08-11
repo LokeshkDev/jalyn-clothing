@@ -43,6 +43,23 @@ export default function ProductDetails() {
   )
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false)
 
+  // Variant-aware product: price + stock follow the selected color/size
+  // from the admin-managed variant matrix, so updates reflect instantly.
+  const displayProduct = useMemo(() => {
+    const variants = product.variants || []
+    const variant = variants.find(
+      (v) => v.color === selectedColor && v.size === selectedSize,
+    )
+    if (!variant) return product
+    return {
+      ...product,
+      price: Number(variant.price) || product.price,
+      stock: variant.stock,
+      inStock: (parseInt(variant.stock, 10) || 0) > 0,
+      activeVariant: variant,
+    }
+  }, [product, selectedColor, selectedSize])
+
   // Derive multiple high quality images for gallery based on color selection
   const galleryImages = useMemo(() => {
     // Check if color specific images exist
@@ -109,7 +126,7 @@ export default function ProductDetails() {
         {/* Product Info Section */}
         <div className="mt-5">
           <MobilePDPInfo
-            product={product}
+            product={displayProduct}
             selectedColor={selectedColor}
             setSelectedColor={setSelectedColor}
             selectedSize={selectedSize}
@@ -155,7 +172,7 @@ export default function ProductDetails() {
 
         {/* Fixed Purchase Bar */}
         <MobilePurchaseBar
-          product={product}
+          product={displayProduct}
           selectedSize={selectedSize}
           selectedColor={selectedColor}
         />
@@ -195,7 +212,7 @@ export default function ProductDetails() {
             {/* RIGHT: Product Information, Delivery Pincode Checker & Right Column Accordions (SCROLLS ALONG) */}
             <div className="lg:col-span-5 space-y-6">
               <ProductInfoPanel
-                product={product}
+                product={displayProduct}
                 selectedColor={selectedColor}
                 setSelectedColor={setSelectedColor}
                 selectedSize={selectedSize}
@@ -208,7 +225,7 @@ export default function ProductDetails() {
               <PdpCoupons />
 
               <ProductPurchaseCard
-                product={product}
+                product={displayProduct}
                 selectedSize={selectedSize}
                 selectedColor={selectedColor}
               />

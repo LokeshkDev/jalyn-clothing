@@ -46,7 +46,15 @@ export default function ProductPurchaseCard({ product, selectedSize, selectedCol
     }, 100)
   }
 
+  const isOutOfStock = product.inStock === false
+
   const handleAddBag = () => {
+    if (isOutOfStock) {
+      setShowToast(true)
+      setTimeout(() => setShowToast(false), 3500)
+      return
+    }
+
     if (!deliveryStore.isVerified) {
       handleDisabledClick()
       return
@@ -80,14 +88,25 @@ export default function ProductPurchaseCard({ product, selectedSize, selectedCol
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="rounded-xl bg-amber-900/95 text-white p-3.5 shadow-2xl backdrop-blur-md flex items-center gap-3 border border-amber-500/30"
+            className={cn(
+              'rounded-xl text-white p-3.5 shadow-2xl backdrop-blur-md flex items-center gap-3 border',
+              isOutOfStock
+                ? 'bg-red-900/95 border-red-500/30'
+                : 'bg-amber-900/95 border-amber-500/30',
+            )}
           >
             <AlertCircle className="h-5 w-5 text-amber-400 shrink-0 animate-bounce" />
             <div className="flex-1 text-xs">
-              <p className="font-bold text-amber-200">Pincode Verification Required</p>
-              <p className="text-[11px] text-amber-100">
-                Please enter and check your delivery pincode above for delivery estimation first!
-              </p>
+              {isOutOfStock ? (
+                <p className="font-bold text-red-200">This variant is out of stock</p>
+              ) : (
+                <>
+                  <p className="font-bold text-amber-200">Pincode Verification Required</p>
+                  <p className="text-[11px] text-amber-100">
+                    Please enter and check your delivery pincode above for delivery estimation first!
+                  </p>
+                </>
+              )}
             </div>
           </motion.div>
         )}
@@ -191,12 +210,19 @@ export default function ProductPurchaseCard({ product, selectedSize, selectedCol
         onClick={handleAddBag}
         className={cn(
           'flex h-14 w-full items-center justify-center gap-2 rounded-xl font-label text-xs font-bold uppercase tracking-[0.14em] transition-all duration-300',
-          deliveryStore.isVerified
+          isOutOfStock
+            ? 'bg-red-100 text-red-500 border border-red-300 cursor-not-allowed'
+            : deliveryStore.isVerified
             ? 'bg-primary text-white hover:bg-primary-deep hover:shadow-lift cursor-pointer active:scale-[0.99]'
             : 'bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-300 cursor-pointer'
         )}
       >
-        {deliveryStore.isVerified ? (
+        {isOutOfStock ? (
+          <>
+            <AlertCircle className="h-4 w-4" />
+            <span>OUT OF STOCK</span>
+          </>
+        ) : deliveryStore.isVerified ? (
           <>
             <ShoppingBag className="h-4 w-4" />
             <span>ADD TO BAG</span>
@@ -215,12 +241,14 @@ export default function ProductPurchaseCard({ product, selectedSize, selectedCol
         onClick={handleAddBag}
         className={cn(
           'flex h-14 w-full items-center justify-center rounded-xl border-2 font-label text-xs font-bold uppercase tracking-[0.14em] transition-all duration-300 cursor-pointer',
-          deliveryStore.isVerified
+          isOutOfStock
+            ? 'border-red-200 bg-red-50 text-red-400 cursor-not-allowed'
+            : deliveryStore.isVerified
             ? 'border-primary bg-white text-primary hover:bg-rose-light/30 active:scale-[0.99]'
             : 'border-gray-200 bg-gray-100 text-gray-500'
         )}
       >
-        <span>BUY NOW &amp; PROCEED TO CART</span>
+        <span>{isOutOfStock ? 'OUT OF STOCK' : 'BUY NOW &amp; PROCEED TO CART'}</span>
       </button>
     </div>
   )

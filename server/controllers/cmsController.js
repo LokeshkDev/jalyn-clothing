@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { processAndStoreImage } from '../services/imageService.js';
 
 // Default CMS homepage & layout section structures
 const DEFAULT_CMS_DATA = {
@@ -212,7 +213,8 @@ export const updateHomepageSection = async (req, res) => {
   let content = req.body;
 
   if (req.file) {
-    const imageUrl = `/uploads/${req.file.filename}`;
+    const { url, storage } = await processAndStoreImage(req.file);
+    const imageUrl = storage === 'local_multer' ? `/uploads${url.replace('/uploads', '')}` : url;
     if (typeof content === 'object') {
       content.banner_image = imageUrl;
     }

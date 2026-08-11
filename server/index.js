@@ -27,6 +27,8 @@ const PORT = process.env.PORT || 5000;
 const allowedOrigins = [
   process.env.CLIENT_URL || 'http://localhost:5173',
   process.env.ADMIN_URL || 'http://localhost:5174',
+  'https://jalyn.vercel.app',
+  'https://www.jalyn.vercel.app',
   'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:5174',
@@ -35,11 +37,11 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl requests) or allowed origins
+      // Allow requests with no origin (mobile apps, curl) or any origin when not in production
       if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
         callback(null, true);
       } else {
-        callback(null, true); // Permissive in dev
+        callback(null, true); // Permissive in production
       }
     },
     credentials: true,
@@ -73,6 +75,14 @@ app.use('/api/coupons', couponRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
+
+// 404 handler - returns JSON so CORS headers are always applied
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+  });
+});
 
 // Start Server & Test Database Connection
 app.listen(PORT, async () => {
