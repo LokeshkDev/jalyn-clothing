@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Star } from 'lucide-react'
 import ProductBadge from '@/components/shop/ProductBadge'
@@ -6,8 +6,53 @@ import WishlistButton from '@/components/shop/WishlistButton'
 import { SHOP_COLORS } from '@/constants/shopProducts'
 import { cn, formatINR } from '@/lib/utils'
 
+function getColorImage(product, colorId, idx) {
+  if (!colorId) return null
+  const normalizedId = typeof colorId === 'string' ? colorId.toLowerCase() : colorId
+  if (product.color_images?.[colorId]) {
+    const val = product.color_images[colorId]
+    return Array.isArray(val) ? val[0] : val
+  }
+  if (product.color_images?.[normalizedId]) {
+    const val = product.color_images[normalizedId]
+    return Array.isArray(val) ? val[0] : val
+  }
+  if (product.colorImages?.[colorId]) {
+    const val = product.colorImages[colorId]
+    return Array.isArray(val) ? val[0] : val
+  }
+  if (Array.isArray(product.colors)) {
+    const colObj = product.colors.find(c => typeof c === 'object' && (c.id === colorId || c.name?.toLowerCase() === normalizedId))
+    if (colObj && colObj.images?.length) {
+      return colObj.images[0]
+    }
+  }
+  if (idx === 1 && (product.hoverImage || product.hover_image || product.images?.hover)) {
+    return product.hoverImage || product.hover_image || product.images?.hover
+  }
+  if (Array.isArray(product.images?.gallery) && product.images.gallery[idx]) {
+    return product.images.gallery[idx]
+  }
+  return null
+}
+
 function MobileShopProductCard({ product }) {
+  const [selectedColor, setSelectedColor] = useState(null)
   const colorMap = Object.fromEntries(SHOP_COLORS.map((c) => [c.id, c]))
+
+  const primaryImg =
+    product.images?.primary ||
+    product.primary_image ||
+    product.image ||
+    'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+
+  const colorsList = Array.isArray(product.colors) ? product.colors : []
+  const activeColorIdx = colorsList.findIndex((c) => {
+    const id = typeof c === 'string' ? c : c.id || c.name
+    return id === selectedColor
+  })
+  const colorImg = selectedColor ? getColorImage(product, selectedColor, activeColorIdx >= 0 ? activeColorIdx : 0) : null
+  const displayImg = colorImg || primaryImg
 
   return (
     <article className="flex flex-col rounded-[16px] border border-primary/5 bg-white overflow-hidden shadow-none transition-shadow">
@@ -15,7 +60,7 @@ function MobileShopProductCard({ product }) {
       <div className="relative aspect-[4/5] w-full bg-[#F7F1F2] overflow-hidden rounded-t-[16px]">
         <Link to={`/products/${product.slug}`} className="block h-full w-full">
           <img
-            src={product.images.primary}
+            src={displayImg}
             alt={product.title}
             loading="lazy"
             className="h-full w-full object-cover object-top"
@@ -98,20 +143,32 @@ function MobileShopProductCard({ product }) {
         </div>
 
         {/* Color Swatches Row */}
-        <div className="mt-2 flex items-center gap-1.5">
-          {product.colors?.slice(0, 3).map((colorId, idx) => (
-            <span
-              key={colorId}
-              className={cn(
-                'h-3.5 w-3.5 rounded-full border border-black/10',
-                idx === 0 && 'ring-1 ring-primary ring-offset-1',
-              )}
-              style={{ backgroundColor: colorMap[colorId]?.hex || '#ccc' }}
-            />
-          ))}
-          {product.colors?.length > 3 && (
+        <div className="mt-2 flex items-center gap-1.5 z-10">
+          {colorsList.slice(0, 3).map((cObj, idx) => {
+            const colorId = typeof cObj === 'string' ? cObj : cObj.id || cObj.name
+            const hex = typeof cObj === 'object' && cObj.hex ? cObj.hex : colorMap[colorId]?.hex || '#AD4A85'
+            const isSelected = selectedColor === colorId || (!selectedColor && idx === 0)
+            return (
+              <button
+                key={colorId + idx}
+                type="button"
+                title={typeof cObj === 'object' ? cObj.name : colorMap[colorId]?.label || colorId}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setSelectedColor(colorId)
+                }}
+                className={cn(
+                  'h-3.5 w-3.5 rounded-full border border-black/10 transition-transform active:scale-90 cursor-pointer',
+                  isSelected && 'ring-1 ring-primary ring-offset-1 scale-110',
+                )}
+                style={{ backgroundColor: hex }}
+              />
+            )
+          })}
+          {colorsList.length > 3 && (
             <span className="text-[10px] font-semibold text-ink-muted">
-              +{product.colors.length - 3}
+              +{colorsList.length - 3}
             </span>
           )}
         </div>

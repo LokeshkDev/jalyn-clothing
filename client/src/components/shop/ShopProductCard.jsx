@@ -24,8 +24,39 @@ function toCartProduct(product) {
   }
 }
 
+function getColorImage(product, colorId, idx) {
+  if (!colorId) return null
+  const normalizedId = typeof colorId === 'string' ? colorId.toLowerCase() : colorId
+  if (product.color_images?.[colorId]) {
+    const val = product.color_images[colorId]
+    return Array.isArray(val) ? val[0] : val
+  }
+  if (product.color_images?.[normalizedId]) {
+    const val = product.color_images[normalizedId]
+    return Array.isArray(val) ? val[0] : val
+  }
+  if (product.colorImages?.[colorId]) {
+    const val = product.colorImages[colorId]
+    return Array.isArray(val) ? val[0] : val
+  }
+  if (Array.isArray(product.colors)) {
+    const colObj = product.colors.find(c => typeof c === 'object' && (c.id === colorId || c.name?.toLowerCase() === normalizedId))
+    if (colObj && colObj.images?.length) {
+      return colObj.images[0]
+    }
+  }
+  if (idx === 1 && (product.hoverImage || product.hover_image || product.images?.hover)) {
+    return product.hoverImage || product.hover_image || product.images?.hover
+  }
+  if (Array.isArray(product.images?.gallery) && product.images.gallery[idx]) {
+    return product.images.gallery[idx]
+  }
+  return null
+}
+
 function ShopProductCard({ product, listView = false, onQuickView }) {
   const [hovered, setHovered] = useState(false)
+  const [selectedColor, setSelectedColor] = useState(null)
   const addItem = useCartStore((s) => s.addItem)
   const colorMap = Object.fromEntries(SHOP_COLORS.map((c) => [c.id, c]))
 
@@ -47,6 +78,14 @@ function ShopProductCard({ product, listView = false, onQuickView }) {
   const reviewsCount = product.reviews ?? product.reviews_count ?? 12
   const originalPrice = product.originalPrice || product.original_price || product.compareAt
 
+  const colorsList = Array.isArray(product.colors) ? product.colors : []
+  const activeColorIdx = colorsList.findIndex((c) => {
+    const id = typeof c === 'string' ? c : c.id || c.name
+    return id === selectedColor
+  })
+  const colorImg = selectedColor ? getColorImage(product, selectedColor, activeColorIdx >= 0 ? activeColorIdx : 0) : null
+  const displayImg = hovered && hoverImg ? hoverImg : (colorImg || primaryImg)
+
   if (listView) {
     return (
       <motion.article
@@ -61,7 +100,7 @@ function ShopProductCard({ product, listView = false, onQuickView }) {
           className="relative aspect-[4/5] w-28 shrink-0 overflow-hidden rounded-[18px] sm:w-36"
         >
           <img
-            src={primaryImg}
+            src={displayImg}
             alt={title}
             loading="lazy"
             className="h-full w-full object-cover"
@@ -130,7 +169,7 @@ function ShopProductCard({ product, listView = false, onQuickView }) {
       <div className="relative aspect-[4/5] overflow-hidden rounded-[18px] bg-rose-light/30 shadow-soft ring-1 ring-primary/5 transition duration-300 group-hover:shadow-lift">
         <Link to={`/products/${product.slug || product.id}`} className="block h-full w-full">
           <img
-            src={hovered && hoverImg ? hoverImg : primaryImg}
+            src={displayImg}
             alt={title}
             loading="lazy"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
@@ -187,9 +226,40 @@ function ShopProductCard({ product, listView = false, onQuickView }) {
       </div>
 
       <div className="mt-3 space-y-1 px-0.5">
-        <p className="text-[11px] font-medium capitalize text-ink-muted">
-          {category}
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] font-medium capitalize text-ink-muted">
+            {category}
+          </p>
+
+          {/* Interactive Color Swatches */}
+          {colorsList.length > 0 && (
+            <div className="flex items-center gap-1.5 z-10">
+              {colorsList.slice(0, 4).map((cObj, idx) => {
+                const colorId = typeof cObj === 'string' ? cObj : cObj.id || cObj.name
+                const hex = typeof cObj === 'object' && cObj.hex ? cObj.hex : colorMap[colorId]?.hex || '#AD4A85'
+                const isSelected = selectedColor === colorId || (!selectedColor && idx === 0)
+                return (
+                  <button
+                    key={colorId + idx}
+                    type="button"
+                    title={typeof cObj === 'object' ? cObj.name : colorMap[colorId]?.label || colorId}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setSelectedColor(colorId)
+                    }}
+                    className={cn(
+                      'h-3.5 w-3.5 rounded-full border border-black/10 transition-transform active:scale-90 cursor-pointer',
+                      isSelected && 'ring-2 ring-primary ring-offset-1 scale-110'
+                    )}
+                    style={{ backgroundColor: hex }}
+                  />
+                )
+              })}
+            </div>
+          )}
+        </div>
+
         <Link
           to={`/products/${product.slug || product.id}`}
           className="block font-heading text-base font-medium text-ink transition hover:text-primary line-clamp-1"

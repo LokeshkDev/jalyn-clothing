@@ -4,6 +4,32 @@ import { SHOP_COLORS } from '@/constants/shopProducts'
 import { cn, formatINR } from '@/lib/utils'
 import { useDeliveryStore } from '@/store'
 
+function isSizeAvailable(product, selectedColor, sz) {
+  if (!product) return false
+  const colorStr = typeof selectedColor === 'object' ? selectedColor?.name || selectedColor?.id : selectedColor
+
+  if (Array.isArray(product.variants) && product.variants.length > 0) {
+    const variant = product.variants.find((v) => {
+      const matchColor =
+        !colorStr ||
+        v.color?.toLowerCase() === String(colorStr).toLowerCase() ||
+        v.colorHex === colorStr
+      const matchSize = String(v.size).toUpperCase() === String(sz).toUpperCase()
+      return matchColor && matchSize
+    })
+    if (variant) {
+      const stock = parseInt(variant.stock, 10)
+      return !isNaN(stock) && stock > 0 && variant.inStock !== false
+    }
+  }
+
+  const hasSize = Array.isArray(product.sizes)
+    ? product.sizes.some((s) => String(s).toUpperCase() === String(sz).toUpperCase())
+    : true
+
+  return hasSize
+}
+
 export default function MobilePDPInfo({
   product,
   selectedColor,
@@ -222,7 +248,7 @@ export default function MobilePDPInfo({
 
         <div className="grid grid-cols-6 gap-2">
           {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((sz) => {
-            const available = product.sizes?.includes(sz)
+            const available = isSizeAvailable(product, selectedColor, sz)
             const isSelected = selectedSize === sz
             return (
               <button
@@ -232,12 +258,14 @@ export default function MobilePDPInfo({
                 onClick={() => setSelectedSize(sz)}
                 aria-label={`Size ${sz}${!available ? ' unavailable' : ''}`}
                 className={cn(
-                  'flex h-11 items-center justify-center rounded-[10px] text-[13px] font-bold transition-all active:scale-95',
-                  isSelected
+                  'flex h-11 items-center justify-center rounded-[10px] text-[13px] font-bold transition-all active:scale-95 cursor-pointer',
+                  isSelected && available
                     ? 'bg-primary text-white shadow-sm'
+                    : isSelected && !available
+                    ? 'bg-primary/50 text-white line-through cursor-not-allowed'
                     : available
-                      ? 'border border-[#E5D8DE] bg-white text-[#222222]'
-                      : 'border border-[#E5D8DE]/50 bg-[#FAF8F8] text-[#666666]/40 cursor-not-allowed line-through',
+                    ? 'border border-[#E5D8DE] bg-white text-[#222222]'
+                    : 'border border-[#E5D8DE]/50 bg-[#FAF8F8] text-[#666666]/40 cursor-not-allowed line-through',
                 )}
               >
                 {sz}

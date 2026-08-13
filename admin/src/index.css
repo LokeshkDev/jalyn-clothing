@@ -2,11 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  font-size: 17px;
+}
+
 body {
   margin: 0;
   background-color: #F9FAFB;
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   color: #111827;
+  font-size: 1rem;
 }
 
 /* Global Heading & Subheading Typography in Admin */
@@ -20,24 +25,32 @@ h1, h2, h3, h4, h5, h6,
   font-family: 'Cormorant Garamond', Georgia, serif;
 }
 
-/* Custom Jalyn Brand Scrollbars in Admin */
+/* Hide Scrollbar Utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Polished Sleek Scrollbars in Admin */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #FFF6F9;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #AD4A85;
+  background: rgba(173, 74, 133, 0.35);
   border-radius: 999px;
-  border: 2px solid #FFF6F9;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #8E3466;
+  background: rgba(173, 74, 133, 0.7);
 }
 
 html, body {
   scrollbar-width: thin;
-  scrollbar-color: #AD4A85 #FFF6F9;
+  scrollbar-color: rgba(173, 74, 133, 0.4) transparent;
 }

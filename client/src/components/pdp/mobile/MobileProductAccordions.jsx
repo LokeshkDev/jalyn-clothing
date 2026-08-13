@@ -114,45 +114,6 @@ export default function MobileProductAccordions({ product, reviewsRef }) {
       ),
     },
     {
-      id: 'sizeguide',
-      label: 'Size Guide',
-      content: (
-        <div className="text-[13px] text-[#666666]">
-          <div className="overflow-x-auto rounded-xl border border-primary/10">
-            <table className="w-full text-left text-[12px] text-[#222222]">
-              <thead className="bg-[#EFD7E3]/30 text-[11px] font-bold uppercase tracking-wider text-primary">
-                <tr>
-                  <th className="px-3 py-2">Size</th>
-                  <th className="px-3 py-2">Bust</th>
-                  <th className="px-3 py-2">Waist</th>
-                  <th className="px-3 py-2">Hips</th>
-                  <th className="px-3 py-2">Length</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-primary/5">
-                {[
-                  ['XS', '32', '26', '35', '44'],
-                  ['S', '34', '28', '37', '45'],
-                  ['M', '36', '30', '39', '45.5'],
-                  ['L', '38', '32', '41', '46'],
-                  ['XL', '40', '34', '43', '46.5'],
-                  ['XXL', '42', '36', '45', '47'],
-                ].map(([sz, b, w, h, l]) => (
-                  <tr key={sz}>
-                    <td className="px-3 py-2 font-bold">{sz}</td>
-                    <td className="px-3 py-2">{b}</td>
-                    <td className="px-3 py-2">{w}</td>
-                    <td className="px-3 py-2">{h}</td>
-                    <td className="px-3 py-2">{l}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ),
-    },
-    {
       id: 'shipping',
       label: 'Shipping & Delivery',
       content: (

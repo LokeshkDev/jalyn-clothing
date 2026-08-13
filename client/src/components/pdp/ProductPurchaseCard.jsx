@@ -248,7 +248,7 @@ export default function ProductPurchaseCard({ product, selectedSize, selectedCol
             : 'border-gray-200 bg-gray-100 text-gray-500'
         )}
       >
-        <span>{isOutOfStock ? 'OUT OF STOCK' : 'BUY NOW &amp; PROCEED TO CART'}</span>
+        <span>{isOutOfStock ? 'OUT OF STOCK' : 'BUY NOW & PROCEED TO CART'}</span>
       </button>
     </div>
   )

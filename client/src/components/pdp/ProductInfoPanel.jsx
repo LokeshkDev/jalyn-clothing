@@ -3,6 +3,32 @@ import { Star, Ruler, Sparkles, Heart, Check } from 'lucide-react'
 import { SHOP_COLORS } from '@/constants/shopProducts'
 import { cn, formatINR } from '@/lib/utils'
 
+function isSizeAvailable(product, selectedColor, sz) {
+  if (!product) return false
+  const colorStr = typeof selectedColor === 'object' ? selectedColor?.name || selectedColor?.id : selectedColor
+
+  if (Array.isArray(product.variants) && product.variants.length > 0) {
+    const variant = product.variants.find((v) => {
+      const matchColor =
+        !colorStr ||
+        v.color?.toLowerCase() === String(colorStr).toLowerCase() ||
+        v.colorHex === colorStr
+      const matchSize = String(v.size).toUpperCase() === String(sz).toUpperCase()
+      return matchColor && matchSize
+    })
+    if (variant) {
+      const stock = parseInt(variant.stock, 10)
+      return !isNaN(stock) && stock > 0 && variant.inStock !== false
+    }
+  }
+
+  const hasSize = Array.isArray(product.sizes)
+    ? product.sizes.some((s) => String(s).toUpperCase() === String(sz).toUpperCase())
+    : true
+
+  return hasSize
+}
+
 export default function ProductInfoPanel({
   product,
   selectedColor,
@@ -14,7 +40,7 @@ export default function ProductInfoPanel({
 }) {
   const colorMap = Object.fromEntries(SHOP_COLORS.map((c) => [c.id, c]))
   const currentCategoryColors = product.colors || ['rose', 'cream', 'black']
-  const colorName = colorMap[selectedColor]?.label || 'Pink Floral'
+  const colorName = colorMap[selectedColor]?.label || (typeof selectedColor === 'string' ? selectedColor.toUpperCase() : 'Pink Floral')
 
   const highlights = [
     { icon: Sparkles, text: 'Premium breathable fabric' },
@@ -104,7 +130,7 @@ export default function ProductInfoPanel({
                 title={colorObj?.label || colorId}
                 onClick={() => setSelectedColor(colorId)}
                 className={cn(
-                  'h-8 w-8 rounded-full border border-black/10 transition-all active:scale-95',
+                  'h-8 w-8 rounded-full border border-black/10 transition-all active:scale-95 cursor-pointer',
                   isSelected && 'ring-2 ring-primary ring-offset-2 scale-110',
                 )}
                 style={{ backgroundColor: colorObj?.hex || '#ccc' }}
@@ -132,7 +158,7 @@ export default function ProductInfoPanel({
 
         <div className="grid grid-cols-6 gap-2">
           {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((sz) => {
-            const available = product.sizes?.includes(sz)
+            const available = isSizeAvailable(product, selectedColor, sz)
             const isSelected = selectedSize === sz
             return (
               <button
@@ -141,12 +167,14 @@ export default function ProductInfoPanel({
                 disabled={!available}
                 onClick={() => setSelectedSize(sz)}
                 className={cn(
-                  'flex h-11 items-center justify-center rounded-xl font-label text-xs font-bold transition-all active:scale-95',
-                  isSelected
+                  'flex h-11 items-center justify-center rounded-xl font-label text-xs font-bold transition-all active:scale-95 cursor-pointer',
+                  isSelected && available
                     ? 'bg-primary text-white shadow-soft'
+                    : isSelected && !available
+                    ? 'bg-primary/50 text-white line-through cursor-not-allowed'
                     : available
-                      ? 'border border-primary/20 bg-white text-ink hover:border-primary/50'
-                      : 'border border-primary/10 bg-surface text-ink-muted/40 cursor-not-allowed line-through',
+                    ? 'border border-primary/20 bg-white text-ink hover:border-primary/50'
+                    : 'border border-primary/10 bg-surface text-ink-muted/40 cursor-not-allowed line-through',
                 )}
               >
                 {sz}

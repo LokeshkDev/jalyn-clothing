@@ -625,14 +625,14 @@ export default function ProductsPage() {
       {/* ─── MASTER PRODUCT ADD / EDIT MODAL (10 SECTIONS) ─── */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] overflow-hidden shadow-2xl flex flex-col">
+          <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[92vh] overflow-hidden shadow-2xl flex flex-col">
             {/* Modal Top Navigation Header */}
             <div className="p-4 bg-gray-900 text-white flex items-center justify-between border-b border-gray-800">
               <div>
                 <h3 className="font-bold text-sm flex items-center gap-2">
                   {editingId ? 'Edit Product & Lifecycle Engine' : 'Add New Product & Unified Inventory'}
                 </h3>
-                <p className="text-[10px] text-gray-400">
+                <p className="text-[11px] text-gray-400">
                   Configure basic details, online/offline switches, color-wise galleries, automated matrix &amp; size guides.
                 </p>
               </div>
@@ -642,7 +642,7 @@ export default function ProductsPage() {
             </div>
 
             {/* Section Tab Buttons Bar */}
-            <div className="bg-gray-100 border-b border-gray-200 flex items-center px-4 overflow-x-auto text-xs font-semibold scrollbar-none">
+            <div className="bg-gray-100 border-b border-gray-200 flex items-center px-4 overflow-x-auto text-xs font-semibold no-scrollbar scrollbar-none">
               {[
                 { id: 'basic', label: '1. Basic Info', icon: Layers },
                 { id: 'availability', label: '2. Channels & Badges', icon: Globe },
