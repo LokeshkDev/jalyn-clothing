@@ -24,6 +24,7 @@ import {
   ArrowDown,
   ChevronUp,
   ChevronDown,
+  Phone,
 } from 'lucide-react';
 import Header from '../components/Header';
 import ImageUploader from '../components/ImageUploader';
@@ -120,21 +121,64 @@ export default function CmsPage() {
       youtube_link: 'https://www.instagram.com/jalyn.apparels/',
       columns: [
         {
-          title: 'Shop',
-          links: [
-            { label: 'New Arrivals', href: '/collections/new-arrivals' },
-            { label: 'Dresses', href: '/shop?category=dresses' },
-            { label: 'Tops & Blouses', href: '/shop?category=tops' },
-          ],
-        },
-        {
           title: 'Customer Care',
           links: [
             { label: 'Contact Us', href: '/contact' },
-            { label: 'Shipping & Delivery', href: '/shipping-policy' },
+            { label: 'Shipping & Delivery', href: '/shipping-delivery' },
+            { label: 'Returns & Exchanges', href: '/returns-exchanges' },
+            { label: 'Track Order', href: '/track-order' },
+            { label: 'Size Guide', href: '/size-guide' },
+          ],
+        },
+        {
+          title: 'About Jalyn',
+          links: [
+            { label: 'Our Story', href: '/about' },
+            { label: 'Craftsmanship', href: '/craftsmanship' },
+            { label: 'Sustainability', href: '/sustainability' },
+            { label: 'Press & Media', href: '/press-media' },
+            { label: 'Careers', href: '/careers' },
+          ],
+        },
+        {
+          title: 'Policies & Legal',
+          links: [
+            { label: 'Privacy Policy', href: '/privacy-policy' },
+            { label: 'Terms of Service', href: '/terms-of-service' },
+            { label: 'Refund Policy', href: '/refund-policy' },
           ],
         },
       ],
+    },
+    about_page: {
+      hero_title: 'Crafting Elegance, Celebrating You',
+      hero_subtitle: 'Discover the story behind Jalyn Apparels — where traditional artistry meets contemporary silhouette design.',
+      hero_image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1920&q=80',
+      story_heading: 'Our Story & Heritage',
+      story_content: "Founded with a passion for effortless style and everyday comfort, JALYN creates premium women's fashion that celebrates individuality and grace. Each collection is meticulously designed with breathable luxury fabrics, hand-embroidered details, and tailored fits that feel like a second skin.",
+      craftsmanship_title: 'Artisanal Craftsmanship',
+      craftsmanship_content: 'Every dress, kurti, and co-ord set is brought to life by master artisans who preserve centuries-old embroidery techniques. We take pride in small-batch production that prioritizes quality over quantity.',
+      craftsmanship_image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=1000',
+      sustainability_title: 'Conscious & Sustainable',
+      sustainability_content: 'We use eco-friendly dyes, organic cotton blends, and zero-waste fabric cutting practices to minimize environmental impact while keeping fashion luxurious.',
+      sustainability_image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=1000',
+      stats: [
+        { number: '50,000+', label: 'Happy Women' },
+        { number: '100%', label: 'Ethical & Artisanal' },
+        { number: '15+', label: 'Master Craftsmen' },
+        { number: '4.9★', label: 'Average Rating' },
+      ],
+    },
+    contact_page: {
+      hero_title: 'We’d Love to Hear From You',
+      hero_subtitle: 'Have a question about your order, sizing, or custom styling advice? Our customer care team is here for you.',
+      hero_image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1920&q=80',
+      email: 'support@jalyn.in',
+      phone: '+91 98765 43210',
+      whatsapp: '+91 98765 43210',
+      address: 'Jalyn Fashion Studio, 42 Luxury Boulevard, Fashion District, Mumbai, MH 400001, India',
+      working_hours: 'Monday - Saturday: 10:00 AM - 7:00 PM IST',
+      google_maps_url: 'https://maps.google.com/maps?q=Mumbai,Maharashtra&t=&z=13&ie=UTF8&iwloc=&output=embed',
     },
   });
 
@@ -191,6 +235,8 @@ export default function CmsPage() {
     { id: 'announcement_bar', label: 'Announcement Bar', icon: Megaphone },
     { id: 'hero_banner', label: 'Hero Slides', icon: ImageIcon },
     { id: 'category_grid', label: 'Curated Categories', icon: LayoutGrid },
+    { id: 'about_page', label: 'About Page', icon: Sparkles },
+    { id: 'contact_page', label: 'Contact Page', icon: Phone },
     { id: 'why_jalyn', label: 'Why Jalyn Values', icon: Heart },
     { id: 'services_strip', label: 'Services Promises', icon: Truck },
     { id: 'promo_banner', label: 'Promo Banner', icon: Tag },
@@ -659,6 +705,264 @@ export default function CmsPage() {
                     />
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 4. About Page CMS Tab */}
+        {activeTab === 'about_page' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6 shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div>
+                <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-brand-600" /> About Page Content Management
+                </h3>
+                <p className="text-xs text-gray-500">Manage hero banner, brand story, craftsmanship, sustainability, and statistics displayed on /about.</p>
+              </div>
+              <button
+                onClick={() => handleSaveSection('about_page')}
+                disabled={savingSection === 'about_page'}
+                className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+              >
+                {savingSection === 'about_page' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>Save About Page</span>
+              </button>
+            </div>
+
+            <div className="space-y-6 text-xs">
+              {/* Hero Banner Section */}
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-4">
+                <h4 className="font-bold text-sm text-gray-900">Hero Section</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Hero Main Title</label>
+                    <input
+                      type="text"
+                      value={cmsData.about_page?.hero_title || ''}
+                      onChange={(e) => updateSectionField('about_page', 'hero_title', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Hero Subtitle</label>
+                    <input
+                      type="text"
+                      value={cmsData.about_page?.hero_subtitle || ''}
+                      onChange={(e) => updateSectionField('about_page', 'hero_subtitle', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    />
+                  </div>
+                </div>
+                <ImageUploader
+                  label="About Hero Background Image"
+                  value={cmsData.about_page?.hero_image || ''}
+                  onChange={(url) => updateSectionField('about_page', 'hero_image', url)}
+                  aspectRatio="aspect-[16/6]"
+                  recommendedSize="1920 × 800 px (Recommended Hero Banner)"
+                  placeholderText="Upload About Page Hero Banner (1920 x 800 px)"
+                />
+              </div>
+
+              {/* Our Story & Heritage */}
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-4">
+                <h4 className="font-bold text-sm text-gray-900">Our Story & Heritage</h4>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Story Heading</label>
+                  <input
+                    type="text"
+                    value={cmsData.about_page?.story_heading || ''}
+                    onChange={(e) => updateSectionField('about_page', 'story_heading', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Story Main Body Text</label>
+                  <textarea
+                    rows={4}
+                    value={cmsData.about_page?.story_content || ''}
+                    onChange={(e) => updateSectionField('about_page', 'story_content', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium leading-relaxed"
+                  />
+                </div>
+              </div>
+
+              {/* Craftsmanship & Sustainability */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
+                  <h4 className="font-bold text-sm text-gray-900">Craftsmanship Section</h4>
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Title</label>
+                    <input
+                      type="text"
+                      value={cmsData.about_page?.craftsmanship_title || ''}
+                      onChange={(e) => updateSectionField('about_page', 'craftsmanship_title', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Content</label>
+                    <textarea
+                      rows={3}
+                      value={cmsData.about_page?.craftsmanship_content || ''}
+                      onChange={(e) => updateSectionField('about_page', 'craftsmanship_content', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    />
+                  </div>
+                  <ImageUploader
+                    label="Craftsmanship Image"
+                    value={cmsData.about_page?.craftsmanship_image || ''}
+                    onChange={(url) => updateSectionField('about_page', 'craftsmanship_image', url)}
+                    aspectRatio="aspect-[4/5]"
+                    recommendedSize="800 × 1000 px (Portrait Artistry)"
+                    placeholderText="Upload Craftsmanship Portrait (800 x 1000 px)"
+                  />
+                </div>
+
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
+                  <h4 className="font-bold text-sm text-gray-900">Sustainability Section</h4>
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Title</label>
+                    <input
+                      type="text"
+                      value={cmsData.about_page?.sustainability_title || ''}
+                      onChange={(e) => updateSectionField('about_page', 'sustainability_title', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Content</label>
+                    <textarea
+                      rows={3}
+                      value={cmsData.about_page?.sustainability_content || ''}
+                      onChange={(e) => updateSectionField('about_page', 'sustainability_content', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    />
+                  </div>
+                  <ImageUploader
+                    label="Sustainability Image"
+                    value={cmsData.about_page?.sustainability_image || ''}
+                    onChange={(url) => updateSectionField('about_page', 'sustainability_image', url)}
+                    aspectRatio="aspect-[4/5]"
+                    recommendedSize="800 × 1000 px (Portrait Eco)"
+                    placeholderText="Upload Sustainability Portrait (800 x 1000 px)"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 5. Contact Page CMS Tab */}
+        {activeTab === 'contact_page' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6 shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div>
+                <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                  <Phone className="w-5 h-5 text-brand-600" /> Contact Page Content Management
+                </h3>
+                <p className="text-xs text-gray-500">Manage hero banner, email, phone, studio address, working hours, and map location displayed on /contact.</p>
+              </div>
+              <button
+                onClick={() => handleSaveSection('contact_page')}
+                disabled={savingSection === 'contact_page'}
+                className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+              >
+                {savingSection === 'contact_page' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>Save Contact Page</span>
+              </button>
+            </div>
+
+            <div className="space-y-6 text-xs">
+              <ImageUploader
+                label="Contact Header Banner Image"
+                value={cmsData.contact_page?.hero_image || ''}
+                onChange={(url) => updateSectionField('contact_page', 'hero_image', url)}
+                aspectRatio="aspect-[16/6]"
+                recommendedSize="1920 × 800 px (Recommended Banner)"
+                placeholderText="Upload Contact Header Banner (1920 x 800 px)"
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Contact Page Title</label>
+                  <input
+                    type="text"
+                    value={cmsData.contact_page?.hero_title || ''}
+                    onChange={(e) => updateSectionField('contact_page', 'hero_title', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Contact Page Subtitle</label>
+                  <input
+                    type="text"
+                    value={cmsData.contact_page?.hero_subtitle || ''}
+                    onChange={(e) => updateSectionField('contact_page', 'hero_subtitle', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Support Email</label>
+                  <input
+                    type="text"
+                    value={cmsData.contact_page?.email || ''}
+                    onChange={(e) => updateSectionField('contact_page', 'email', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Support Phone</label>
+                  <input
+                    type="text"
+                    value={cmsData.contact_page?.phone || ''}
+                    onChange={(e) => updateSectionField('contact_page', 'phone', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">WhatsApp Support Number</label>
+                  <input
+                    type="text"
+                    value={cmsData.contact_page?.whatsapp || ''}
+                    onChange={(e) => updateSectionField('contact_page', 'whatsapp', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Fashion Studio Full Address</label>
+                <textarea
+                  rows={2}
+                  value={cmsData.contact_page?.address || ''}
+                  onChange={(e) => updateSectionField('contact_page', 'address', e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Working Hours Text</label>
+                  <input
+                    type="text"
+                    value={cmsData.contact_page?.working_hours || ''}
+                    onChange={(e) => updateSectionField('contact_page', 'working_hours', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Google Maps Embed URL</label>
+                  <input
+                    type="text"
+                    value={cmsData.contact_page?.google_maps_url || ''}
+                    onChange={(e) => updateSectionField('contact_page', 'google_maps_url', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium font-mono text-[11px]"
+                  />
+                </div>
               </div>
             </div>
           </div>

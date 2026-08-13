@@ -223,31 +223,23 @@ export const INSTAGRAM_POSTS = [
 ]
 
 export const FOOTER_LINKS = {
-  shop: [
-    { label: 'New Arrivals', href: '/collections/new-arrivals' },
-    { label: 'Dresses', href: '/shop?category=dresses' },
-    { label: 'Tops & Blouses', href: '/shop?category=tops' },
-    { label: 'Co-ord Sets', href: '/shop?category=coords' },
-    { label: 'Ethnic Wear', href: '/shop?category=ethnic' },
-    { label: 'Sale', href: '/collections/sale' },
-  ],
-  care: [
+  column1: [
     { label: 'Contact Us', href: '/contact' },
-    { label: 'Shipping & Delivery', href: '/shipping-policy' },
-    { label: 'Returns & Exchanges', href: '/return-policy' },
+    { label: 'Shipping & Delivery', href: '/shipping-delivery' },
+    { label: 'Returns & Exchanges', href: '/returns-exchanges' },
     { label: 'Track Order', href: '/track-order' },
     { label: 'Size Guide', href: '/size-guide' },
   ],
-  about: [
+  column2: [
     { label: 'Our Story', href: '/about' },
     { label: 'Craftsmanship', href: '/craftsmanship' },
     { label: 'Sustainability', href: '/sustainability' },
-    { label: 'Press & Media', href: '/press' },
+    { label: 'Press & Media', href: '/press-media' },
     { label: 'Careers', href: '/careers' },
   ],
-  policies: [
+  column3: [
     { label: 'Privacy Policy', href: '/privacy-policy' },
-    { label: 'Terms of Service', href: '/terms-and-conditions' },
+    { label: 'Terms of Service', href: '/terms-of-service' },
     { label: 'Refund Policy', href: '/refund-policy' },
   ],
 }

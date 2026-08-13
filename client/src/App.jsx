@@ -12,6 +12,10 @@ const OrderSuccess = lazy(() => import('@/pages/OrderSuccess'))
 const OrderFailure = lazy(() => import('@/pages/OrderFailure'))
 const PaymentFailure = lazy(() => import('@/pages/PaymentFailure'))
 
+const AboutPage = lazy(() => import('@/pages/AboutPage'))
+const ContactPage = lazy(() => import('@/pages/ContactPage'))
+const PolicyPage = lazy(() => import('@/pages/PolicyPage'))
+
 // Profile & Account Pages Lazy Loaded
 const ProfileLayout = lazy(() => import('@/pages/profile/ProfileLayout'))
 const Profile = lazy(() => import('@/pages/profile/Profile'))
@@ -49,6 +53,29 @@ function AppRoutes() {
           <Route path="shop" element={<Shop />} />
           <Route path="products/:slug" element={<ProductDetails />} />
           <Route path="product/:slug" element={<ProductDetails />} />
+
+          {/* About & Contact Routes */}
+          <Route path="about" element={<AboutPage />} />
+          <Route path="our-story" element={<AboutPage />} />
+          <Route path="contact" element={<ContactPage />} />
+          <Route path="contact-us" element={<ContactPage />} />
+
+          {/* Policy & Info Routes */}
+          <Route path="shipping-delivery" element={<PolicyPage initialTab="shipping-delivery" />} />
+          <Route path="shipping-policy" element={<PolicyPage initialTab="shipping-delivery" />} />
+          <Route path="returns-exchanges" element={<PolicyPage initialTab="returns-exchanges" />} />
+          <Route path="return-policy" element={<PolicyPage initialTab="returns-exchanges" />} />
+          <Route path="track-order" element={<PolicyPage initialTab="track-order" />} />
+          <Route path="size-guide" element={<PolicyPage initialTab="size-guide" />} />
+          <Route path="craftsmanship" element={<PolicyPage initialTab="craftsmanship" />} />
+          <Route path="sustainability" element={<PolicyPage initialTab="sustainability" />} />
+          <Route path="press-media" element={<PolicyPage initialTab="press-media" />} />
+          <Route path="press" element={<PolicyPage initialTab="press-media" />} />
+          <Route path="careers" element={<PolicyPage initialTab="careers" />} />
+          <Route path="privacy-policy" element={<PolicyPage initialTab="privacy-policy" />} />
+          <Route path="terms-of-service" element={<PolicyPage initialTab="terms-of-service" />} />
+          <Route path="terms-and-conditions" element={<PolicyPage initialTab="terms-of-service" />} />
+          <Route path="refund-policy" element={<PolicyPage initialTab="refund-policy" />} />
 
           {/* Checkout Page */}
           <Route path="checkout" element={<Checkout />} />

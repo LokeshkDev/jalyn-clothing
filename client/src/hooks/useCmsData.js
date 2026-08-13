@@ -80,10 +80,9 @@ export function useCmsData() {
 
   // --- Footer Settings (columns, social links, about text) ---
   const defaultFooterColumns = [
-    { title: 'Shop', links: FOOTER_LINKS.shop },
-    { title: 'Customer Care', links: FOOTER_LINKS.care },
-    { title: 'About', links: FOOTER_LINKS.about },
-    { title: 'Policies', links: FOOTER_LINKS.policies },
+    { title: '', links: FOOTER_LINKS.column1 },
+    { title: '', links: FOOTER_LINKS.column2 },
+    { title: '', links: FOOTER_LINKS.column3 },
   ];
 
   const footerSettings = cmsData?.footer_settings || {
@@ -95,6 +94,9 @@ export function useCmsData() {
     columns: defaultFooterColumns,
   };
 
+  const aboutPage = cmsData?.about_page || null;
+  const contactPage = cmsData?.contact_page || null;
+
   return {
     cmsData,
     heroSlides,
@@ -104,6 +106,8 @@ export function useCmsData() {
     instagramFeed,
     menuLinks,
     footerSettings,
+    aboutPage,
+    contactPage,
     announcementBar: cmsData?.announcement_bar || null,
     promoBanner: cmsData?.promo_banner || null,
     loading,
