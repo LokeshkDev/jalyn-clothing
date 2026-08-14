@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion'
-import { Sparkles, RefreshCw, ShieldCheck, Truck, Flower2 } from 'lucide-react'
+import { Sparkles, RefreshCw, ShieldCheck, Truck } from 'lucide-react'
 import { SERVICES } from '@/constants/data'
-import { FloatingPetals } from '@/components/ui/BlossomDecor'
 
 const icons = {
   sparkles: Sparkles,
@@ -12,11 +11,14 @@ const icons = {
 
 export default function Services() {
   return (
-    <section
-      className="relative overflow-hidden border-y border-primary/5 bg-gradient-to-b from-rose-light/50 to-surface-muted py-10 md:py-14"
+    <motion.section
+      className="relative overflow-hidden border-y border-primary/5 bg-gradient-to-b from-rose-light/50 to-surface-muted pt-10 md:pt-14 mb-[15px] lg:mb-5"
       aria-label="Our services"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      <FloatingPetals className="opacity-30" />
       <div className="container-luxury relative z-[1] grid grid-cols-4 gap-2 sm:gap-4 md:gap-8">
         {SERVICES.map((service, i) => {
           const Icon = icons[service.icon] || Sparkles
@@ -43,11 +45,10 @@ export default function Services() {
               <p className="mt-0.5 text-[9px] text-ink-muted sm:text-xs md:text-sm leading-tight line-clamp-2 sm:line-clamp-none">
                 {service.description}
               </p>
-              <Flower2 className="mt-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary/35" aria-hidden />
             </motion.div>
           )
         })}
       </div>
-    </section>
+    </motion.section>
   )
 }

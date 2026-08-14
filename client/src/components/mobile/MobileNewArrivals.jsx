@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { ChevronRight, Heart, Star } from 'lucide-react'
 import { PRODUCTS } from '@/constants/data'
 import { cn, formatINR } from '@/lib/utils'
@@ -10,7 +11,14 @@ export default function MobileNewArrivals() {
   const items = products && products.length > 0 ? products : PRODUCTS
 
   return (
-    <section className="mt-6 container-luxury" aria-labelledby="mobile-arrivals-heading">
+    <motion.section
+      className="mt-6 container-luxury mb-[15px] lg:mb-5"
+      aria-labelledby="mobile-arrivals-heading"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+    >
       <div className="mb-4 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <h2
@@ -37,7 +45,7 @@ export default function MobileNewArrivals() {
           <MobileProductCard key={product.id || product.slug} product={product} />
         ))}
       </div>
-    </section>
+    </motion.section>
   )
 }
 

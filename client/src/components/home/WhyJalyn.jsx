@@ -25,7 +25,14 @@ const VALUES = [
 
 export default function WhyJalyn() {
   return (
-    <section className="bg-white py-8 md:py-16" aria-labelledby="why-heading">
+    <motion.section
+      className="bg-white pt-8 md:pt-16 mb-[15px] lg:mb-5"
+      aria-labelledby="why-heading"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+    >
       <div className="container-luxury max-w-7xl px-4 sm:px-6">
         <motion.h2
           id="why-heading"
@@ -64,7 +71,7 @@ export default function WhyJalyn() {
           })}
         </div>
       </div>
-    </section>
+    </motion.section>
   )
 }
 

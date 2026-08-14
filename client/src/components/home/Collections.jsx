@@ -13,7 +13,14 @@ export default function Collections() {
   const items = categories && categories.length > 0 ? categories : COLLECTIONS
 
   return (
-    <section className="relative overflow-hidden bg-[#FAF6F8]/60 py-16 md:py-20" aria-labelledby="collections-heading">
+    <motion.section
+      className="relative overflow-hidden bg-[#FAF6F8]/60 pt-16 md:pt-20 mb-[15px] lg:mb-5"
+      aria-labelledby="collections-heading"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+    >
       <div className="container-luxury">
         <SectionHeader
           label="Categories"
@@ -74,6 +81,6 @@ export default function Collections() {
           </Swiper>
         </div>
       </div>
-    </section>
+    </motion.section>
   )
 }

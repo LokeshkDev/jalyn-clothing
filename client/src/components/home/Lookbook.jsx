@@ -1,9 +1,7 @@
 import { Link } from 'react-router-dom'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { useRef } from 'react'
-import { Flower2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { BlossomBadge, FloatingPetals } from '@/components/ui/BlossomDecor'
 
 import { useCmsData } from '@/hooks/useCmsData'
 
@@ -24,14 +22,17 @@ export default function Lookbook() {
   const y = useTransform(scrollYProgress, [0, 1], ['0%', '12%'])
 
   return (
-    <section
+    <motion.section
       ref={ref}
-      className="overflow-hidden"
+      className="overflow-hidden mb-[15px] lg:mb-5"
       aria-labelledby="lookbook-heading"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="grid lg:grid-cols-5">
         <div className="relative flex items-center overflow-hidden bg-gradient-to-br from-rose-light via-[#F6E4EC] to-rose px-8 py-16 sm:px-12 lg:col-span-2 lg:px-14 lg:py-24">
-          <FloatingPetals className="opacity-40" />
           <motion.div
             initial={{ opacity: 0, x: -28 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -40,7 +41,6 @@ export default function Lookbook() {
             className="relative z-[1]"
           >
             <div className="mb-3 flex items-center gap-2">
-              <BlossomBadge className="!h-6 !w-6" />
               <p className="section-label">{badge}</p>
             </div>
             <h2
@@ -56,7 +56,6 @@ export default function Lookbook() {
               <Link to={ctaLink}>
                 <Button>{ctaText}</Button>
               </Link>
-              <Flower2 className="h-5 w-5 text-primary/50" aria-hidden />
             </div>
           </motion.div>
         </div>
@@ -72,6 +71,6 @@ export default function Lookbook() {
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-l from-transparent to-primary/10" />
         </div>
       </div>
-    </section>
+    </motion.section>
   )
 }

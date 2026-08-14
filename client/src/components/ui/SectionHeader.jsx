@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion'
-import { BlossomDivider, SectionBloom } from '@/components/ui/BlossomDecor'
 
 const ease = [0.22, 1, 0.36, 1]
 
@@ -18,7 +17,6 @@ export default function SectionHeader({
       viewport={{ once: true, margin: '-60px' }}
       transition={{ duration: 0.7, ease }}
     >
-      <SectionBloom />
       {label && (
         <p className={`section-label ${light ? 'text-rose-light' : ''}`}>{label}</p>
       )}
@@ -28,7 +26,6 @@ export default function SectionHeader({
       >
         {title}
       </h2>
-      <BlossomDivider className="mt-4" />
     </motion.div>
   )
 }

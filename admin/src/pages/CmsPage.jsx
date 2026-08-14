@@ -226,7 +226,7 @@ export default function CmsPage() {
     'promo_banner',
     'new_arrivals',
     'exclusive_sale',
-    'most_loved_styles',
+    'our_products',
     'instagram_feed',
   ]);
   const [layoutVisibility, setLayoutVisibility] = useState({
@@ -239,7 +239,7 @@ export default function CmsPage() {
     promo_banner: true,
     new_arrivals: true,
     exclusive_sale: true,
-    most_loved_styles: true,
+    our_products: true,
     instagram_feed: true,
   });
 
@@ -249,7 +249,7 @@ export default function CmsPage() {
     'category_grid',
     'new_arrivals',
     'exclusive_sale',
-    'most_loved_styles',
+    'our_products',
     'promo_banner',
     'why_jalyn',
     'services_strip',
@@ -261,7 +261,7 @@ export default function CmsPage() {
     category_grid: true,
     new_arrivals: true,
     exclusive_sale: true,
-    most_loved_styles: true,
+    our_products: true,
     promo_banner: true,
     why_jalyn: true,
     services_strip: true,
@@ -351,8 +351,8 @@ export default function CmsPage() {
 
   // Migrate old combined sections (recently_viewed / you_may_also_like) to separate keys
   const migrateLayout = (order, visibility) => {
-    const oldKeys = ['recently_viewed', 'you_may_also_like'];
-    const newKeys = ['new_arrivals', 'exclusive_sale', 'most_loved_styles'];
+    const oldKeys = ['recently_viewed', 'you_may_also_like', 'most_loved_styles'];
+    const newKeys = ['new_arrivals', 'exclusive_sale', 'our_products'];
     const filtered = (order || []).filter((k) => !oldKeys.includes(k));
     const replaceAt = (order || []).findIndex((k) => oldKeys.includes(k));
     if (replaceAt === -1) {
@@ -1583,7 +1583,7 @@ export default function CmsPage() {
                 case 'promo_banner': title = 'Promo Banner'; Icon = Tag; break;
                 case 'new_arrivals': title = 'New Arrivals'; Icon = Sparkles; break;
                 case 'exclusive_sale': title = 'Exclusive Sale'; Icon = Tag; break;
-                case 'most_loved_styles': title = 'Most Loved Styles'; Icon = Heart; break;
+                case 'our_products': title = 'Our Products'; Icon = Heart; break;
                 case 'recently_viewed': title = 'Recently Viewed'; Icon = Eye; break;
                 case 'you_may_also_like': title = 'You May Also Like'; Icon = Star; break;
                 case 'instagram_feed': title = 'Instagram Posts'; Icon = Instagram; break;
@@ -1601,7 +1601,7 @@ export default function CmsPage() {
               if (sectionKey === 'instagram_feed') renderer = render_instagram_feed;
               if (sectionKey === 'recently_viewed') renderer = render_recently_viewed;
               if (sectionKey === 'you_may_also_like') renderer = render_you_may_also_like;
-              if (sectionKey === 'new_arrivals' || sectionKey === 'exclusive_sale' || sectionKey === 'most_loved_styles') renderer = render_auto_section;
+              if (sectionKey === 'new_arrivals' || sectionKey === 'exclusive_sale' || sectionKey === 'our_products') renderer = render_auto_section;
 
               return (
                 <React.Fragment key={sectionKey}>

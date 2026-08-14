@@ -1,14 +1,20 @@
-import { Instagram, Flower2 } from 'lucide-react'
+import { Instagram } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { INSTAGRAM_POSTS } from '@/constants/data'
-import { BlossomDivider, SectionBloom } from '@/components/ui/BlossomDecor'
 
 export default function InstagramFeed({ customData }) {
   const IG_URL = customData?.url || 'https://www.instagram.com/jalyn.apparels/'
   const posts = customData?.posts || INSTAGRAM_POSTS
 
   return (
-    <section className="relative overflow-hidden bg-surface py-16 md:py-20" aria-labelledby="ig-heading">
+    <motion.section
+      className="relative overflow-hidden bg-surface pt-16 md:pt-20 mb-[15px] lg:mb-5"
+      aria-labelledby="ig-heading"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+    >
       <div className="container-luxury">
         <motion.div
           className="mb-10 text-center"
@@ -17,7 +23,6 @@ export default function InstagramFeed({ customData }) {
           viewport={{ once: true }}
           transition={{ duration: 0.65 }}
         >
-          <SectionBloom />
           <h2
             id="ig-heading"
             className="font-display text-2xl font-medium tracking-tight text-ink sm:text-3xl"
@@ -32,7 +37,6 @@ export default function InstagramFeed({ customData }) {
               {customData?.handle || '@jalyn.apparels'}
             </a>
           </h2>
-          <BlossomDivider className="mt-4" />
         </motion.div>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6 md:gap-3">
@@ -72,10 +76,9 @@ export default function InstagramFeed({ customData }) {
         </div>
 
         <p className="mt-6 flex items-center justify-center gap-2 text-xs text-ink-muted">
-          <Flower2 className="h-3.5 w-3.5 text-primary" />
           Tag us <strong>{customData?.handle || '@jalyn.apparels'}</strong> in your JALYN moments
         </p>
       </div>
-    </section>
+    </motion.section>
   )
 }

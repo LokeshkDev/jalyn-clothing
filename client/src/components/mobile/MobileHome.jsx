@@ -21,7 +21,7 @@ export default function MobileHome() {
     'category_grid',
     'new_arrivals',
     'exclusive_sale',
-    'most_loved_styles',
+    'our_products',
     'promo_banner',
     'why_jalyn',
     'services_strip',
@@ -41,7 +41,7 @@ export default function MobileHome() {
         return <MobileNewArrivals />
       case 'exclusive_sale':
         return <SaleCarousel />
-      case 'most_loved_styles':
+      case 'our_products':
         return <MobileTrendingProducts />
       case 'promo_banner':
         return <MobilePromo />

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { Briefcase, Shirt, Sparkles, Moon, PartyPopper, Flower2 } from 'lucide-react'
 import { COLLECTIONS } from '@/constants/data'
 import { useProductsApi } from '@/hooks/useProductsApi'
@@ -17,7 +18,14 @@ export default function MobileCategories() {
   const items = categories && categories.length > 0 ? categories : COLLECTIONS
 
   return (
-    <section className="pt-5" aria-label="Shop by category">
+    <motion.section
+      className="pt-5 mb-[15px] lg:mb-5"
+      aria-label="Shop by category"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+    >
       <div className="flex gap-4 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.map((cat, i) => {
           const BadgeIcon = BADGE_ICONS[cat.id || cat.slug] || Shirt
@@ -54,6 +62,6 @@ export default function MobileCategories() {
           )
         })}
       </div>
-    </section>
+    </motion.section>
   )
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Autoplay } from 'swiper/modules'
 import api from '@/services/api'
@@ -9,6 +10,8 @@ import SectionHeader from '@/components/ui/SectionHeader'
 import { normalizeProduct } from '@/hooks/useProductsApi'
 
 import 'swiper/css'
+
+const ease = [0.22, 1, 0.36, 1]
 
 export function NewArrivalsCarousel() {
   const [products, setProducts] = useState([])
@@ -34,7 +37,14 @@ export function NewArrivalsCarousel() {
   if (loading || products.length === 0) return null
 
   return (
-    <section className="relative overflow-hidden bg-white py-12 md:py-16" aria-labelledby="new-arrivals-heading">
+    <motion.section
+      className="relative overflow-hidden bg-white pt-12 md:pt-16 mb-[15px] lg:mb-5"
+      aria-labelledby="new-arrivals-heading"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease }}
+    >
       <div className="container-luxury relative">
         <SectionHeader
           label="Fresh Collection"
@@ -72,7 +82,7 @@ export function NewArrivalsCarousel() {
         product={quickViewProduct}
         onClose={() => setQuickViewProduct(null)}
       />
-    </section>
+    </motion.section>
   )
 }
 
@@ -100,7 +110,14 @@ export function SaleCarousel() {
   if (loading || products.length === 0) return null
 
   return (
-    <section className="relative overflow-hidden bg-white py-12 md:py-16" aria-labelledby="sale-heading">
+    <motion.section
+      className="relative overflow-hidden bg-white pt-12 md:pt-16 mb-[15px] lg:mb-5"
+      aria-labelledby="sale-heading"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease }}
+    >
       <div className="container-luxury relative">
         <SectionHeader
           label="Limited Time Offer"
@@ -138,6 +155,6 @@ export function SaleCarousel() {
         product={quickViewProduct}
         onClose={() => setQuickViewProduct(null)}
       />
-    </section>
+    </motion.section>
   )
 }

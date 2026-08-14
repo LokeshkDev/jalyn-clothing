@@ -18,14 +18,21 @@ export default function TrendingProducts() {
   const items = products && products.length > 0 ? products : PRODUCTS
 
   return (
-    <section className="relative overflow-hidden bg-white py-16 md:py-20" aria-labelledby="trending-heading">
+    <motion.section
+      className="relative overflow-hidden bg-white pt-16 md:pt-20 mb-[15px] lg:mb-5"
+      aria-labelledby="trending-heading"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+    >
       <div className="pointer-events-none absolute -right-20 top-10 h-64 w-64 rounded-full bg-rose-light/60 blur-3xl" />
       <div className="pointer-events-none absolute -left-16 bottom-10 h-52 w-52 rounded-full bg-primary/10 blur-3xl" />
 
       <div className="container-luxury relative">
         <SectionHeader
-          label="Trending Now"
-          title="Most Loved Styles"
+          label="Shop Collection"
+          title="Our Products"
           id="trending-heading"
         />
 
@@ -75,6 +82,6 @@ export default function TrendingProducts() {
         open={Boolean(quickViewProduct)}
         onClose={() => setQuickViewProduct(null)}
       />
-    </section>
+    </motion.section>
   )
 }

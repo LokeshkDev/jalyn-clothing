@@ -4,14 +4,20 @@ import { Autoplay, EffectFade, Pagination } from 'swiper/modules'
 import { motion } from 'framer-motion'
 import { HERO_SLIDES } from '@/constants/data'
 import { Button } from '@/components/ui/Button'
-import { FloatingPetals, BlossomBadge } from '@/components/ui/BlossomDecor'
 import 'swiper/css'
 import 'swiper/css/effect-fade'
 import 'swiper/css/pagination'
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden bg-white" aria-label="Hero">
+    <motion.section
+      className="relative overflow-hidden bg-white mb-[15px] lg:mb-5"
+      aria-label="Hero"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+    >
       <Swiper
         modules={[Autoplay, EffectFade, Pagination]}
         effect="fade"
@@ -52,8 +58,6 @@ export default function Hero() {
               {/* Light gradient overlay matching mobile hero palette */}
               <div className="absolute inset-0 bg-gradient-to-r from-[#EFE6E0]/95 via-[#EFE6E0]/70 to-transparent" />
 
-              <FloatingPetals className="z-[1] opacity-70" />
-
               <div className="relative z-10 flex min-h-[min(88vh,820px)] items-center">
                 <div className="container-luxury w-full py-20 sm:py-24">
                   <motion.div
@@ -63,7 +67,6 @@ export default function Hero() {
                     className="max-w-xl"
                   >
                     <div className="mb-4 flex items-center gap-3">
-                      <BlossomBadge />
                       <p className="font-label text-xs font-bold uppercase tracking-[0.18em] text-primary">
                         {slide.eyebrow}
                       </p>
@@ -109,6 +112,6 @@ export default function Hero() {
           border-radius: 999px !important;
         }
       `}</style>
-    </section>
+    </motion.section>
   )
 }

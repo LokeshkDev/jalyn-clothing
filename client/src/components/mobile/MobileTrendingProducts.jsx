@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { ChevronRight, Heart, Star } from 'lucide-react'
 import { PRODUCTS } from '@/constants/data'
 import { cn, formatINR } from '@/lib/utils'
@@ -10,17 +11,24 @@ export default function MobileTrendingProducts() {
   const items = products && products.length > 0 ? products : PRODUCTS
 
   return (
-    <section className="mt-6" aria-labelledby="mobile-trending-heading">
+    <motion.section
+      className="mt-6 mb-[15px] lg:mb-5"
+      aria-labelledby="mobile-trending-heading"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+    >
       <div className="mb-3 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <h2
             id="mobile-trending-heading"
             className="font-label text-lg font-bold text-[#4A2F3C]"
           >
-            Most Loved Styles
+            Our Products
           </h2>
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-            Trending Now
+            Shop Collection
           </span>
         </div>
         <Link
@@ -37,7 +45,7 @@ export default function MobileTrendingProducts() {
           <MobileProductCard key={product.id || product.slug} product={product} />
         ))}
       </div>
-    </section>
+    </motion.section>
   )
 }
 

@@ -1,4 +1,5 @@
 import { Award, RefreshCw, ShieldCheck, Truck } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { SERVICES } from '@/constants/data'
 
 const icons = {
@@ -10,9 +11,13 @@ const icons = {
 
 export default function MobileServices() {
   return (
-    <section
-      className="mx-3 my-4 overflow-hidden rounded-2xl border border-[#EFD7E3] bg-[#FFF6F9]/60 shadow-sm"
+    <motion.section
+      className="mx-3 mt-4 overflow-hidden rounded-2xl border border-[#EFD7E3] bg-[#FFF6F9]/60 shadow-sm mb-[15px] lg:mb-5"
       aria-label="Our promises"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="grid grid-cols-4 divide-x divide-[#EFD7E3]">
         {SERVICES.map((service) => {
@@ -35,6 +40,6 @@ export default function MobileServices() {
           )
         })}
       </div>
-    </section>
+    </motion.section>
   )
 }

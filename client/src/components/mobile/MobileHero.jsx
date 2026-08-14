@@ -1,13 +1,21 @@
 import { Link } from 'react-router-dom'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Autoplay, Pagination } from 'swiper/modules'
+import { motion } from 'framer-motion'
 import { HERO_SLIDES } from '@/constants/data'
 import 'swiper/css'
 import 'swiper/css/pagination'
 
 export default function MobileHero() {
   return (
-    <section className="px-4 pt-1" aria-label="Featured collection">
+    <motion.section
+      className="px-4 pt-1 mb-[15px] lg:mb-5"
+      aria-label="Featured collection"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+    >
       <Swiper
         modules={[Autoplay, Pagination]}
         autoplay={{ delay: 5000, disableOnInteraction: false }}
@@ -71,6 +79,6 @@ export default function MobileHero() {
           border-radius: 999px !important;
         }
       `}</style>
-    </section>
+    </motion.section>
   )
 }

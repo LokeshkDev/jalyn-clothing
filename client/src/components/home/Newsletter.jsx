@@ -1,9 +1,8 @@
 import { useForm } from 'react-hook-form'
-import { Mail, Flower2 } from 'lucide-react'
+import { Mail } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { BlossomBadge, FloatingPetals } from '@/components/ui/BlossomDecor'
 
 export default function Newsletter() {
   const [done, setDone] = useState(false)
@@ -21,11 +20,14 @@ export default function Newsletter() {
   }
 
   return (
-    <section
-      className="relative overflow-hidden bg-gradient-to-r from-rose-light via-[#F3D5E3] to-rose py-12 md:py-14"
+    <motion.section
+      className="relative overflow-hidden bg-gradient-to-r from-rose-light via-[#F3D5E3] to-rose pt-12 md:pt-14 mb-[15px] lg:mb-5"
       aria-labelledby="newsletter-heading"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      <FloatingPetals className="opacity-35" />
       <motion.div
         className="container-luxury relative z-[1] flex flex-col items-start justify-between gap-6 md:flex-row md:items-center"
         initial={{ opacity: 0, y: 20 }}
@@ -36,7 +38,6 @@ export default function Newsletter() {
         <div className="flex items-start gap-4">
           <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-soft">
             <Mail className="h-5 w-5" strokeWidth={1.5} />
-            <BlossomBadge className="!absolute -right-2 -top-2 !h-5 !w-5" />
           </div>
           <div>
             <h2
@@ -53,7 +54,6 @@ export default function Newsletter() {
 
         {done ? (
           <p className="flex items-center gap-2 font-display text-base font-medium text-primary" role="status">
-            <Flower2 className="h-4 w-4" />
             You&apos;re subscribed — welcome to JALYN.
           </p>
         ) : (
@@ -92,6 +92,6 @@ export default function Newsletter() {
           </form>
         )}
       </motion.div>
-    </section>
+    </motion.section>
   )
 }
