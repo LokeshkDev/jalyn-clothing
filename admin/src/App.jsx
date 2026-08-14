@@ -5,8 +5,11 @@ import DashboardPage from './pages/DashboardPage';
 import CmsPage from './pages/CmsPage';
 import ProductsPage from './pages/ProductsPage';
 import CategoriesPage from './pages/CategoriesPage';
+import NewArrivalsPage from './pages/NewArrivalsPage';
+import SalePage from './pages/SalePage';
 import OrdersPage from './pages/OrdersPage';
 import CouponsPage from './pages/CouponsPage';
+import AuthUsersPage from './pages/AuthUsersPage';
 import LoginPage from './pages/LoginPage';
 
 function ProtectedLayout({ user, onLogout }) {
@@ -21,8 +24,11 @@ function ProtectedLayout({ user, onLogout }) {
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/cms" element={<CmsPage />} />
+          <Route path="/auth-users" element={<AuthUsersPage />} />
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/categories" element={<CategoriesPage />} />
+          <Route path="/new-arrivals" element={<NewArrivalsPage />} />
+          <Route path="/sale" element={<SalePage />} />
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/coupons" element={<CouponsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

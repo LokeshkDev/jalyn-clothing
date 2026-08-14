@@ -23,25 +23,23 @@ export default function ProfileLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const user = useUserStore((s) => s.user)
+  const logoutStore = useUserStore((s) => s.logout)
   const updateProfile = useUserStore((s) => s.updateProfile)
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
 
   const [editForm, setEditForm] = useState({
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    phone: user.phone,
+    firstName: user?.firstName || (user?.name ? user.name.split(' ')[0] : ''),
+    lastName: user?.lastName || (user?.name && user.name.split(' ').length > 1 ? user.name.split(' ').slice(1).join(' ') : ''),
+    email: user?.email || '',
+    phone: user?.phone || '',
   })
 
   const navItems = [
-    { label: 'My Orders', href: '/profile/orders', icon: ShoppingBag, desc: 'Track, return, or buy items again' },
+    { label: 'My Orders', href: '/profile/orders', icon: ShoppingBag, desc: 'Track and manage your order history' },
     { label: 'Wishlist', href: '/profile/wishlist', icon: Heart, desc: 'Your saved favorite fashion pieces' },
     { label: 'Addresses', href: '/profile/addresses', icon: MapPin, desc: 'Manage your saved delivery addresses' },
-    { label: 'Coupons', href: '/profile/coupons', icon: Tag, desc: 'Promo codes & exclusive offers' },
-    { label: 'Returns & Refunds', href: '/profile/returns', icon: RotateCcw, desc: 'Check status of return requests' },
-    { label: 'Notifications', href: '/profile/notifications', icon: Bell, desc: 'Order alerts & promotions' },
     { label: 'Help & Support', href: '/profile/help', icon: HelpCircle, desc: 'Contact stylists & FAQs' },
   ]
 
@@ -52,11 +50,62 @@ export default function ProfileLayout() {
   }
 
   const handleLogout = () => {
+    logoutStore()
     setIsLogoutModalOpen(false)
-    navigate('/')
+    navigate('/login')
   }
 
   const isRootProfilePage = location.pathname === '/profile' || location.pathname === '/account'
+
+  const avatarInitial = (user?.firstName || user?.name || 'U').charAt(0).toUpperCase()
+
+  // GUEST STATE / UNAUTHENTICATED PROFILE GATE VIEW
+  if (!user) {
+    return (
+      <div className="min-h-[80vh] bg-[#FAF7F5] flex items-center justify-center p-6 font-body">
+        <div className="w-full max-w-md bg-white rounded-3xl border border-[#EFE9E4] p-8 shadow-soft text-center space-y-6">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#2C1C24] text-[#E8C5A8] shadow-md">
+            <User className="h-8 w-8" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="font-heading text-2xl font-bold text-[#2C1C24]">
+              Welcome to Jalyn Account
+            </h2>
+            <p className="text-xs text-[#666666] leading-relaxed">
+              Sign in to view your orders, saved addresses, wishlist items, and exclusive member privileges.
+            </p>
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <button
+              onClick={() => navigate('/login', { state: { from: location.pathname } })}
+              className="w-full rounded-xl bg-[#2C1C24] py-3.5 text-xs font-bold uppercase tracking-wider text-white shadow-soft hover:bg-[#3D2832] transition cursor-pointer"
+            >
+              Sign In to Your Account
+            </button>
+            <button
+              onClick={() => navigate('/register', { state: { from: location.pathname } })}
+              className="w-full rounded-xl border border-[#2C1C24] py-3.5 text-xs font-bold uppercase tracking-wider text-[#2C1C24] hover:bg-[#FAF7F5] transition cursor-pointer"
+            >
+              Create New Account
+            </button>
+          </div>
+
+          <div className="pt-4 border-t border-[#EFE9E4] flex items-center justify-center gap-6 text-[11px] font-semibold text-[#888888]">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="h-4 w-4 text-[#D4A373]" />
+              <span>SSL Secure</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <ShoppingBag className="h-4 w-4 text-[#D4A373]" />
+              <span>Easy Returns</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-surface min-h-screen pb-20 lg:pb-16">
@@ -70,11 +119,17 @@ export default function ProfileLayout() {
             <div className="rounded-3xl bg-gradient-to-r from-primary to-primary-soft p-5 text-white shadow-soft relative overflow-hidden">
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <img
-                    src={user.avatar}
-                    alt={user.firstName}
-                    className="h-16 w-16 rounded-full border-2 border-white/40 object-cover"
-                  />
+                  {user.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.firstName}
+                      className="h-16 w-16 rounded-full border-2 border-white/40 object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-white/40 bg-white/25 font-display text-2xl font-bold text-white">
+                      {avatarInitial}
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => setIsEditModalOpen(true)}
@@ -151,11 +206,17 @@ export default function ProfileLayout() {
             <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
               <div className="flex items-center gap-4 sm:gap-6">
                 <div className="relative">
-                  <img
-                    src={user.avatar}
-                    alt={user.firstName}
-                    className="h-20 w-20 rounded-full border-4 border-white/30 object-cover shadow-soft"
-                  />
+                  {user.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.firstName}
+                      className="h-20 w-20 rounded-full border-4 border-white/30 object-cover shadow-soft"
+                    />
+                  ) : (
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white/30 bg-white/25 font-display text-3xl font-bold text-white shadow-soft">
+                      {avatarInitial}
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => setIsEditModalOpen(true)}

@@ -10,10 +10,11 @@ import { verifyToken, adminOnly } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.get('/', verifyToken, adminOnly, getOrders);
-router.get('/:id', verifyToken, adminOnly, getOrderById);
-router.post('/', verifyToken, adminOnly, createOrder);
+router.get('/', verifyToken, getOrders);
+router.get('/:id', verifyToken, getOrderById);
+router.post('/', verifyToken, createOrder);
 router.put('/:id', verifyToken, adminOnly, updateOrder);
 router.delete('/:id', verifyToken, adminOnly, deleteOrder);
 
 export default router;
+

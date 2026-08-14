@@ -9,20 +9,25 @@ import {
   LogOut,
   Sparkles,
   BadgePercent,
+  Users,
+  Tag,
 } from 'lucide-react';
 
 export default function Sidebar({ currentUser, onLogout }) {
   const navItems = [
     { label: 'Dashboard', path: '/', icon: LayoutDashboard },
     { label: 'CMS Homepage Settings', path: '/cms', icon: Sliders, badge: 'CMS' },
+    { label: 'Auth & User Manager', path: '/auth-users', icon: Users, badge: 'USERS' },
     { label: 'Products', path: '/products', icon: ShoppingBag },
     { label: 'Categories', path: '/categories', icon: FolderTree },
+    { label: 'New Arrivals', path: '/new-arrivals', icon: Sparkles },
+    { label: 'Sale Catalog', path: '/sale', icon: Tag },
     { label: 'Orders', path: '/orders', icon: ShoppingBasket },
     { label: 'Coupons', path: '/coupons', icon: BadgePercent },
   ];
 
   return (
-    <aside className="w-64 bg-[#1E1119] text-white flex flex-col h-screen sticky top-0 border-r border-rose-950/40">
+    <aside className="w-64 bg-[#1E1119] text-white flex flex-col h-full shrink-0 border-r border-rose-950/40">
       {/* Brand Header */}
       <div className="p-5 border-b border-rose-950/50 flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-rose-400 flex items-center justify-center font-bold text-white shadow-lg">

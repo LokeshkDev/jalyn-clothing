@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { X, Minus, Plus, Trash2, MapPin, CheckCircle2, AlertCircle, Lock } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useCartStore, useDeliveryStore } from '@/store'
 import { formatINR, cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 
 export default function CartDrawer() {
+  const navigate = useNavigate()
   const { isOpen, closeCart, items, updateQty, removeItem, getSubtotal } =
     useCartStore()
 
   const deliveryStore = useDeliveryStore()
   const [inputPincode, setInputPincode] = useState(deliveryStore.pincode || '')
   const [pincodeError, setPincodeError] = useState('')
+
+  const handleCheckout = () => {
+    closeCart()
+    navigate('/checkout')
+  }
 
   useEffect(() => {
     if (deliveryStore.pincode) {
@@ -189,10 +195,12 @@ export default function CartDrawer() {
               </div>
 
               {deliveryStore.isVerified ? (
-                <Button className="w-full text-xs tracking-widest uppercase py-3.5" type="button">
-                  <Link to="/checkout" onClick={closeCart} className="contents">
-                    CHECKOUT
-                  </Link>
+                <Button 
+                  className="w-full text-xs tracking-widest uppercase py-3.5" 
+                  type="button"
+                  onClick={handleCheckout}
+                >
+                  CHECKOUT
                 </Button>
               ) : (
                 <button

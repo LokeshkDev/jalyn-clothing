@@ -11,11 +11,31 @@ CREATE TABLE IF NOT EXISTS `users` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(100) NOT NULL,
   `email` VARCHAR(150) NOT NULL UNIQUE,
+  `phone` VARCHAR(20) NULL,
   `password` VARCHAR(255) NOT NULL,
   `role` ENUM('admin', 'customer') DEFAULT 'customer',
   `avatar` VARCHAR(255) NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 1b. Addresses Table
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `addresses` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `name` VARCHAR(100) NOT NULL,
+  `phone` VARCHAR(20) NOT NULL,
+  `address_line1` TEXT NOT NULL,
+  `city` VARCHAR(100) NOT NULL,
+  `state` VARCHAR(100) NOT NULL,
+  `pincode` VARCHAR(20) NOT NULL,
+  `type` VARCHAR(50) DEFAULT 'Home',
+  `is_default` TINYINT(1) DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
@@ -53,6 +73,12 @@ CREATE TABLE IF NOT EXISTS `products` (
   `colors` JSON NULL,
   `primary_image` VARCHAR(255) NULL,
   `hover_image` VARCHAR(255) NULL,
+  `is_new_arrival` TINYINT(1) DEFAULT 0,
+  `new_arrival_order` INT DEFAULT 0,
+  `new_arrival_published` TINYINT(1) DEFAULT 1,
+  `is_sale` TINYINT(1) DEFAULT 0,
+  `sale_order` INT DEFAULT 0,
+  `sale_published` TINYINT(1) DEFAULT 1,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -53,13 +53,42 @@ ensureCategoriesTable();
 
 export const getCategories = async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM categories WHERE is_active = 1 ORDER BY id ASC');
+    const [rows] = await pool.query(`
+      SELECT 
+        c.id,
+        c.name,
+        c.slug,
+        c.description,
+        c.image_url,
+        c.is_active,
+        c.created_at,
+        (
+          SELECT COUNT(*) 
+          FROM products p 
+          WHERE (
+            p.category_slug = c.slug 
+            OR LOWER(TRIM(p.category)) = LOWER(TRIM(c.name))
+            OR LOWER(TRIM(p.category)) = LOWER(TRIM(c.slug))
+            OR p.category_id = c.id
+          )
+          AND (p.is_active = 1 OR p.is_active IS NULL)
+        ) AS item_count
+      FROM categories c
+      WHERE c.is_active = 1
+      ORDER BY c.id ASC
+    `);
+
     if (!rows || rows.length === 0) {
       return res.json({ success: true, categories: MOCK_CATEGORIES, isFallback: true });
     }
     return res.json({ success: true, categories: rows });
   } catch (error) {
-    return res.json({ success: true, categories: MOCK_CATEGORIES, isFallback: true });
+    try {
+      const [basicRows] = await pool.query('SELECT * FROM categories WHERE is_active = 1 ORDER BY id ASC');
+      return res.json({ success: true, categories: basicRows });
+    } catch (err) {
+      return res.json({ success: true, categories: MOCK_CATEGORIES, isFallback: true });
+    }
   }
 };
 
@@ -91,6 +120,54 @@ export const createCategory = async (req, res) => {
   }
 };
 
+export const updateCategory = async (req, res) => {
+  const { id } = req.params;
+  const { name, slug, description } = req.body;
+  let image_url = req.body.image_url;
+
+  if (req.file) {
+    const serverUrl = `${req.protocol}://${req.get('host')}`;
+    const { url, storage } = await processAndStoreImage(req.file);
+    image_url = storage === 'local_multer' ? `${serverUrl}${url}` : url;
+  }
+
+  const categorySlug = slug || (name ? name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : undefined);
+
+  try {
+    const [existing] = await pool.query('SELECT * FROM categories WHERE id = ? OR slug = ?', [id, id]);
+    if (!existing || existing.length === 0) {
+      const mock = MOCK_CATEGORIES.find((c) => c.id == id || c.slug === id);
+      if (mock) {
+        const [insertRes] = await pool.query(
+          'INSERT INTO categories (name, slug, description, image_url, item_count, is_active) VALUES (?, ?, ?, ?, ?, 1)',
+          [name || mock.name, categorySlug || mock.slug, description !== undefined ? description : mock.name, image_url !== undefined ? image_url : (mock.image_url || ''), mock.item_count || 10]
+        );
+        return res.json({
+          success: true,
+          message: 'Category updated successfully.',
+          categoryId: insertRes.insertId,
+        });
+      }
+      return res.status(404).json({ success: false, message: 'Category not found' });
+    }
+
+    const targetId = existing[0].id;
+    const updateName = name !== undefined ? name : existing[0].name;
+    const updateSlug = categorySlug !== undefined ? categorySlug : existing[0].slug;
+    const updateDesc = description !== undefined ? description : existing[0].description;
+    const updateImage = image_url !== undefined ? image_url : existing[0].image_url;
+
+    await pool.query(
+      'UPDATE categories SET name = ?, slug = ?, description = ?, image_url = ? WHERE id = ?',
+      [updateName, updateSlug, updateDesc, updateImage, targetId]
+    );
+
+    return res.json({ success: true, message: 'Category updated successfully.' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const deleteCategory = async (req, res) => {
   const { id } = req.params;
   try {
@@ -100,3 +177,4 @@ export const deleteCategory = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+

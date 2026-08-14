@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 
+import { useUserStore } from '@/store'
+
 export default function AddressModal({ isOpen, onClose, onSave, addressToEdit }) {
+  const user = useUserStore((s) => s.user)
+
   const [formData, setFormData] = useState({
     type: 'Home',
     name: '',
@@ -24,19 +28,19 @@ export default function AddressModal({ isOpen, onClose, onSave, addressToEdit })
     } else {
       setFormData({
         type: 'Home',
-        name: 'Ananya Sharma',
-        phone: '+91 98765 43210',
+        name: user?.name || '',
+        phone: user?.phone || '',
         addressLine1: '',
         addressLine2: '',
         landmark: '',
-        city: 'Bengaluru',
-        state: 'Karnataka',
+        city: '',
+        state: '',
         pincode: '',
         isDefault: false,
       })
     }
     setErrors({})
-  }, [addressToEdit, isOpen])
+  }, [addressToEdit, isOpen, user])
 
   const validate = () => {
     const errs = {}
@@ -99,7 +103,7 @@ export default function AddressModal({ isOpen, onClose, onSave, addressToEdit })
                   Address Type
                 </label>
                 <div className="flex items-center gap-3">
-                  {['Home', 'Work', 'Other'].map((type) => (
+                  {['Home', 'Office', 'Other'].map((type) => (
                     <button
                       key={type}
                       type="button"

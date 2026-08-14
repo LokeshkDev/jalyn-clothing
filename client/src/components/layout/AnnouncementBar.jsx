@@ -1,9 +1,10 @@
 import { useCmsData } from '@/hooks/useCmsData'
 
 export default function AnnouncementBar() {
-  const { announcementBar } = useCmsData()
+  const { cmsData, announcementBar } = useCmsData()
+  const isVisible = cmsData?.homepage_layout?.visibility?.announcement_bar !== false
 
-  if (announcementBar && announcementBar.enabled === false) {
+  if (!isVisible || (announcementBar && announcementBar.enabled === false)) {
     return null
   }
 

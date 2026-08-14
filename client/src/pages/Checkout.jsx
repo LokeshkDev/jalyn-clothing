@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -27,6 +27,8 @@ import 'swiper/css'
 
 import { useCartStore, useUserStore, useOrderStore } from '@/store'
 import { useCoupons, calcCouponDiscount } from '@/hooks/useCoupons'
+import { useCmsData } from '@/hooks/useCmsData'
+import api from '@/services/api'
 import { formatINR, cn } from '@/lib/utils'
 import AddressModal from '@/components/profile/AddressModal'
 import MobileAddressSheet from '@/components/checkout/MobileAddressSheet'
@@ -40,11 +42,20 @@ export default function Checkout() {
 
   const user = useUserStore((s) => s.user)
   const addresses = useUserStore((s) => s.addresses)
+  const fetchAddresses = useUserStore((s) => s.fetchAddresses)
   const addAddress = useUserStore((s) => s.addAddress)
   const updateAddress = useUserStore((s) => s.updateAddress)
   const deleteAddress = useUserStore((s) => s.deleteAddress)
   const addOrder = useOrderStore((s) => s.addOrder)
   const { coupons: availableCoupons } = useCoupons()
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login', { state: { from: '/checkout' } })
+    } else {
+      fetchAddresses()
+    }
+  }, [user, navigate, fetchAddresses])
 
   const [selectedAddrId, setSelectedAddrId] = useState(
     addresses.find((a) => a.isDefault)?.id || addresses[0]?.id || '',
@@ -61,19 +72,80 @@ export default function Checkout() {
   const [isAddressSheetOpen, setIsAddressSheetOpen] = useState(false)
   const [isCouponSheetOpen, setIsCouponSheetOpen] = useState(false)
 
+  const { codSettings, deliverySettings, taxSettings, shippingMethods } = useCmsData()
+  const isCodEnabled = codSettings?.enabled ?? true
+  const codFee = paymentMethod === 'cod' && isCodEnabled ? (codSettings?.cod_fee || 0) : 0
+
   const [addressToEdit, setAddressToEdit] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [toastMessage, setToastMessage] = useState(null)
 
+  // User contact phone state (mandatory for Google Sign-In users)
+  const [userPhoneInput, setUserPhoneInput] = useState(user?.phone || '')
+  const [isEditingUserPhone, setIsEditingUserPhone] = useState(false)
+
+  const updateUserStore = useUserStore((s) => s.login)
+  const handleSaveUserPhone = () => {
+    if (!userPhoneInput || userPhoneInput.replace(/\D/g, '').length < 10) {
+      setToastMessage('Please enter a valid 10-digit phone number.')
+      return
+    }
+    const updatedUser = { ...user, phone: userPhoneInput }
+    updateUserStore(updatedUser, localStorage.getItem('token') || 'demo_token')
+    setIsEditingUserPhone(false)
+    setToastMessage('Phone number saved successfully!')
+  }
+
   const subtotal = getSubtotal()
-  const shippingCost = shippingMethod === 'express' ? 99 : subtotal >= 1999 ? 0 : 99
+
+  // DYNAMIC SHIPPING CONFIGURATION FROM ADMIN CMS
+  const isStandardShippingEnabled = shippingMethods?.standard?.enabled ?? true
+  const isExpressShippingEnabled = shippingMethods?.express?.enabled ?? true
+
+  const standardTitle = shippingMethods?.standard?.title || 'Standard Delivery'
+  const standardSubtitle = shippingMethods?.standard?.subtitle || 'Delivery in 3 to 5 business days'
+  const standardRate = shippingMethods?.standard?.price ?? 99
+  const standardFreeThreshold = shippingMethods?.standard?.free_threshold ?? 1999
+
+  const expressTitle = shippingMethods?.express?.title || 'Express Delivery'
+  const expressSubtitle = shippingMethods?.express?.subtitle || 'Fast delivery in 1 to 2 business days'
+  const expressRate = shippingMethods?.express?.price ?? 199
+
+  // Auto-switch shipping method if active selected option is disabled by Admin
+  useEffect(() => {
+    if (shippingMethod === 'standard' && !isStandardShippingEnabled && isExpressShippingEnabled) {
+      setShippingMethod('express')
+    } else if (shippingMethod === 'express' && !isExpressShippingEnabled && isStandardShippingEnabled) {
+      setShippingMethod('standard')
+    }
+  }, [isStandardShippingEnabled, isExpressShippingEnabled, shippingMethod])
+
+  const shippingCost = useMemo(() => {
+    if (shippingMethod === 'express' && isExpressShippingEnabled) {
+      return expressRate
+    }
+    if (isStandardShippingEnabled) {
+      return subtotal >= standardFreeThreshold ? 0 : standardRate
+    }
+    return 0
+  }, [shippingMethod, isExpressShippingEnabled, isStandardShippingEnabled, expressRate, standardFreeThreshold, standardRate, subtotal])
 
   const discountAmount = useMemo(() => {
     return calcCouponDiscount(appliedCoupon, subtotal)
   }, [subtotal, appliedCoupon])
 
-  const taxAmount = Math.round((subtotal - discountAmount) * 0.05)
-  const grandTotal = Math.max(0, subtotal - discountAmount + shippingCost + taxAmount)
+  // DYNAMIC TAX ESTIMATION FROM ADMIN CMS
+  const isTaxEnabled = taxSettings?.enabled ?? true
+  const taxPercent = taxSettings?.tax_percent ?? 18
+  const taxLabel = taxSettings?.tax_label || `GST (${taxPercent}%)`
+
+  const taxAmount = useMemo(() => {
+    if (!isTaxEnabled) return 0
+    const taxableAmount = Math.max(0, subtotal - discountAmount)
+    return Math.round(taxableAmount * (taxPercent / 100))
+  }, [isTaxEnabled, subtotal, discountAmount, taxPercent])
+
+  const grandTotal = Math.max(0, subtotal - discountAmount + shippingCost + taxAmount + codFee)
 
   const selectedAddressObj = useMemo(() => {
     return addresses.find((a) => a.id === selectedAddrId) || addresses[0]
@@ -98,7 +170,22 @@ export default function Checkout() {
     setTimeout(() => setToastMessage(null), 3000)
   }
 
-  const handlePlaceOrder = () => {
+  // Load Cashfree JS SDK v3 dynamically
+  const loadCashfreeSdk = () => {
+    return new Promise((resolve, reject) => {
+      if (window.Cashfree) {
+        resolve(window.Cashfree)
+        return
+      }
+      const script = document.createElement('script')
+      script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js'
+      script.onload = () => resolve(window.Cashfree)
+      script.onerror = () => reject(new Error('Failed to load Cashfree SDK'))
+      document.body.appendChild(script)
+    })
+  }
+
+  const handlePlaceOrder = async () => {
     if (!selectedAddressObj) {
       setToastMessage('Please select or add a delivery address.')
       setTimeout(() => setToastMessage(null), 3000)
@@ -111,14 +198,120 @@ export default function Checkout() {
       return
     }
 
+    if (paymentMethod === 'cod' && !isCodEnabled) {
+      setToastMessage('Cash on Delivery is currently disabled by store admin. Please pay online via Cashfree.')
+      setPaymentMethod('online')
+      setTimeout(() => setToastMessage(null), 4000)
+      return
+    }
+
     setIsSubmitting(true)
 
-    setTimeout(() => {
+    // Option 1: Cashfree Online Payment
+    if (paymentMethod === 'online') {
+      try {
+        const orderId = `JALYN_CF_${Date.now()}`
+        const res = await api.post('/payment/cashfree/create-order', {
+          order_id: orderId,
+          order_amount: grandTotal,
+          customer_details: {
+            customer_name: selectedAddressObj.name || user?.firstName || 'Valued Customer',
+            customer_email: user?.email || 'customer@jalyn.in',
+            customer_phone: selectedAddressObj.phone || user?.phone || '9999999999',
+          },
+        })
+
+        if (res.data?.success) {
+          const sessionId = res.data.payment_session_id
+          console.log('✅ Cashfree session created:', { sessionId, isSimulated: res.data.isSimulated })
+
+          // Try to open Cashfree modal for real sessions, skip for simulated mode
+          if (!res.data.isSimulated && sessionId && !sessionId.includes('simulated')) {
+            try {
+              console.log('🔄 Loading Cashfree SDK...')
+              const CashfreeSDK = await loadCashfreeSdk()
+              if (CashfreeSDK) {
+                const mode = res.data.environment === 'PRODUCTION' ? 'production' : 'sandbox'
+                console.log('✅ Cashfree SDK loaded, opening modal in', mode, 'mode')
+                const cashfree = CashfreeSDK({ mode })
+                await cashfree.checkout({
+                  paymentSessionId: sessionId,
+                  redirectTarget: '_modal',
+                })
+              }
+            } catch (sdkErr) {
+              console.warn('⚠️ Cashfree SDK modal error (proceeding with verification):', sdkErr.message)
+              // Continue with verification even if SDK fails
+            }
+          } else {
+            console.log('ℹ️ Skipping Cashfree SDK modal (simulated mode or invalid session)')
+          }
+
+          // Verify payment status
+          console.log('🔍 Verifying payment for order:', orderId)
+          const verifyRes = await api.post('/payment/cashfree/verify', { order_id: orderId })
+
+          const newOrder = addOrder({
+            customer_email: user?.email,
+            address: selectedAddressObj,
+            shippingMethod,
+            shippingCost,
+            paymentMethod: 'Online Payment (Cashfree)',
+            paymentStatus: verifyRes.data?.payment_status === 'SUCCESS' ? 'paid' : 'pending',
+            orderNotes,
+            items: cartItems,
+            subtotal,
+            discount: discountAmount,
+            tax: taxAmount,
+            total: grandTotal,
+          })
+
+          const orderPayload = {
+            order_number: newOrder.id,
+            customer_name: selectedAddressObj.name || user?.firstName || 'Valued Customer',
+            customer_email: user?.email || 'customer@jalyn.in',
+            customer_phone: selectedAddressObj.phone || user?.phone || '',
+            shipping_address: `${selectedAddressObj.addressLine1 || ''}, ${selectedAddressObj.city || ''}, ${selectedAddressObj.state || ''} ${selectedAddressObj.pincode || ''}`,
+            total_amount: grandTotal,
+            payment_status: verifyRes.data?.payment_status === 'SUCCESS' ? 'paid' : 'pending',
+            order_status: 'Processing',
+            payment_method: 'Online Payment (Cashfree)',
+            items: cartItems.map((i) => ({
+              product_name: i.name || i.title || 'Jalyn Product',
+              price: i.price,
+              quantity: i.qty || 1,
+              size: i.size || 'M',
+              color: i.color || 'Default',
+              image_url: i.image || i.primary_image || '',
+            })),
+          }
+
+          try {
+            await api.post('/orders', orderPayload)
+          } catch (dbErr) {
+            console.warn('Backend order DB sync notice:', dbErr)
+          }
+
+          clearCart()
+          setIsSubmitting(false)
+          navigate(`/order-success/${newOrder.id}`)
+        } else {
+          throw new Error(res.data?.message || 'Cashfree payment session creation failed.')
+        }
+      } catch (err) {
+        console.error('Cashfree Checkout Error:', err)
+        setToastMessage(err.response?.data?.message || err.message || 'Cashfree online payment failed. Please try again.')
+        setIsSubmitting(false)
+      }
+    } else {
+      // Option 2: Cash on Delivery (COD)
       const newOrder = addOrder({
+        customer_email: user?.email,
         address: selectedAddressObj,
         shippingMethod,
         shippingCost,
-        paymentMethod,
+        paymentMethod: 'Cash on Delivery (COD)',
+        paymentStatus: 'pending',
         orderNotes,
         items: cartItems,
         subtotal,
@@ -127,10 +320,36 @@ export default function Checkout() {
         total: grandTotal,
       })
 
+      const orderPayload = {
+        order_number: newOrder.id,
+        customer_name: selectedAddressObj.name || user?.firstName || 'Valued Customer',
+        customer_email: user?.email || 'customer@jalyn.in',
+        customer_phone: selectedAddressObj.phone || user?.phone || '',
+        shipping_address: `${selectedAddressObj.addressLine1 || ''}, ${selectedAddressObj.city || ''}, ${selectedAddressObj.state || ''} ${selectedAddressObj.pincode || ''}`,
+        total_amount: grandTotal,
+        payment_status: 'pending',
+        order_status: 'Processing',
+        payment_method: 'Cash on Delivery (COD)',
+        items: cartItems.map((i) => ({
+          product_name: i.name || i.title || 'Jalyn Product',
+          price: i.price,
+          quantity: i.qty || 1,
+          size: i.size || 'M',
+          color: i.color || 'Default',
+          image_url: i.image || i.primary_image || '',
+        })),
+      }
+
+      try {
+        await api.post('/orders', orderPayload)
+      } catch (dbErr) {
+        console.warn('Backend COD order DB sync notice:', dbErr)
+      }
+
       clearCart()
       setIsSubmitting(false)
       navigate(`/order-success/${newOrder.id}`)
-    }, 1500)
+    }
   }
 
   const getAddressIcon = (type) => {
@@ -199,12 +418,28 @@ export default function Checkout() {
             </div>
 
             {/* Customer Contact Snippet */}
-            <div className="p-2.5 bg-rose-light/20 rounded-xl text-xs flex justify-between items-center text-ink">
-              <div>
-                <p className="font-bold">{user.firstName} {user.lastName}</p>
-                <p className="text-[11px] text-ink-muted">{user.email} · {user.phone}</p>
+            {user ? (
+              <div className="p-2.5 bg-rose-light/20 rounded-xl text-xs flex justify-between items-center text-ink border border-primary/10">
+                <div>
+                  <p className="font-bold">{user.firstName || user.name || 'Valued Customer'} {user.lastName || ''}</p>
+                  <p className="text-[11px] text-ink-muted">{user.email} {user.phone ? `· ${user.phone}` : ''}</p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-3 bg-amber-50 rounded-xl text-xs flex items-center justify-between border border-amber-200">
+                <div>
+                  <p className="font-bold text-amber-900">Already have an account?</p>
+                  <p className="text-[11px] text-amber-700">Sign in for saved addresses & fast checkout</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/login', { state: { from: '/checkout' } })}
+                  className="rounded-lg bg-amber-800 px-3 py-1 text-[11px] font-bold text-white shadow-xs cursor-pointer"
+                >
+                  Sign In
+                </button>
+              </div>
+            )}
 
             {selectedAddressObj ? (
               <div className="rounded-xl bg-[#FAF8F8] p-3 text-[12px] space-y-1 border border-primary/5">
@@ -289,6 +524,80 @@ export default function Checkout() {
             </div>
           </div>
 
+          {/* 3. Mobile Payment Method (2 Options Only: Cashfree & COD) */}
+          <div className="rounded-2xl border border-primary/10 bg-white p-4 shadow-sm space-y-2.5">
+            <h3 className="text-[13px] font-bold text-[#222222]">3. Payment Method</h3>
+
+            <div className="space-y-2.5">
+              {/* Cashfree Online Payment */}
+              <div
+                onClick={() => setPaymentMethod('online')}
+                className={cn(
+                  'flex items-center justify-between rounded-xl p-3 border transition-all text-[12px] cursor-pointer',
+                  paymentMethod === 'online'
+                    ? 'border-primary bg-[#EFD7E3]/20 shadow-xs'
+                    : 'border-[#E5D8DE] bg-white',
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="mobilePayment"
+                    checked={paymentMethod === 'online'}
+                    onChange={() => setPaymentMethod('online')}
+                    className="h-4 w-4 text-primary"
+                  />
+                  <div>
+                    <span className="font-bold text-[#222222] block">Online Payment (Cashfree)</span>
+                    <span className="text-[10px] text-[#666666]">Cards, UPI (GPay, PhonePe), Netbanking</span>
+                  </div>
+                </div>
+                <span className="rounded bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-800">
+                  Secured
+                </span>
+              </div>
+
+              {/* Cash on Delivery (COD) */}
+              <div
+                onClick={() => isCodEnabled && setPaymentMethod('cod')}
+                className={cn(
+                  'flex items-center justify-between rounded-xl p-3 border transition-all text-[12px]',
+                  !isCodEnabled
+                    ? 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed'
+                    : paymentMethod === 'cod'
+                      ? 'border-primary bg-[#EFD7E3]/20 shadow-xs cursor-pointer'
+                      : 'border-[#E5D8DE] bg-white cursor-pointer',
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="mobilePayment"
+                    disabled={!isCodEnabled}
+                    checked={paymentMethod === 'cod' && isCodEnabled}
+                    onChange={() => isCodEnabled && setPaymentMethod('cod')}
+                    className="h-4 w-4 text-primary"
+                  />
+                  <div>
+                    <span className="font-bold text-[#222222] block">Cash on Delivery (COD)</span>
+                    <span className="text-[10px] text-[#666666]">
+                      {isCodEnabled ? 'Pay cash on delivery' : 'Disabled by store admin'}
+                    </span>
+                  </div>
+                </div>
+                {isCodEnabled ? (
+                  <span className="rounded bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-700 border border-emerald-200">
+                    ✓ Available
+                  </span>
+                ) : (
+                  <span className="rounded bg-red-100 px-2 py-0.5 text-[9px] font-bold text-red-700 border border-red-200">
+                    ✕ Disabled
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Ticket-Style Coupon Carousel on Mobile (MANUAL DRAG/SWIPE ONLY, NO AUTOPLAY) */}
           {availableCoupons.length > 0 && (
             <div className="rounded-2xl border border-primary/10 bg-white p-4 shadow-sm space-y-3">
@@ -362,6 +671,12 @@ export default function Checkout() {
               <span>Estimated Tax (5%)</span>
               <span className="font-semibold text-[#222222]">{formatINR(taxAmount)}</span>
             </div>
+            {paymentMethod === 'cod' && codFee > 0 && (
+              <div className="flex justify-between text-[#666666]">
+                <span>COD Handling Fee</span>
+                <span className="font-semibold text-[#222222]">{formatINR(codFee)}</span>
+              </div>
+            )}
             <div className="flex justify-between border-t border-primary/10 pt-2 text-[14px] font-bold text-[#222222]">
               <span>Total Amount</span>
               <span className="text-primary font-display text-[16px]">{formatINR(grandTotal)}</span>
@@ -443,10 +758,8 @@ export default function Checkout() {
               <div className="rounded-2xl border border-primary/10 bg-white p-5 shadow-soft space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-primary/10">
                   <h3 className="font-heading text-base font-bold text-ink flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-light text-xs text-primary font-bold">
-                      1
-                    </span>
-                    Customer &amp; Shipping Address
+                    <MapPin className="h-4.5 w-4.5 text-primary" />
+                    <span>Customer &amp; Shipping Address</span>
                   </h3>
                   <button
                     type="button"
@@ -461,21 +774,73 @@ export default function Checkout() {
                   </button>
                 </div>
 
-                {/* Customer Contact Snippet */}
-                <div className="grid grid-cols-3 gap-3 text-xs bg-rose-light/20 p-3 rounded-xl border border-primary/5">
-                  <div>
-                    <span className="text-ink-muted text-[11px] block">Name</span>
-                    <span className="font-bold text-ink">{user.firstName} {user.lastName}</span>
+                {/* Customer Contact Snippet & Mandatory Phone Prompt */}
+                {user ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-3 text-xs bg-rose-light/20 p-3 rounded-xl border border-primary/10">
+                      <div>
+                        <span className="text-ink-muted text-[11px] block">Name</span>
+                        <span className="font-bold text-ink">{user.name || 'Valued Customer'}</span>
+                      </div>
+                      <div>
+                        <span className="text-ink-muted text-[11px] block">Email</span>
+                        <span className="font-bold text-ink truncate block">{user.email}</span>
+                      </div>
+                      <div>
+                        <span className="text-ink-muted text-[11px] block">Phone</span>
+                        <span className="font-bold text-ink">{user.phone || '⚠️ Phone Missing'}</span>
+                      </div>
+                    </div>
+
+                    {(!user.phone || isEditingUserPhone) && (
+                      <div className="p-3 bg-amber-50 rounded-xl text-xs space-y-2 border border-amber-200">
+                        <div className="flex items-center justify-between">
+                          <p className="font-bold text-amber-900 flex items-center gap-1.5">
+                            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                            <span>Mandatory Contact Phone Number</span>
+                          </p>
+                          <span className="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded uppercase">
+                            Required
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-amber-800">
+                          Please enter your 10-digit mobile number for order delivery &amp; OTP updates:
+                        </p>
+                        <div className="flex gap-2">
+                          <input
+                            type="tel"
+                            maxLength={10}
+                            value={userPhoneInput}
+                            onChange={(e) => setUserPhoneInput(e.target.value.replace(/\D/g, ''))}
+                            placeholder="Enter 10-digit Phone Number"
+                            className="flex-1 rounded-lg border border-amber-300 bg-white px-3 py-1.5 font-mono text-xs font-bold outline-none focus:border-amber-600"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleSaveUserPhone}
+                            className="rounded-lg bg-primary px-4 py-1.5 font-bold text-white text-xs hover:bg-primary-deep transition cursor-pointer"
+                          >
+                            Save Phone
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <span className="text-ink-muted text-[11px] block">Email</span>
-                    <span className="font-bold text-ink truncate block">{user.email}</span>
+                ) : (
+                  <div className="p-3 bg-amber-50 rounded-xl text-xs flex items-center justify-between border border-amber-200">
+                    <div>
+                      <p className="font-bold text-amber-900">Already have an account?</p>
+                      <p className="text-[11px] text-amber-700">Sign in to use your saved addresses &amp; enjoy 1-click checkout</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/login', { state: { from: '/checkout' } })}
+                      className="rounded-xl bg-[#2C1C24] px-4 py-2 text-xs font-bold text-white shadow-xs cursor-pointer hover:bg-[#3D2832] transition"
+                    >
+                      Sign In to Account
+                    </button>
                   </div>
-                  <div>
-                    <span className="text-ink-muted text-[11px] block">Phone</span>
-                    <span className="font-bold text-ink">{user.phone}</span>
-                  </div>
-                </div>
+                )}
 
                 {/* Saved Address Cards Grid with Badges & Edit/Delete Controls */}
                 <div className="grid grid-cols-2 gap-3.5">
@@ -555,82 +920,85 @@ export default function Checkout() {
                 </div>
               </div>
 
-              {/* 2. Shipping Method */}
-              <div className="rounded-2xl border border-primary/10 bg-white p-5 shadow-soft">
-                <h3 className="font-heading text-base font-bold text-ink mb-4 flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-light text-xs text-primary font-bold">
-                    2
-                  </span>
-                  Shipping Method
-                </h3>
+              {/* Shipping Method (Shown ONLY if at least one shipping method is enabled in Admin CMS) */}
+              {(isStandardShippingEnabled || isExpressShippingEnabled) && (
+                <div className="rounded-2xl border border-primary/10 bg-white p-5 shadow-soft">
+                  <h3 className="font-heading text-base font-bold text-ink mb-4 flex items-center gap-2">
+                    <Truck className="h-4.5 w-4.5 text-primary" />
+                    <span>Shipping Method</span>
+                  </h3>
 
-                <div className="grid grid-cols-2 gap-3.5">
-                  <div
-                    onClick={() => setShippingMethod('standard')}
-                    className={cn(
-                      'cursor-pointer rounded-xl p-4 border transition-all text-xs flex items-start gap-3',
-                      shippingMethod === 'standard'
-                        ? 'border-primary bg-rose-light/20 shadow-soft'
-                        : 'border-primary/10 bg-white hover:border-primary/30',
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      name="desktopShippingMethod"
-                      checked={shippingMethod === 'standard'}
-                      onChange={() => setShippingMethod('standard')}
-                      className="mt-0.5 h-4 w-4 text-primary"
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Truck className="h-4 w-4 text-primary" />
-                        <span className="font-bold text-ink">Standard Delivery</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {isStandardShippingEnabled && (
+                      <div
+                        onClick={() => setShippingMethod('standard')}
+                        className={cn(
+                          'cursor-pointer rounded-xl p-4 border transition-all text-xs flex items-start gap-3',
+                          shippingMethod === 'standard'
+                            ? 'border-primary bg-rose-light/20 shadow-soft'
+                            : 'border-primary/10 bg-white hover:border-primary/30',
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="desktopShippingMethod"
+                          checked={shippingMethod === 'standard'}
+                          onChange={() => setShippingMethod('standard')}
+                          className="mt-0.5 h-4 w-4 text-primary"
+                        />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Truck className="h-4 w-4 text-primary" />
+                            <span className="font-bold text-ink">{standardTitle}</span>
+                          </div>
+                          <p className="mt-1 text-ink-muted">{standardSubtitle}</p>
+                          <span className="mt-1.5 inline-block font-bold text-emerald-700">
+                            {subtotal >= standardFreeThreshold ? 'FREE Shipping' : formatINR(standardRate)}
+                          </span>
+                        </div>
                       </div>
-                      <p className="mt-1 text-ink-muted">Delivery in 3 to 5 business days</p>
-                      <span className="mt-1.5 inline-block font-bold text-emerald-700">
-                        {subtotal >= 1999 ? 'FREE Shipping' : '₹99'}
-                      </span>
-                    </div>
-                  </div>
+                    )}
 
-                  <div
-                    onClick={() => setShippingMethod('express')}
-                    className={cn(
-                      'cursor-pointer rounded-xl p-4 border transition-all text-xs flex items-start gap-3',
-                      shippingMethod === 'express'
-                        ? 'border-primary bg-rose-light/20 shadow-soft'
-                        : 'border-primary/10 bg-white hover:border-primary/30',
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      name="desktopShippingMethod"
-                      checked={shippingMethod === 'express'}
-                      onChange={() => setShippingMethod('express')}
-                      className="mt-0.5 h-4 w-4 text-primary"
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Truck className="h-4 w-4 text-primary" />
-                        <span className="font-bold text-ink">Express Delivery</span>
+                    {isExpressShippingEnabled && (
+                      <div
+                        onClick={() => setShippingMethod('express')}
+                        className={cn(
+                          'cursor-pointer rounded-xl p-4 border transition-all text-xs flex items-start gap-3',
+                          shippingMethod === 'express'
+                            ? 'border-primary bg-rose-light/20 shadow-soft'
+                            : 'border-primary/10 bg-white hover:border-primary/30',
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="desktopShippingMethod"
+                          checked={shippingMethod === 'express'}
+                          onChange={() => setShippingMethod('express')}
+                          className="mt-0.5 h-4 w-4 text-primary"
+                        />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Truck className="h-4 w-4 text-primary" />
+                            <span className="font-bold text-ink">{expressTitle}</span>
+                          </div>
+                          <p className="mt-1 text-ink-muted">{expressSubtitle}</p>
+                          <span className="mt-1.5 inline-block font-bold text-primary">{formatINR(expressRate)}</span>
+                        </div>
                       </div>
-                      <p className="mt-1 text-ink-muted">Fast delivery in 1 to 2 business days</p>
-                      <span className="mt-1.5 inline-block font-bold text-primary">₹99</span>
-                    </div>
+                    )}
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* 3. Payment Method */}
+              {/* Payment Method (2 Options Only: Cashfree & COD) */}
               <div className="rounded-2xl border border-primary/10 bg-white p-5 shadow-soft">
                 <h3 className="font-heading text-base font-bold text-ink mb-4 flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-light text-xs text-primary font-bold">
-                    3
-                  </span>
-                  Payment Method
+                  <CreditCard className="h-4.5 w-4.5 text-primary" />
+                  <span>Payment Method</span>
                 </h3>
 
                 <div className="space-y-3">
+                  {/* Option 1: Cashfree Online Payment */}
                   <div
                     onClick={() => setPaymentMethod('online')}
                     className={cn(
@@ -651,23 +1019,35 @@ export default function Checkout() {
                         />
                         <CreditCard className="h-5 w-5 text-primary" />
                         <div>
-                          <span className="font-bold text-ink text-sm">Online Payment</span>
-                          <p className="text-ink-muted">UPI, Cards, Net Banking &amp; Wallets</p>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-ink text-sm">Online Payment (Cashfree)</span>
+                            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-800">
+                              Cards / UPI / Netbanking
+                            </span>
+                          </div>
+                          <p className="text-ink-muted mt-0.5">Pay securely via Cashfree Gateway (Google Pay, PhonePe, Paytm, Cards)</p>
                         </div>
                       </div>
-                      <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                        Instant Confirmation
+                      <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                        Cashfree Secured
                       </span>
                     </div>
                   </div>
 
+                  {/* Option 2: Cash on Delivery (COD) */}
                   <div
-                    onClick={() => setPaymentMethod('cod')}
+                    onClick={() => {
+                      if (isCodEnabled) {
+                        setPaymentMethod('cod')
+                      }
+                    }}
                     className={cn(
-                      'cursor-pointer rounded-xl p-4 border transition-all text-xs',
-                      paymentMethod === 'cod'
-                        ? 'border-primary bg-rose-light/20 shadow-soft'
-                        : 'border-primary/10 bg-white hover:border-primary/30',
+                      'rounded-xl p-4 border transition-all text-xs',
+                      !isCodEnabled
+                        ? 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed'
+                        : paymentMethod === 'cod'
+                          ? 'border-primary bg-rose-light/20 shadow-soft cursor-pointer'
+                          : 'border-primary/10 bg-white hover:border-primary/30 cursor-pointer',
                     )}
                   >
                     <div className="flex items-center justify-between">
@@ -675,19 +1055,35 @@ export default function Checkout() {
                         <input
                           type="radio"
                           name="desktopPaymentMethod"
-                          checked={paymentMethod === 'cod'}
-                          onChange={() => setPaymentMethod('cod')}
+                          disabled={!isCodEnabled}
+                          checked={paymentMethod === 'cod' && isCodEnabled}
+                          onChange={() => isCodEnabled && setPaymentMethod('cod')}
                           className="h-4 w-4 text-primary"
                         />
-                        <Banknote className="h-5 w-5 text-emerald-700" />
+                        <Banknote className={`h-5 w-5 ${isCodEnabled ? 'text-emerald-700' : 'text-gray-400'}`} />
                         <div>
-                          <span className="font-bold text-ink text-sm">Cash on Delivery</span>
-                          <p className="text-ink-muted">Pay cash when your order arrives</p>
+                          <span className="font-bold text-ink text-sm">Cash on Delivery (COD)</span>
+                          <p className="text-ink-muted">
+                            {isCodEnabled
+                              ? (codSettings?.notice || 'Pay cash when your order arrives at your doorstep')
+                              : 'Cash on Delivery is currently disabled by store admin.'}
+                          </p>
+                          {codFee > 0 && isCodEnabled && (
+                            <span className="text-[11px] font-semibold text-amber-700 mt-0.5 block">
+                              + {formatINR(codFee)} COD Handling Fee
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <span className="rounded bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
-                        ✓ COD Available
-                      </span>
+                      {isCodEnabled ? (
+                        <span className="rounded bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                          ✓ COD Available
+                        </span>
+                      ) : (
+                        <span className="rounded bg-red-100 px-2.5 py-0.5 text-[10px] font-bold text-red-700 border border-red-200">
+                          ✕ Disabled
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -831,10 +1227,18 @@ export default function Checkout() {
                       {shippingCost === 0 ? <span className="text-emerald-700 font-bold">FREE</span> : formatINR(shippingCost)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-ink-muted">
-                    <span>Estimated Tax (5%)</span>
-                    <span className="font-semibold text-ink">{formatINR(taxAmount)}</span>
-                  </div>
+                  {isTaxEnabled && (
+                    <div className="flex justify-between text-ink-muted">
+                      <span>{taxLabel}</span>
+                      <span className="font-semibold text-ink">{formatINR(taxAmount)}</span>
+                    </div>
+                  )}
+                  {paymentMethod === 'cod' && codFee > 0 && (
+                    <div className="flex justify-between text-ink-muted">
+                      <span>COD Handling Fee</span>
+                      <span className="font-semibold text-ink">{formatINR(codFee)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t border-primary/10 pt-3 text-base font-bold text-ink">
                     <span>Total Amount</span>
                     <span className="text-primary font-display text-xl">{formatINR(grandTotal)}</span>

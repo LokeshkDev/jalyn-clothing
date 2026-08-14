@@ -108,6 +108,18 @@ export default function OrdersPage() {
   };
 
   const handleStatusChange = async (id, payload) => {
+    // If changing order status to shipped, prompt for tracking number
+    if (payload.order_status === 'shipped') {
+      const orderObj = orders.find((o) => o.id === id);
+      const defaultTracking = orderObj?.tracking_id || '';
+      const tracking = window.prompt('Please enter the AWB Tracking ID (Courier Tracking Number):', defaultTracking);
+      if (tracking === null) {
+        // Cancel update
+        return false;
+      }
+      payload.tracking_id = tracking;
+    }
+
     try {
       const res = await api.put(`/orders/${id}`, payload);
       updateLocalOrder({ id, ...payload });
@@ -194,7 +206,7 @@ export default function OrdersPage() {
   }, [orders, search, statusFilter, paymentFilter]);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50/50 min-h-screen">
+    <div className="flex-1 overflow-y-auto">
       <Header title="Order Management Center" subtitle="Review, fulfil, and manage customer orders — status, payments, and full CRUD workflows." />
 
       {toast && (
@@ -703,6 +715,9 @@ export default function OrdersPage() {
                             customer_phone: detailOrder.customer_phone || '',
                             shipping_address: detailOrder.shipping_address || '',
                             total_amount: detailOrder.total_amount,
+                            courier: detailOrder.courier || '',
+                            tracking_id: detailOrder.tracking_id || '',
+                            expected_delivery: detailOrder.expected_delivery || '',
                           });
                           setEditing(true);
                         }
@@ -730,6 +745,20 @@ export default function OrdersPage() {
                           <MapPin className="w-3.5 h-3.5 text-gray-300 mt-0.5 shrink-0" />
                           {detailOrder.shipping_address}
                         </p>
+                      </div>
+                      <div className="pt-2 border-t border-gray-100 grid grid-cols-3 gap-2">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Courier Partner</p>
+                          <p className="font-bold text-gray-900">{detailOrder.courier || 'BlueDart Express'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Tracking ID</p>
+                          <p className="font-bold text-gray-900">{detailOrder.tracking_id || 'Pending'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Expected Delivery</p>
+                          <p className="font-bold text-emerald-700">{detailOrder.expected_delivery || '3 to 5 business days'}</p>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -766,12 +795,44 @@ export default function OrdersPage() {
                       <label className="block">
                         <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Shipping Address</span>
                         <textarea
-                          rows={3}
+                          rows={2}
                           value={draft.shipping_address || ''}
                           onChange={(e) => setDraft({ ...draft, shipping_address: e.target.value })}
                           className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-xs font-medium focus:ring-2 focus:ring-brand-500"
                         />
                       </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <label className="block">
+                          <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Courier Partner</span>
+                          <input
+                            type="text"
+                            value={draft.courier || ''}
+                            onChange={(e) => setDraft({ ...draft, courier: e.target.value })}
+                            placeholder="e.g. BlueDart Express"
+                            className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-xs font-medium focus:ring-2 focus:ring-brand-500"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Tracking ID</span>
+                          <input
+                            type="text"
+                            value={draft.tracking_id || ''}
+                            onChange={(e) => setDraft({ ...draft, tracking_id: e.target.value })}
+                            placeholder="e.g. BD234760271IN"
+                            className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-xs font-medium focus:ring-2 focus:ring-brand-500"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Expected Delivery</span>
+                          <input
+                            type="text"
+                            value={draft.expected_delivery || ''}
+                            onChange={(e) => setDraft({ ...draft, expected_delivery: e.target.value })}
+                            placeholder="e.g. 3 to 5 business days"
+                            className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-xs font-medium focus:ring-2 focus:ring-brand-500"
+                          />
+                        </label>
+                      </div>
                       <button
                         onClick={handleSaveDetail}
                         disabled={busy}

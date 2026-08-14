@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Search, User, Heart, ShoppingBag, ChevronDown } from 'lucide-react'
+import { Search, User, Heart, ShoppingBag, ChevronDown, Menu, X, ChevronRight } from 'lucide-react'
 import logo from '@/assets/jalyn-logo.png'
 import { NAV_LINKS } from '@/constants/data'
 import { cn } from '@/lib/utils'
@@ -32,15 +32,52 @@ export default function Header() {
   const isPdpPage = location.pathname.startsWith('/products/') || location.pathname.startsWith('/product/')
   const [scrolled, setScrolled] = useState(false)
   const [activeDropdown, setActiveDropdown] = useState(null)
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+  const [expandedMobileMenu, setExpandedMobileMenu] = useState(null)
 
   const cartCount = useCartStore((s) => s.getCount())
   const openCart = useCartStore((s) => s.openCart)
   const wishCount = useWishlistStore((s) => s.ids.length)
   const setSearchOpen = useUIStore((s) => s.setSearchOpen)
 
-  // Use CMS menu links if available, else fall back to static NAV_LINKS
-  const { menuLinks } = useCmsData()
-  const navLinks = menuLinks?.length ? menuLinks : NAV_LINKS
+  const { menuLinks, cmsData } = useCmsData()
+  
+  const navLinks = useMemo(() => {
+    const baseLinks = menuLinks?.length ? [...menuLinks] : [...NAV_LINKS]
+    
+    // Check if new arrivals or sale are toggled on in CMS (new arrivals defaults to true, sale defaults to false/true)
+    const showNewArrivals = cmsData?.page_new_arrivals?.show_in_menu !== false
+    const showSale = cmsData?.page_sale?.show_in_menu === true
+
+    // Filter the links based on show/hide toggles
+    return baseLinks.filter((l) => {
+      const path = l.href?.toLowerCase() || ''
+      const isNewArrivalsLink = path === '/new-arrivals' || path === '/collections/new-arrivals' || path === '/shop?category=new-arrivals'
+      const isSaleLink = path === '/sale' || path === '/sales' || path === '/collections/sale'
+      
+      if (isNewArrivalsLink && !showNewArrivals) return false
+      if (isSaleLink && !showSale) return false
+      
+      return true
+    })
+  }, [menuLinks, cmsData])
+
+  const featuredEdits = cmsData?.featured_edits || {
+    women: {
+      heading: 'Featured Edit',
+      title: 'Aesthetic Co-ord Sets',
+      image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=400&q=80',
+      cta_text: 'Shop Collection',
+      cta_link: '/shop',
+    },
+    kids: {
+      heading: 'Featured Edit',
+      title: 'Playful Toddler Wear',
+      image: 'https://images.unsplash.com/photo-1519457431-44ccd64a579b?auto=format&fit=crop&w=400&q=80',
+      cta_text: 'Shop Collection',
+      cta_link: '/shop',
+    }
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -48,6 +85,10 @@ export default function Header() {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  useEffect(() => {
+    setMobileDrawerOpen(false)
+  }, [location])
 
   const checkIsActive = (link) => {
     if (link.href === '/shop') {
@@ -57,127 +98,351 @@ export default function Header() {
   }
 
   return (
-    <header
-      className={cn(
-        'sticky top-0 z-50 transition-all duration-300 bg-[#FFF6F9] border-b border-[#EFD7E3] shadow-sm',
-        isPdpPage && 'hidden lg:block',
-      )}
-    >
-      <div className="container-luxury max-w-7xl flex h-16 items-center justify-between gap-6 lg:h-20">
-        {/* Left: Brand Logo */}
-        <Link
-          to="/"
-          className="relative z-10 flex shrink-0 items-center"
-          aria-label="JALYN home"
-        >
-          <img
-            src={logo}
-            alt="JALYN — Style meets comfort"
-            className="h-8 w-auto object-contain sm:h-10 lg:h-11"
-            width={180}
-            height={44}
-          />
-        </Link>
+    <>
+      <header
+        className={cn(
+          'sticky top-0 z-50 transition-all duration-300 bg-[#FFF6F9] border-b border-[#EFD7E3] shadow-sm',
+          isPdpPage && 'hidden lg:block',
+        )}
+      >
+        <div className="container-luxury max-w-7xl flex h-16 items-center justify-between gap-4 lg:h-20 px-4 sm:px-6">
+          {/* Left: Mobile Hamburger + Logo */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMobileDrawerOpen(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:text-primary hover:bg-primary/5 lg:hidden cursor-pointer"
+              aria-label="Open mobile menu"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
 
-        {/* Center: Desktop Navigation Links with Catchy Hover Dropdowns */}
-        <nav
-          className="hidden lg:flex items-center gap-6 xl:gap-8"
-          aria-label="Primary"
-        >
-          {navLinks.map((link) => {
-            const isActive = checkIsActive(link)
-            const hasChildren = link.children && link.children.length > 0
+            <Link
+              to="/"
+              className="relative z-10 flex shrink-0 items-center"
+              aria-label="JALYN home"
+            >
+              <img
+                src={logo}
+                alt="JALYN — Style meets comfort"
+                className="h-8 object-contain sm:h-10 lg:h-20"
+                width={180}
+                height={44}
+              />
+            </Link>
+          </div>
 
-            if (hasChildren) {
-              return (
-                <div
-                  key={link.label}
-                  className="relative group py-5"
-                  onMouseEnter={() => setActiveDropdown(link.label)}
-                  onMouseLeave={() => setActiveDropdown(null)}
-                >
-                  <Link
-                    to={link.href}
-                    className={cn(
-                      'flex items-center gap-1 text-[13px] font-semibold uppercase tracking-[0.12em] transition-colors cursor-pointer',
-                      isActive ? 'text-primary font-bold' : 'text-ink group-hover:text-primary',
-                    )}
-                  >
-                    <span>{link.label}</span>
-                    <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180 text-primary/70" />
-                  </Link>
+          {/* Center: Desktop Mega Navigation Links */}
+          <nav
+            className="hidden lg:flex items-center gap-6 xl:gap-8"
+            aria-label="Primary"
+          >
+            {navLinks.map((link) => {
+              const isActive = checkIsActive(link)
+              const hasGroups = Boolean(link.groups && link.groups.length > 0)
+              const hasChildren = Boolean(link.children && link.children.length > 0)
 
-                  {/* Catchy Dropdown Card */}
+              if (hasGroups) {
+                return (
                   <div
-                    className={cn(
-                      'absolute left-0 top-full z-50 w-64 rounded-2xl border border-[#EFD7E3] bg-white p-3 shadow-xl transition-all duration-200 pointer-events-none opacity-0 translate-y-2',
-                      activeDropdown === link.label && 'opacity-100 translate-y-0 pointer-events-auto',
-                    )}
+                    key={link.label}
+                    className="group py-5" // Removed relative so absolute dropdown centers on the Header
+                    onMouseEnter={() => setActiveDropdown(link.label)}
+                    onMouseLeave={() => setActiveDropdown(null)}
                   >
-                    <div className="space-y-1">
-                      {link.children.map((child) => (
-                        <Link
-                          key={child.label}
-                          to={child.href}
-                          onClick={() => setActiveDropdown(null)}
-                          className="flex flex-col rounded-xl px-3.5 py-2.5 transition hover:bg-[#FFF6F9] group/item"
-                        >
-                          <span className="text-xs font-bold text-ink group-hover/item:text-primary transition">
-                            {child.label}
-                          </span>
-                          {child.subtitle && (
-                            <span className="text-[10px] text-ink-muted">
-                              {child.subtitle}
-                            </span>
-                          )}
-                        </Link>
-                      ))}
+                    <Link
+                      to={link.href}
+                      className={cn(
+                        'flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors cursor-pointer',
+                        isActive ? 'text-primary font-bold' : 'text-ink group-hover:text-primary',
+                      )}
+                    >
+                      <span>{link.label}</span>
+                      <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180 text-primary/70" />
+                    </Link>
+
+                    {/* Multi-Column Mega Dropdown Panel */}
+                    <div
+                      className={cn(
+                        'absolute left-1/2 -translate-x-1/2 top-full z-50 rounded-[28px] border border-[#EFD7E3] bg-white/95 backdrop-blur-md p-8 shadow-[0_20px_50px_rgba(42,26,34,0.12)] transition-all duration-300 pointer-events-none opacity-0 translate-y-4 scale-98 origin-top',
+                        activeDropdown === link.label && 'opacity-100 translate-y-0 scale-100 pointer-events-auto',
+                        link.groups?.length === 1 ? 'w-[480px]' :
+                        link.groups?.length === 2 ? 'w-[680px]' :
+                        link.groups?.length === 3 ? 'w-[840px]' :
+                        'w-[96vw] max-w-6xl'
+                      )}
+                    >
+                      <div className={cn(
+                        'grid gap-8',
+                        link.groups?.length === 1 ? 'grid-cols-1 md:grid-cols-[1.2fr_1fr]' :
+                        link.groups?.length === 2 ? 'grid-cols-1 md:grid-cols-[1.2fr_1.2fr_1fr]' :
+                        link.groups?.length === 3 ? 'grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1.2fr]' :
+                        'grid-cols-1 md:grid-cols-4 lg:grid-cols-5'
+                      )}>
+                        {link.groups.map((group) => (
+                          <div key={group.title} className="space-y-4">
+                            <h4 className="font-heading text-base font-semibold tracking-wide text-ink pb-2 border-b border-rose-light/50">
+                              {group.title}
+                            </h4>
+                            <ul className="space-y-1.5 text-xs">
+                              {group.items?.map((item) => {
+                                const isItemActive = currentFullUrl === item.href
+                                return (
+                                  <li key={item.label}>
+                                    <Link
+                                      to={item.href}
+                                      onClick={() => setActiveDropdown(null)}
+                                      className={cn(
+                                        "flex flex-col rounded-xl px-3.5 py-1.5 transition duration-200 group/item border-l-0 hover:border-l-4 hover:border-primary hover:pl-3",
+                                        isItemActive
+                                          ? "bg-[#FFF6F9] border-l-4 border-primary pl-3"
+                                          : "hover:bg-[#FFF6F9]"
+                                      )}
+                                    >
+                                      <span className={cn(
+                                        "text-xs font-bold transition",
+                                        isItemActive ? "text-primary" : "text-ink group-hover/item:text-primary"
+                                      )}>
+                                        {item.label}
+                                      </span>
+                                    </Link>
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          </div>
+                        ))}
+
+                        {/* Column: Luxury Promo Card */}
+                        <div className="hidden md:block space-y-4 col-span-1 border-l border-rose-light/40 pl-8">
+                          <h4 className="font-heading text-base font-semibold tracking-wide text-ink pb-2">
+                            {featuredEdits[link.label.toLowerCase()]?.heading || 'Featured Edit'}
+                          </h4>
+                          <div className="relative group/promo overflow-hidden rounded-2xl aspect-[3/4] bg-surface-muted shadow-soft">
+                            <img
+                              src={
+                                featuredEdits[link.label.toLowerCase()]?.image ||
+                                (link.label.toLowerCase() === 'women'
+                                  ? 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=400&q=80'
+                                  : 'https://images.unsplash.com/photo-1519457431-44ccd64a579b?auto=format&fit=crop&w=400&q=80')
+                              }
+                              alt="Featured collection"
+                              className="h-full w-full object-cover transition-transform duration-700 group-hover/promo:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#2A1A22]/80 via-[#2A1A22]/20 to-transparent flex flex-col justify-end p-4">
+                              <span className="text-[9px] font-bold tracking-[0.15em] text-rose-blush uppercase mb-1">
+                                New Arrival
+                              </span>
+                              <h5 className="font-heading text-sm font-semibold text-white leading-tight mb-2">
+                                {featuredEdits[link.label.toLowerCase()]?.title ||
+                                  (link.label.toLowerCase() === 'women' ? 'Aesthetic Co-ord Sets' : 'Playful Toddler Wear')}
+                              </h5>
+                              <Link
+                                to={featuredEdits[link.label.toLowerCase()]?.cta_link || link.href}
+                                onClick={() => setActiveDropdown(null)}
+                                className="inline-flex items-center text-[10px] font-bold text-white hover:text-rose-blush transition gap-1"
+                              >
+                                <span>{featuredEdits[link.label.toLowerCase()]?.cta_text || 'Shop Collection'}</span>
+                                <ChevronRight className="h-3 w-3" />
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )
+              }
+
+              if (hasChildren) {
+                return (
+                  <div
+                    key={link.label}
+                    className="relative group py-5"
+                    onMouseEnter={() => setActiveDropdown(link.label)}
+                    onMouseLeave={() => setActiveDropdown(null)}
+                  >
+                    <Link
+                      to={link.href}
+                      className={cn(
+                        'flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors cursor-pointer',
+                        isActive ? 'text-primary font-bold' : 'text-ink group-hover:text-primary',
+                      )}
+                    >
+                      <span>{link.label}</span>
+                      <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180 text-primary/70" />
+                    </Link>
+
+                    {/* Standard Dropdown */}
+                    <div
+                      className={cn(
+                        'absolute left-0 top-full z-50 w-64 rounded-2xl border border-[#EFD7E3] bg-white/95 backdrop-blur-md p-3 shadow-[0_15px_40px_rgba(42,26,34,0.1)] transition-all duration-300 pointer-events-none opacity-0 translate-y-3 scale-95 origin-top-left',
+                        activeDropdown === link.label && 'opacity-100 translate-y-0 scale-100 pointer-events-auto',
+                      )}
+                    >
+                      <div className="space-y-1">
+                        {link.children.map((child) => {
+                          const isChildActive = currentFullUrl === child.href
+                          return (
+                            <Link
+                              key={child.label}
+                              to={child.href}
+                              onClick={() => setActiveDropdown(null)}
+                              className={cn(
+                                "flex flex-col rounded-xl px-3.5 py-2 transition duration-200 group/item border-l-0 hover:border-l-4 hover:border-primary hover:pl-3",
+                                isChildActive
+                                  ? "bg-[#FFF6F9] border-l-4 border-primary pl-3"
+                                  : "hover:bg-[#FFF6F9]"
+                              )}
+                            >
+                              <span className={cn(
+                                "text-xs font-bold transition",
+                                isChildActive ? "text-primary" : "text-ink group-hover/item:text-primary"
+                              )}>
+                                {child.label}
+                              </span>
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+
+              return (
+                <Link
+                  key={link.label}
+                  to={link.href}
+                  className={cn(
+                    'text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors py-1',
+                    isActive ? 'text-primary font-bold' : 'text-ink hover:text-primary',
+                  )}
+                >
+                  {link.label}
+                </Link>
               )
-            }
+            })}
+          </nav>
 
-            return (
-              <Link
-                key={link.label}
-                to={link.href}
-                className={cn(
-                  'text-[13px] font-semibold uppercase tracking-[0.12em] transition-colors py-1',
-                  link.accent
-                    ? 'text-red-600 font-bold hover:text-red-700'
-                    : isActive
-                      ? 'text-primary font-bold'
-                      : 'text-ink hover:text-primary',
-                )}
-              >
-                {link.label}
-              </Link>
-            )
-          })}
-        </nav>
-
-        {/* Right: Utility Icons */}
-        <div className="relative z-10 flex items-center gap-1 sm:gap-1.5">
-          <IconBtn label="Search" onClick={() => setSearchOpen(true)}>
-            <Search className="h-[19px] w-[19px]" />
-          </IconBtn>
-
-          <span className="hidden sm:inline-flex">
-            <IconBtn label="Account" as={Link} to="/account">
-              <User className="h-[19px] w-[19px]" />
+          {/* Right: Utility Icons */}
+          <div className="relative z-10 flex items-center gap-1 sm:gap-1.5">
+            <IconBtn label="Search" onClick={() => setSearchOpen(true)}>
+              <Search className="h-[19px] w-[19px]" />
             </IconBtn>
-          </span>
 
-          <IconBtn label="Wishlist" as={Link} to="/wishlist" badge={wishCount}>
-            <Heart className="h-[19px] w-[19px]" />
-          </IconBtn>
+            <span className="hidden sm:inline-flex">
+              <IconBtn label="Account" as={Link} to="/account">
+                <User className="h-[19px] w-[19px]" />
+              </IconBtn>
+            </span>
 
-          <IconBtn label="Cart" onClick={openCart} badge={cartCount}>
-            <ShoppingBag className="h-[19px] w-[19px]" />
-          </IconBtn>
+            <IconBtn label="Wishlist" as={Link} to="/wishlist" badge={wishCount}>
+              <Heart className="h-[19px] w-[19px]" />
+            </IconBtn>
+
+            <IconBtn label="Cart" onClick={openCart} badge={cartCount}>
+              <ShoppingBag className="h-[19px] w-[19px]" />
+            </IconBtn>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Mobile Slide-Over Navigation Drawer */}
+      {mobileDrawerOpen && (
+        <div className="fixed inset-0 z-[100] flex lg:hidden">
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileDrawerOpen(false)}
+          />
+
+          <div className="relative flex w-full max-w-xs flex-col bg-[#FFF6F9] p-5 shadow-2xl h-full overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#EFD7E3] pb-4 mb-4">
+              <img src={logo} alt="JALYN" className="h-8 object-contain" />
+              <button
+                type="button"
+                onClick={() => setMobileDrawerOpen(false)}
+                className="p-1.5 text-ink hover:text-primary rounded-full hover:bg-white cursor-pointer"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-3 font-sans text-xs">
+              {navLinks.map((link) => {
+                const hasGroups = Boolean(link.groups?.length)
+                const hasChildren = Boolean(link.children?.length)
+                const isExpanded = expandedMobileMenu === link.label
+
+                if (hasGroups || hasChildren) {
+                  return (
+                    <div key={link.label} className="border-b border-primary/10 pb-2">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedMobileMenu(isExpanded ? null : link.label)}
+                        className="flex w-full items-center justify-between py-2 text-sm font-bold uppercase tracking-wider text-ink hover:text-primary"
+                      >
+                        <span>{link.label}</span>
+                        <ChevronRight
+                          className={cn('h-4 w-4 transition-transform text-primary', isExpanded && 'rotate-90')}
+                        />
+                      </button>
+
+                      {isExpanded && (
+                        <div className="mt-2 space-y-3 pl-2">
+                          {hasGroups &&
+                            link.groups.map((group) => (
+                              <div key={group.title} className="space-y-1.5">
+                                <span className="block text-[11px] font-bold uppercase text-primary tracking-wider">
+                                  {group.title}
+                                </span>
+                                <div className="space-y-1 pl-2 border-l border-primary/20">
+                                  {group.items.map((item) => (
+                                    <Link
+                                      key={item.label}
+                                      to={item.href}
+                                      onClick={() => setMobileDrawerOpen(false)}
+                                      className="block py-1 text-ink-muted hover:text-primary"
+                                    >
+                                      {item.label}
+                                    </Link>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+
+                          {hasChildren &&
+                            link.children.map((child) => (
+                              <Link
+                                key={child.label}
+                                to={child.href}
+                                onClick={() => setMobileDrawerOpen(false)}
+                                className="block py-1.5 text-ink hover:text-primary font-medium"
+                              >
+                                {child.label}
+                              </Link>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                }
+
+                return (
+                  <Link
+                    key={link.label}
+                    to={link.href}
+                    onClick={() => setMobileDrawerOpen(false)}
+                    className="block py-2.5 text-sm font-bold uppercase tracking-wider text-ink hover:text-primary border-b border-primary/10"
+                  >
+                    {link.label}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

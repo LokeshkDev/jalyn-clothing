@@ -1,22 +1,23 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ShoppingBag, Clock, CheckCircle2, Heart, ArrowRight } from 'lucide-react'
-import { useOrderStore, useWishlistStore } from '@/store'
+import { ArrowRight } from 'lucide-react'
+import { useOrderStore, useUserStore } from '@/store'
 import { formatINR, cn } from '@/lib/utils'
 
 export default function Profile() {
-  const orders = useOrderStore((s) => s.orders)
-  const wishCount = useWishlistStore((s) => s.count())
+  const user = useUserStore((s) => s.user)
+  const allOrders = useOrderStore((s) => s.orders)
+  const fetchOrders = useOrderStore((s) => s.fetchOrders)
 
-  const totalOrders = orders.length
-  const pendingOrders = orders.filter((o) => o.status === 'Processing' || o.status === 'Shipped').length
-  const deliveredOrders = orders.filter((o) => o.status === 'Delivered').length
+  useEffect(() => {
+    if (user?.email) {
+      fetchOrders(user.email)
+    }
+  }, [user?.email, fetchOrders])
 
-  const stats = [
-    { label: 'Total Orders', value: totalOrders, icon: ShoppingBag, color: 'text-primary bg-rose-light/50' },
-    { label: 'Pending Orders', value: pendingOrders, icon: Clock, color: 'text-amber-600 bg-amber-50' },
-    { label: 'Delivered', value: deliveredOrders, icon: CheckCircle2, color: 'text-emerald-700 bg-emerald-50' },
-    { label: 'Wishlist Items', value: wishCount, icon: Heart, color: 'text-rose-500 bg-pink-50' },
-  ]
+  const orders = allOrders.filter(
+    (o) => o.customer_email === user?.email || o.address?.email === user?.email
+  )
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -35,27 +36,6 @@ export default function Profile() {
 
   return (
     <div className="space-y-6">
-      {/* 4 Statistics Cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {stats.map((st) => {
-          const Icon = st.icon
-          return (
-            <div
-              key={st.label}
-              className="rounded-2xl border border-primary/10 bg-white p-5 shadow-soft transition hover:shadow-lift"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-heading text-2xl font-bold text-ink">{st.value}</span>
-                <div className={cn('flex h-10 w-10 items-center justify-center rounded-full', st.color)}>
-                  <Icon className="h-5 w-5" />
-                </div>
-              </div>
-              <p className="mt-2 text-xs font-semibold text-ink-muted">{st.label}</p>
-            </div>
-          )
-        })}
-      </div>
-
       {/* Recent Orders Section */}
       <div className="rounded-2xl border border-primary/10 bg-white p-6 shadow-soft">
         <div className="flex items-center justify-between mb-5">

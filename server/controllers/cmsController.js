@@ -80,28 +80,138 @@ const DEFAULT_CMS_DATA = {
   },
   menu_arrangement: {
     nav_links: [
-      { label: 'New Arrivals', href: '/collections/new-arrivals' },
       {
-        label: 'Clothing',
-        href: '/shop',
+        label: 'New Arrival',
+        href: '/shop?category=new-arrivals',
         hasDropdown: true,
         children: [
-          { label: 'Dresses & Gowns', href: '/shop?category=dresses', subtitle: 'Flattering silhouettes' },
-          { label: 'Tops & Blouses', href: '/shop?category=tops', subtitle: 'Everyday chic' },
-          { label: 'Co-ord Sets', href: '/shop?category=coords', subtitle: 'Matching essentials' },
+          { label: 'Ethnic Wear', href: '/shop?category=ethnic' },
+          { label: 'Casuals', href: '/shop?category=casuals' },
+          { label: 'Formals', href: '/shop?category=formals' },
         ],
       },
       {
-        label: 'Categories',
-        href: '/shop',
+        label: 'Women',
+        href: '/shop?category=women',
         hasDropdown: true,
-        children: [
-          { label: 'Ethnic Wear', href: '/shop?category=ethnic', subtitle: 'Traditional elegance' },
-          { label: 'Designer Sarees', href: '/shop?category=sarees', subtitle: 'Timeless classics' },
+        isMega: true,
+        groups: [
+          {
+            title: 'Indian and Fusion Wear',
+            items: [
+              { label: 'Kurtis & Tunics', href: '/shop?category=kurtis-tunic' },
+              { label: 'Co-Ord Sets', href: '/shop?category=coords' },
+              { label: 'Salwar & Chudidars Set', href: '/shop?category=salwar-chudidar' },
+              { label: 'Sharara & Lehenga', href: '/shop?category=sharara-lehenga' },
+              { label: 'Short Kurtis', href: '/shop?category=short-kurti' },
+              { label: 'Ethnic Wear', href: '/shop?category=ethnic-wear' },
+              { label: 'Unstitched Material', href: '/shop?category=unstitched' },
+              { label: 'Leggings, Patiyala & Kurtipants', href: '/shop?category=leggings-kurtipants' },
+              { label: 'Dupattas & Shawls', href: '/shop?category=dupattas-shawls' },
+            ],
+          },
+          {
+            title: 'Western Wear',
+            items: [
+              { label: 'Dresses & Gowns', href: '/shop?category=dresses-gown' },
+              { label: 'Shirts & Crop Tops', href: '/shop?category=shirt-croptops' },
+              { label: 'T-Shirts', href: '/shop?category=tshirts' },
+              { label: 'Jeans', href: '/shop?category=jeans' },
+              { label: 'Short Tops', href: '/shop?category=short-tops' },
+              { label: 'Co-ords', href: '/shop?category=western-coords' },
+              { label: 'Palazzos', href: '/shop?category=palazzos' },
+            ],
+          },
+          {
+            title: 'Maternity Wear',
+            items: [
+              { label: 'Ethnic Tops', href: '/shop?category=maternity-ethnic-tops' },
+              { label: 'Dresses & Gowns', href: '/shop?category=maternity-dresses' },
+              { label: 'Nightwear Feeding', href: '/shop?category=nightwear-feeding' },
+            ],
+          },
+          {
+            title: 'Nightwear & Loungewear',
+            items: [
+              { label: 'PJs', href: '/shop?category=pjs' },
+              { label: 'Shirts', href: '/shop?category=lounge-shirts' },
+              { label: 'Nighties & Night Gowns', href: '/shop?category=nighties-nightgowns' },
+            ],
+          },
         ],
       },
-      { label: 'Shop All', href: '/shop' },
-      { label: 'Sale', href: '/collections/sale', accent: true },
+      {
+        label: 'Kids',
+        href: '/shop?category=kids',
+        hasDropdown: true,
+        isMega: true,
+        groups: [
+          {
+            title: 'Girls Clothing',
+            items: [
+              { label: 'Dresses', href: '/shop?category=girls-dress' },
+              { label: 'T-Shirts', href: '/shop?category=girls-tshirt' },
+              { label: 'Clothing Sets', href: '/shop?category=girls-clothing-set' },
+              { label: 'Ethnic Wear', href: '/shop?category=girls-ethnic-wear' },
+              { label: 'Sharara & Lehenga', href: '/shop?category=girls-sharara-lehenga' },
+            ],
+          },
+          {
+            title: 'Nightwear & Loungewear',
+            items: [
+              { label: 'Shirts', href: '/shop?category=kids-lounge-shirts' },
+              { label: 'Pants', href: '/shop?category=kids-pants' },
+              { label: 'Girls Frocks', href: '/shop?category=girls-frocks' },
+              { label: 'Nightwear & Lounges', href: '/shop?category=kids-nightwear-lounges' },
+            ],
+          },
+          {
+            title: 'Toddlers',
+            items: [
+              { label: 'Clothing Sets', href: '/shop?category=toddlers-clothing-set' },
+              { label: 'Frocks', href: '/shop?category=toddlers-frocks' },
+              { label: 'Nightwear & Loungewear', href: '/shop?category=toddlers-nightwear' },
+              { label: 'Western Wear Girls', href: '/shop?category=toddlers-western-girls' },
+              { label: 'Western Wear Boys', href: '/shop?category=toddlers-western-boys' },
+            ],
+          },
+          {
+            title: 'Infants',
+            items: [
+              { label: 'Ethnic Wear', href: '/shop?category=infants-ethnic-wear' },
+              { label: 'Western Wear', href: '/shop?category=infants-western-wear' },
+              { label: 'Regular Wear', href: '/shop?category=infants-regular-wear' },
+              { label: 'Nightwear', href: '/shop?category=infants-nightwear' },
+            ],
+          },
+        ],
+      },
+      {
+        label: 'Plus Curve',
+        href: '/shop?category=plus-curve',
+        hasDropdown: true,
+        children: [
+          { label: 'Maxies', href: '/shop?category=maxies' },
+          { label: 'Chudi Set', href: '/shop?category=chudi-set' },
+          { label: 'Tops', href: '/shop?category=plus-tops' },
+          { label: 'Nightwear & Loungewear', href: '/shop?category=plus-nightwear' },
+          { label: 'Nighties', href: '/shop?category=plus-nighties' },
+        ],
+      },
+      {
+        label: 'Combo',
+        href: '/shop?category=combo',
+        hasDropdown: true,
+        children: [
+          { label: 'Western Combo Women', href: '/shop?category=combo-western-women' },
+          { label: 'Western Combo Kids', href: '/shop?category=combo-western-kids' },
+          { label: 'College Combo', href: '/shop?category=combo-college' },
+          { label: 'Formal Combo', href: '/shop?category=combo-formal' },
+          { label: 'Nightwear & Loungewear Combo', href: '/shop?category=combo-nightwear' },
+        ],
+      },
+      { label: 'Track Your Order', href: '/track-order' },
+      { label: 'About Us', href: '/about' },
     ],
   },
   footer_settings: {
@@ -170,6 +280,163 @@ const DEFAULT_CMS_DATA = {
     address: 'Jalyn Fashion Studio, 42 Luxury Boulevard, Fashion District, Mumbai, MH 400001, India',
     working_hours: 'Monday - Saturday: 10:00 AM - 7:00 PM IST',
     google_maps_url: 'https://maps.google.com/maps?q=Mumbai,Maharashtra&t=&z=13&ie=UTF8&iwloc=&output=embed',
+  },
+  cod_settings: {
+    enabled: true,
+    min_order_amount: 0,
+    cod_fee: 0,
+    notice: 'Pay cash upon delivery at your doorstep.',
+  },
+  auth_page: {
+    badge: 'JALYN EXCLUSIVE CLUB',
+    title: 'Timeless Grace,',
+    title_highlight: 'Crafted for You.',
+    subtitle: 'Sign in to manage your orders, access member-only private sales, save favorite couture pieces, and enjoy personalized tailoring assistance.',
+    image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=1400&q=80',
+    reviews: [
+      {
+        id: 1,
+        rating: 5,
+        text: '“The fit and fabric quality from Jalyn are unmatched. Shopping here feels like stepping into a personal luxury studio.”',
+        name: 'Ananya Kapoor',
+        role: 'Verified Jalyn Collector',
+        initials: 'AK',
+      },
+      {
+        id: 2,
+        rating: 5,
+        text: '“Exquisite hand craftsmanship and incredible attention to detail. Delivery was prompt and packaging felt truly regal.”',
+        name: 'Riddhi Sen',
+        role: 'Luxury Fashion Enthusiast',
+        initials: 'RS',
+      },
+      {
+        id: 3,
+        rating: 5,
+        text: '“The custom fit assistance helped me get the perfect size co-ord set. I receive compliments every time I wear it!”',
+        name: 'Meera Rajput',
+        role: 'Loyal Jalyn Client',
+        initials: 'MR',
+      },
+    ],
+  },
+  delivery_settings: {
+    enabled: true,
+    show_pincode_checker: true,
+    shipping_notice: 'Free Express Delivery on orders above ₹1,999',
+  },
+  tax_settings: {
+    enabled: true,
+    tax_percent: 18,
+    tax_label: 'GST (18%)',
+    inclusive: false,
+  },
+  shipping_methods: {
+    standard: {
+      enabled: true,
+      title: 'Standard Delivery',
+      subtitle: 'Delivery in 3 to 5 business days',
+      price: 99,
+      free_threshold: 1999,
+    },
+    express: {
+      enabled: true,
+      title: 'Express Delivery',
+      subtitle: 'Fast delivery in 1 to 2 business days',
+      price: 199,
+    },
+  },
+  desktop_homepage_layout: {
+    order: [
+      'announcement_bar',
+      'hero_banner',
+      'category_grid',
+      'featured_edits',
+      'why_jalyn',
+      'services_strip',
+      'promo_banner',
+      'new_arrivals',
+      'exclusive_sale',
+      'most_loved_styles',
+      'instagram_feed',
+    ],
+    visibility: {
+      announcement_bar: true,
+      hero_banner: true,
+      category_grid: true,
+      featured_edits: true,
+      why_jalyn: true,
+      services_strip: true,
+      promo_banner: true,
+      new_arrivals: true,
+      exclusive_sale: true,
+      most_loved_styles: true,
+      instagram_feed: true,
+    },
+  },
+  mobile_homepage_layout: {
+    order: [
+      'hero_banner',
+      'category_grid',
+      'new_arrivals',
+      'exclusive_sale',
+      'most_loved_styles',
+      'promo_banner',
+      'why_jalyn',
+      'services_strip',
+      'instagram_feed',
+    ],
+    visibility: {
+      hero_banner: true,
+      category_grid: true,
+      new_arrivals: true,
+      exclusive_sale: true,
+      most_loved_styles: true,
+      promo_banner: true,
+      why_jalyn: true,
+      services_strip: true,
+      instagram_feed: true,
+    },
+  },
+  featured_edits: {
+    women: {
+      heading: 'Featured Edit',
+      title: 'Aesthetic Co-ord Sets',
+      image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=400&q=80',
+      cta_text: 'Shop Collection',
+      cta_link: '/shop',
+    },
+    kids: {
+      heading: 'Featured Edit',
+      title: 'Playful Toddler Wear',
+      image: 'https://images.unsplash.com/photo-1519457431-44ccd64a579b?auto=format&fit=crop&w=400&q=80',
+      cta_text: 'Shop Collection',
+      cta_link: '/shop',
+    }
+  },
+  page_new_arrivals: {
+    title: 'New Arrivals',
+    description: 'Discover the latest styles handpicked for you. From effortless everyday looks to statement pieces, our new arrivals are designed to keep you ahead in fashion.',
+    bg_image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1920&q=80',
+    slug: 'new-arrivals',
+    meta_title: 'New Arrivals | JALYN Store',
+    meta_description: 'Discover the latest women\'s fashion arrivals at JALYN. Shop new dresses, co-ord sets, ethnic wear, tops and more.'
+  },
+  page_sale: {
+    title: 'Exclusive Sale',
+    description: 'Upgrade your wardrobe with our curated seasonal markdowns. Enjoy premium quality JALYN styles at special limited-time pricing.',
+    bg_image: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&w=1920&q=80',
+    slug: 'sale',
+    meta_title: 'Seasonal Sale | JALYN Store',
+    meta_description: 'Shop the JALYN clearance and seasonal sale. Enjoy massive discounts on premium dresses, tops, accessories, and coordinates.'
+  },
+  recently_viewed: {
+    title: 'Recently Viewed',
+    enabled: true
+  },
+  you_may_also_like: {
+    title: 'You May Also Like',
+    enabled: true
   },
 };
 

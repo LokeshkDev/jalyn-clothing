@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react'
 import { ShoppingBag, Truck, RotateCcw, ShieldCheck, MapPin, CheckCircle2, AlertCircle, Lock, Edit2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCartStore, useDeliveryStore } from '@/store'
+import { useCmsData } from '@/hooks/useCmsData'
 import { cn } from '@/lib/utils'
 
 export default function ProductPurchaseCard({ product, selectedSize, selectedColor }) {
   const addItem = useCartStore((s) => s.addItem)
   const openCart = useCartStore((s) => s.openCart)
   const deliveryStore = useDeliveryStore()
+  const { deliverySettings } = useCmsData()
+  const isDeliveryEnabled = deliverySettings?.enabled ?? true
 
   const [inputPincode, setInputPincode] = useState(deliveryStore.pincode || '')
   const [pincodeError, setPincodeError] = useState('')
@@ -113,75 +116,77 @@ export default function ProductPurchaseCard({ product, selectedSize, selectedCol
       </AnimatePresence>
 
       {/* Estimated Delivery Pincode Checker (Collapsible when verified) */}
-      <div className={cn(
-        'rounded-2xl border p-3.5 shadow-sm space-y-2.5 transition-all',
-        deliveryStore.isVerified
-          ? 'border-emerald-300 bg-emerald-50/40'
-          : 'border-amber-300 bg-amber-50/30'
-      )}>
-        <div className="flex items-center justify-between font-label text-xs font-bold uppercase tracking-wider text-ink">
-          <div className="flex items-center gap-2">
-            <MapPin className={cn('h-4 w-4', deliveryStore.isVerified ? 'text-emerald-600' : 'text-amber-600')} />
-            <span>Check Estimated Delivery</span>
+      {isDeliveryEnabled && (
+        <div className={cn(
+          'rounded-2xl border p-3.5 shadow-sm space-y-2.5 transition-all',
+          deliveryStore.isVerified
+            ? 'border-emerald-300 bg-emerald-50/40'
+            : 'border-amber-300 bg-amber-50/30'
+        )}>
+          <div className="flex items-center justify-between font-label text-xs font-bold uppercase tracking-wider text-ink">
+            <div className="flex items-center gap-2">
+              <MapPin className={cn('h-4 w-4', deliveryStore.isVerified ? 'text-emerald-600' : 'text-amber-600')} />
+              <span>Check Estimated Delivery</span>
+            </div>
+            {deliveryStore.isVerified && (
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" /> Verified
+              </span>
+            )}
           </div>
-          {deliveryStore.isVerified && (
-            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3" /> Verified
-            </span>
+
+          {/* Collapsed Verified State vs Expandable Edit Form */}
+          {deliveryStore.isVerified && !isEditingPincode ? (
+            <div className="flex items-center justify-between p-2.5 bg-white/90 rounded-xl border border-emerald-200 text-xs text-emerald-900 shadow-xs">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <p className="font-semibold text-emerald-800 text-[11.5px] leading-tight">
+                  Delivery available to <strong>{deliveryStore.deliveryInfo?.pincode || deliveryStore.pincode}</strong> · Ships in 3-5 days
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditingPincode(true)}
+                className="text-xs font-bold text-primary hover:underline uppercase tracking-wider shrink-0 ml-2 flex items-center gap-1"
+              >
+                <Edit2 className="h-3 w-3" />
+                <span>Change</span>
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleCheckDelivery} className="flex gap-2">
+              <input
+                type="text"
+                maxLength={6}
+                value={inputPincode}
+                onChange={(e) => setInputPincode(e.target.value.replace(/\D/g, ''))}
+                placeholder="Enter 6-digit Pincode (e.g. 400050)"
+                className="flex-1 rounded-xl border border-primary/20 bg-white px-3.5 py-2 text-xs font-mono font-medium outline-none focus:border-primary transition"
+              />
+              <button
+                type="submit"
+                className="rounded-xl bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-primary-deep transition shrink-0"
+              >
+                {deliveryStore.isVerified ? 'Update' : 'Check'}
+              </button>
+            </form>
+          )}
+
+          {pincodeError && (
+            <p className="flex items-center gap-1.5 text-xs text-red-500 font-medium">
+              <AlertCircle className="h-3.5 w-3.5" />
+              {pincodeError}
+            </p>
+          )}
+
+          {!deliveryStore.isVerified && (
+            <p className="flex items-center gap-1.5 text-[11px] text-amber-800 font-medium">
+              <Lock className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+              <span>Enter &amp; verify your delivery pincode above to enable <strong>Add to Bag</strong>.</span>
+            </p>
           )}
         </div>
-
-        {/* Collapsed Verified State vs Expandable Edit Form */}
-        {deliveryStore.isVerified && !isEditingPincode ? (
-          <div className="flex items-center justify-between p-2.5 bg-white/90 rounded-xl border border-emerald-200 text-xs text-emerald-900 shadow-xs">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-              <p className="font-semibold text-emerald-800 text-[11.5px] leading-tight">
-                Delivery available to <strong>{deliveryStore.deliveryInfo?.pincode || deliveryStore.pincode}</strong> · Ships in 3-5 days
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsEditingPincode(true)}
-              className="text-xs font-bold text-primary hover:underline uppercase tracking-wider shrink-0 ml-2 flex items-center gap-1"
-            >
-              <Edit2 className="h-3 w-3" />
-              <span>Change</span>
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleCheckDelivery} className="flex gap-2">
-            <input
-              type="text"
-              maxLength={6}
-              value={inputPincode}
-              onChange={(e) => setInputPincode(e.target.value.replace(/\D/g, ''))}
-              placeholder="Enter 6-digit Pincode (e.g. 400050)"
-              className="flex-1 rounded-xl border border-primary/20 bg-white px-3.5 py-2 text-xs font-mono font-medium outline-none focus:border-primary transition"
-            />
-            <button
-              type="submit"
-              className="rounded-xl bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-primary-deep transition shrink-0"
-            >
-              {deliveryStore.isVerified ? 'Update' : 'Check'}
-            </button>
-          </form>
-        )}
-
-        {pincodeError && (
-          <p className="flex items-center gap-1.5 text-xs text-red-500 font-medium">
-            <AlertCircle className="h-3.5 w-3.5" />
-            {pincodeError}
-          </p>
-        )}
-
-        {!deliveryStore.isVerified && (
-          <p className="flex items-center gap-1.5 text-[11px] text-amber-800 font-medium">
-            <Lock className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-            <span>Enter &amp; verify your delivery pincode above to enable <strong>Add to Bag</strong>.</span>
-          </p>
-        )}
-      </div>
+      )}
 
       {/* SINGLE ROW Badges */}
       <div className="grid grid-cols-3 gap-2 rounded-2xl border border-primary/10 bg-white p-3 shadow-sm text-center">

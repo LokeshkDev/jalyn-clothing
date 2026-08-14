@@ -5,7 +5,17 @@ import { Flower2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { BlossomBadge, FloatingPetals } from '@/components/ui/BlossomDecor'
 
+import { useCmsData } from '@/hooks/useCmsData'
+
 export default function Lookbook() {
+  const { promoBanner } = useCmsData()
+  const badge = promoBanner?.badge || 'Lookbook'
+  const title = promoBanner?.title || 'Timeless Elegance, Every Moment'
+  const subtitle = promoBanner?.subtitle || 'Explore our seasonal lookbook — quiet luxury silhouettes styled for mornings, evenings, and everything in between.'
+  const ctaText = promoBanner?.cta_text || 'Explore Lookbook'
+  const ctaLink = promoBanner?.cta_link || '/lookbook'
+  const bgImage = promoBanner?.bg_image || 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1600&q=80'
+
   const ref = useRef(null)
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -31,23 +41,20 @@ export default function Lookbook() {
           >
             <div className="mb-3 flex items-center gap-2">
               <BlossomBadge className="!h-6 !w-6" />
-              <p className="section-label">Lookbook</p>
+              <p className="section-label">{badge}</p>
             </div>
             <h2
               id="lookbook-heading"
               className="mt-2 font-display text-3xl font-medium leading-tight tracking-tight text-ink md:text-4xl lg:text-[2.75rem]"
             >
-              Timeless Elegance,
-              <br />
-              <span className="italic text-primary">Every Moment</span>
+              {title}
             </h2>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-ink-muted md:text-base">
-              Explore our seasonal lookbook — quiet luxury silhouettes styled
-              for mornings, evenings, and everything in between.
+              {subtitle}
             </p>
             <div className="mt-8 flex items-center gap-3">
-              <Link to="/lookbook">
-                <Button>Explore Lookbook</Button>
+              <Link to={ctaLink}>
+                <Button>{ctaText}</Button>
               </Link>
               <Flower2 className="h-5 w-5 text-primary/50" aria-hidden />
             </div>
@@ -57,8 +64,8 @@ export default function Lookbook() {
         <div className="relative min-h-[380px] overflow-hidden lg:col-span-3 lg:min-h-[520px]">
           <motion.img
             style={{ y }}
-            src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1600&q=80"
-            alt="JALYN lookbook — woman in floral dress among soft blooms"
+            src={bgImage}
+            alt="Promo banner collection"
             className="absolute inset-0 h-[120%] w-full object-cover object-center"
             loading="lazy"
           />

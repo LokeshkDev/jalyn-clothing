@@ -1,31 +1,140 @@
 export const NAV_LINKS = [
-  { label: 'New Arrivals', href: '/collections/new-arrivals' },
   {
-    label: 'Clothing',
-    href: '/shop',
+    label: 'New Arrivals',
+    href: '/new-arrivals',
     hasDropdown: true,
     children: [
-      { label: 'Dresses & Gowns', href: '/shop?category=dresses', subtitle: 'Flattering silhouettes' },
-      { label: 'Tops & Blouses', href: '/shop?category=tops', subtitle: 'Everyday chic' },
-      { label: 'Co-ord Sets', href: '/shop?category=coords', subtitle: 'Matching essentials' },
-      { label: 'Lounge & Sleepwear', href: '/shop?category=loungewear', subtitle: 'Relaxed luxury' },
-      { label: 'Jackets & Shrugs', href: '/shop?category=jackets', subtitle: 'Layering pieces' },
+      { label: 'Ethnic Wear', href: '/shop?category=ethnic' },
+      { label: 'Casuals', href: '/shop?category=casuals' },
+      { label: 'Formals', href: '/shop?category=formals' },
     ],
   },
   {
-    label: 'Categories',
-    href: '/shop',
+    label: 'Sale',
+    href: '/sale',
+  },
+  {
+    label: 'Women',
+    href: '/shop?category=women',
     hasDropdown: true,
-    children: [
-      { label: 'Ethnic Wear', href: '/shop?category=ethnic', subtitle: 'Traditional elegance' },
-      { label: 'Designer Sarees', href: '/shop?category=sarees', subtitle: 'Timeless classics' },
-      { label: 'Anarkali & Kurtis', href: '/shop?category=kurtis', subtitle: 'Festive favorites' },
-      { label: 'Aesthetic Activewear', href: '/shop?category=activewear', subtitle: 'Comfort & motion' },
-      { label: 'Artisanal Footwear', href: '/shop?category=footwear', subtitle: 'Handcrafted style' },
+    isMega: true,
+    groups: [
+      {
+        title: 'Indian and Fusion Wear',
+        items: [
+          { label: 'Kurtis & Tunics', href: '/shop?category=kurtis-tunic' },
+          { label: 'Co-Ord Sets', href: '/shop?category=coords' },
+          { label: 'Salwar & Chudidars Set', href: '/shop?category=salwar-chudidar' },
+          { label: 'Sharara & Lehenga', href: '/shop?category=sharara-lehenga' },
+          { label: 'Short Kurtis', href: '/shop?category=short-kurti' },
+          { label: 'Ethnic Wear', href: '/shop?category=ethnic-wear' },
+          { label: 'Unstitched Material', href: '/shop?category=unstitched' },
+          { label: 'Leggings, Patiyala & Kurtipants', href: '/shop?category=leggings-kurtipants' },
+          { label: 'Dupattas & Shawls', href: '/shop?category=dupattas-shawls' },
+        ],
+      },
+      {
+        title: 'Western Wear',
+        items: [
+          { label: 'Dresses & Gowns', href: '/shop?category=dresses-gown' },
+          { label: 'Shirts & Crop Tops', href: '/shop?category=shirt-croptops' },
+          { label: 'T-Shirts', href: '/shop?category=tshirts' },
+          { label: 'Jeans', href: '/shop?category=jeans' },
+          { label: 'Short Tops', href: '/shop?category=short-tops' },
+          { label: 'Co-ords', href: '/shop?category=western-coords' },
+          { label: 'Palazzos', href: '/shop?category=palazzos' },
+        ],
+      },
+      {
+        title: 'Maternity Wear',
+        items: [
+          { label: 'Ethnic Tops', href: '/shop?category=maternity-ethnic-tops' },
+          { label: 'Dresses & Gowns', href: '/shop?category=maternity-dresses' },
+          { label: 'Nightwear Feeding', href: '/shop?category=nightwear-feeding' },
+        ],
+      },
+      {
+        title: 'Nightwear & Loungewear',
+        items: [
+          { label: 'PJs', href: '/shop?category=pjs' },
+          { label: 'Shirts', href: '/shop?category=lounge-shirts' },
+          { label: 'Nighties & Night Gowns', href: '/shop?category=nighties-nightgowns' },
+        ],
+      },
     ],
   },
-  { label: 'Shop All', href: '/shop' },
-  { label: 'Sale', href: '/collections/sale', accent: true },
+  {
+    label: 'Kids',
+    href: '/shop?category=kids',
+    hasDropdown: true,
+    isMega: true,
+    groups: [
+      {
+        title: 'Girls Clothing',
+        items: [
+          { label: 'Dresses', href: '/shop?category=girls-dress' },
+          { label: 'T-Shirts', href: '/shop?category=girls-tshirt' },
+          { label: 'Clothing Sets', href: '/shop?category=girls-clothing-set' },
+          { label: 'Ethnic Wear', href: '/shop?category=girls-ethnic-wear' },
+          { label: 'Sharara & Lehenga', href: '/shop?category=girls-sharara-lehenga' },
+        ],
+      },
+      {
+        title: 'Nightwear & Loungewear',
+        items: [
+          { label: 'Shirts', href: '/shop?category=kids-lounge-shirts' },
+          { label: 'Pants', href: '/shop?category=kids-pants' },
+          { label: 'Girls Frocks', href: '/shop?category=girls-frocks' },
+          { label: 'Nightwear & Lounges', href: '/shop?category=kids-nightwear-lounges' },
+        ],
+      },
+      {
+        title: 'Toddlers',
+        items: [
+          { label: 'Clothing Sets', href: '/shop?category=toddlers-clothing-set' },
+          { label: 'Frocks', href: '/shop?category=toddlers-frocks' },
+          { label: 'Nightwear & Loungewear', href: '/shop?category=toddlers-nightwear' },
+          { label: 'Western Wear Girls', href: '/shop?category=toddlers-western-girls' },
+          { label: 'Western Wear Boys', href: '/shop?category=toddlers-western-boys' },
+        ],
+      },
+      {
+        title: 'Infants',
+        items: [
+          { label: 'Ethnic Wear', href: '/shop?category=infants-ethnic-wear' },
+          { label: 'Western Wear', href: '/shop?category=infants-western-wear' },
+          { label: 'Regular Wear', href: '/shop?category=infants-regular-wear' },
+          { label: 'Nightwear', href: '/shop?category=infants-nightwear' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Plus Curve',
+    href: '/shop?category=plus-curve',
+    hasDropdown: true,
+    children: [
+      { label: 'Maxis', href: '/shop?category=maxis' },
+      { label: 'Chudi Sets', href: '/shop?category=chudi-sets' },
+      { label: 'Tops', href: '/shop?category=plus-tops' },
+      { label: 'Nightwear & Loungewear', href: '/shop?category=plus-nightwear' },
+      { label: 'Nighties', href: '/shop?category=plus-nighties' },
+    ],
+  },
+  {
+    label: 'Combo',
+    href: '/shop?category=combo',
+    hasDropdown: true,
+    children: [
+      { label: 'Western Combo Women', href: '/shop?category=combo-western-women' },
+      { label: 'Western Combo Kids', href: '/shop?category=combo-western-kids' },
+      { label: 'College Combo', href: '/shop?category=combo-college' },
+      { label: 'Formal Combo', href: '/shop?category=combo-formal' },
+      { label: 'Nightwear Combo', href: '/shop?category=combo-nightwear' },
+    ],
+  },
+  { label: 'Track Your Order', href: '/track-order' },
+  { label: 'About Us', href: '/about' },
 ]
 
 export const SERVICES = [

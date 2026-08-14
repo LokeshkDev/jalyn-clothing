@@ -238,6 +238,11 @@ export const ensureProductsTable = async () => {
       "ALTER TABLE products ADD COLUMN IF NOT EXISTS base_sku VARCHAR(100)",
       "ALTER TABLE products ADD COLUMN IF NOT EXISTS brand VARCHAR(100) DEFAULT 'JALYN'",
       "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_new_arrival TINYINT DEFAULT 1",
+      "ALTER TABLE products ADD COLUMN IF NOT EXISTS new_arrival_order INT DEFAULT 0",
+      "ALTER TABLE products ADD COLUMN IF NOT EXISTS new_arrival_published TINYINT DEFAULT 1",
+      "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_sale TINYINT DEFAULT 0",
+      "ALTER TABLE products ADD COLUMN IF NOT EXISTS sale_order INT DEFAULT 0",
+      "ALTER TABLE products ADD COLUMN IF NOT EXISTS sale_published TINYINT DEFAULT 1",
       "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_online TINYINT DEFAULT 1",
       "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_offline TINYINT DEFAULT 1",
       "ALTER TABLE products ADD COLUMN IF NOT EXISTS low_stock_threshold INT DEFAULT 5",
@@ -315,7 +320,7 @@ function filterAndSortMockProducts(list, category, search, sort, includeOffline 
 
 // ─── GET /products ───
 export const getProducts = async (req, res) => {
-  const { category, search, sort, new_arrivals, include_offline } = req.query;
+  const { category, search, sort, new_arrivals, sales, sale, include_offline } = req.query;
   const isIncludeOffline = include_offline === '1' || include_offline === 'true';
 
   try {
@@ -328,7 +333,10 @@ export const getProducts = async (req, res) => {
     }
 
     if (new_arrivals === '1') {
-      query += ' AND is_new_arrival = 1';
+      query += ' AND is_new_arrival = 1 AND new_arrival_published = 1';
+    }
+    if (sales === '1' || sale === '1') {
+      query += ' AND is_sale = 1 AND sale_published = 1';
     }
     if (category && category !== 'all') {
       query += ' AND category_slug = ?';
@@ -338,8 +346,13 @@ export const getProducts = async (req, res) => {
       query += ' AND (title LIKE ? OR description LIKE ?)';
       params.push(`%${search}%`, `%${search}%`);
     }
-    if (sort === 'price-low') query += ' ORDER BY price ASC';
-    else if (sort === 'price-high') query += ' ORDER BY price DESC';
+    if (sort === 'price-low' || sort === 'price_asc') query += ' ORDER BY price ASC';
+    else if (sort === 'price-high' || sort === 'price_desc') query += ' ORDER BY price DESC';
+    else if (sort === 'top-rated' || sort === 'rating') query += ' ORDER BY rating DESC';
+    else if (sort === 'popularity' || sort === 'reviews') query += ' ORDER BY reviews_count DESC';
+    else if (sort === 'discount') query += ' ORDER BY discount DESC';
+    else if (new_arrivals === '1') query += ' ORDER BY new_arrival_order ASC, created_at DESC';
+    else if (sales === '1' || sale === '1') query += ' ORDER BY sale_order ASC, created_at DESC';
     else query += ' ORDER BY created_at DESC';
 
     const [rows] = await pool.query(query, params);
@@ -704,5 +717,183 @@ export const getInventoryTransactions = async (req, res) => {
     return res.json({ success: true, transactions: rows || [] });
   } catch (error) {
     return res.json({ success: true, transactions: [] });
+  }
+};
+
+export const updateNewArrivalStatus = async (req, res) => {
+  const { id } = req.params;
+  const { is_new_arrival, new_arrival_order, new_arrival_published } = req.body;
+
+  try {
+    const updates = [];
+    const params = [];
+
+    if (is_new_arrival !== undefined) {
+      updates.push('is_new_arrival = ?');
+      params.push(is_new_arrival ? 1 : 0);
+    }
+    if (new_arrival_order !== undefined) {
+      updates.push('new_arrival_order = ?');
+      params.push(new_arrival_order);
+    }
+    if (new_arrival_published !== undefined) {
+      updates.push('new_arrival_published = ?');
+      params.push(new_arrival_published ? 1 : 0);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update.' });
+    }
+
+    params.push(id);
+    await pool.query(`UPDATE products SET ${updates.join(', ')} WHERE id = ?`, params);
+
+    return res.json({ success: true, message: 'Product new arrival status updated successfully.' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updateNewArrivalsBulk = async (req, res) => {
+  const { productIds, isNewArrival, newArrivalPublished } = req.body;
+
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    return res.status(400).json({ success: false, message: 'Invalid productIds array.' });
+  }
+
+  try {
+    const params = [];
+    let setClause = [];
+    
+    if (isNewArrival !== undefined) {
+      setClause.push('is_new_arrival = ?');
+      params.push(isNewArrival ? 1 : 0);
+    }
+    if (newArrivalPublished !== undefined) {
+      setClause.push('new_arrival_published = ?');
+      params.push(newArrivalPublished ? 1 : 0);
+    }
+
+    if (setClause.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update.' });
+    }
+
+    params.push(productIds);
+
+    const query = `UPDATE products SET ${setClause.join(', ')} WHERE id IN (?)`;
+    await pool.query(query, params);
+
+    return res.json({
+      success: true,
+      message: `Bulk updated new arrivals status for ${productIds.length} products.`,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const reorderNewArrivals = async (req, res) => {
+  const { orders } = req.body; // array of { id, new_arrival_order }
+
+  if (!Array.isArray(orders)) {
+    return res.status(400).json({ success: false, message: 'Invalid orders array.' });
+  }
+
+  try {
+    for (const item of orders) {
+      await pool.query('UPDATE products SET new_arrival_order = ? WHERE id = ?', [item.new_arrival_order, item.id]);
+    }
+    return res.json({ success: true, message: 'New arrivals order updated successfully.' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updateSaleStatus = async (req, res) => {
+  const { id } = req.params;
+  const { is_sale, sale_order, sale_published } = req.body;
+
+  try {
+    const updates = [];
+    const params = [];
+
+    if (is_sale !== undefined) {
+      updates.push('is_sale = ?');
+      params.push(is_sale ? 1 : 0);
+    }
+    if (sale_order !== undefined) {
+      updates.push('sale_order = ?');
+      params.push(sale_order);
+    }
+    if (sale_published !== undefined) {
+      updates.push('sale_published = ?');
+      params.push(sale_published ? 1 : 0);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update.' });
+    }
+
+    params.push(id);
+    await pool.query(`UPDATE products SET ${updates.join(', ')} WHERE id = ?`, params);
+
+    return res.json({ success: true, message: 'Product sale status updated successfully.' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updateSalesBulk = async (req, res) => {
+  const { productIds, isSale, salePublished } = req.body;
+
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    return res.status(400).json({ success: false, message: 'Invalid productIds array.' });
+  }
+
+  try {
+    const params = [];
+    let setClause = [];
+    
+    if (isSale !== undefined) {
+      setClause.push('is_sale = ?');
+      params.push(isSale ? 1 : 0);
+    }
+    if (salePublished !== undefined) {
+      setClause.push('sale_published = ?');
+      params.push(salePublished ? 1 : 0);
+    }
+
+    if (setClause.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update.' });
+    }
+
+    params.push(productIds);
+
+    const query = `UPDATE products SET ${setClause.join(', ')} WHERE id IN (?)`;
+    await pool.query(query, params);
+
+    return res.json({
+      success: true,
+      message: `Bulk updated sale status for ${productIds.length} products.`,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const reorderSales = async (req, res) => {
+  const { orders } = req.body; // array of { id, sale_order }
+
+  if (!Array.isArray(orders)) {
+    return res.status(400).json({ success: false, message: 'Invalid orders array.' });
+  }
+
+  try {
+    for (const item of orders) {
+      await pool.query('UPDATE products SET sale_order = ? WHERE id = ?', [item.sale_order, item.id]);
+    }
+    return res.json({ success: true, message: 'Sales order updated successfully.' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

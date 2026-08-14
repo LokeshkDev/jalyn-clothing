@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import ShopHero from '@/components/shop/ShopHero'
+import { useParams, Link } from 'react-router-dom'
+import { ChevronRight, SlidersHorizontal } from 'lucide-react'
 import ProductToolbar from '@/components/shop/ProductToolbar'
 import ProductGrid from '@/components/shop/ProductGrid'
 import SkeletonCard from '@/components/shop/SkeletonCard'
@@ -11,7 +12,6 @@ import FilterDrawer from '@/components/shop/FilterDrawer'
 import Services from '@/components/home/Services'
 
 // Mobile specific components
-import MobileShopHero from '@/components/shop/MobileShopHero'
 import MobileShopToolbar from '@/components/shop/MobileShopToolbar'
 import MobileCategoryChips from '@/components/shop/MobileCategoryChips'
 import MobileShopProductCard from '@/components/shop/MobileShopProductCard'
@@ -20,7 +20,6 @@ import MobileSortSheet from '@/components/shop/MobileSortSheet'
 import MobileFloatingBar from '@/components/shop/MobileFloatingBar'
 import MobileRecentlyViewed from '@/components/shop/MobileRecentlyViewed'
 import { Swiper, SwiperSlide } from 'swiper/react'
-import { Navigation } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/navigation'
 
@@ -29,7 +28,6 @@ import {
   PRICE_BOUNDS,
 } from '@/constants/shopProducts'
 import { useProductsApi } from '@/hooks/useProductsApi'
-
 
 const initialFilters = () => ({
   categories: [],
@@ -48,8 +46,10 @@ const initialFilters = () => ({
   brand: [],
 })
 
-export default function Shop() {
+export default function CategoryPage() {
+  const { slug } = useParams()
   const { products: apiProducts } = useProductsApi()
+  const [categories, setCategories] = useState([])
   const [filters, setFilters] = useState(initialFilters)
   const [sort, setSort] = useState('newest')
   const [view, setView] = useState(4)
@@ -59,19 +59,66 @@ export default function Shop() {
   const [sortSheetOpen, setSortSheetOpen] = useState(false)
   const [quickView, setQuickView] = useState(null)
 
+  // Fetch category metadata from backend
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 1000)
-    return () => clearTimeout(t)
+    fetch('/api/categories')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.categories) {
+          setCategories(data.categories)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
+    setLoading(true)
+    const t = setTimeout(() => setLoading(false), 500)
+    return () => clearTimeout(t)
+  }, [slug])
+
+  useEffect(() => {
     setPage(1)
-  }, [filters, sort])
+  }, [filters, sort, slug])
+
+  // Find matching category details
+  const currentCategory = useMemo(() => {
+    if (!slug) return null
+    const normalizedSlug = slug.toLowerCase().trim()
+    return categories.find(
+      (c) =>
+        (c.slug && c.slug.toLowerCase() === normalizedSlug) ||
+        (c.name && c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === normalizedSlug)
+    )
+  }, [categories, slug])
+
+  const categoryTitle = useMemo(() => {
+    if (currentCategory?.name) return currentCategory.name
+    if (!slug) return 'Collection'
+    return slug
+      .split('-')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  }, [currentCategory, slug])
+
+  const categoryDescription = useMemo(() => {
+    if (currentCategory?.description) return currentCategory.description
+    return `Explore our premium curated ${categoryTitle} collection designed for timeless elegance and effortless comfort.`
+  }, [currentCategory, categoryTitle])
+
+  const categoryBanner = useMemo(() => {
+    if (currentCategory?.image_url) return currentCategory.image_url
+    return 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1920&q=80'
+  }, [currentCategory])
+
+  // Update document title for SEO
+  useEffect(() => {
+    document.title = `JALYN | ${categoryTitle} Collection`
+  }, [categoryTitle])
 
   // Active filter count for badge indicator
   const activeFilterCount = useMemo(() => {
     let count = 0
-    if (filters.categories.length) count += filters.categories.length
     if (filters.sizes.length) count += filters.sizes.length
     if (filters.colors.length) count += filters.colors.length
     if (filters.fabric.length) count += filters.fabric.length
@@ -86,19 +133,29 @@ export default function Shop() {
     const rawList = apiProducts && apiProducts.length > 0 ? apiProducts : SHOP_PRODUCTS
     let list = rawList.filter((p) => p.is_online !== 0 && p.is_online !== false)
 
-    if (filters.categories.length) {
-      list = list.filter((p) => filters.categories.includes(p.category))
+    // Filter strictly by this category slug / name
+    if (slug && slug !== 'all') {
+      const targetSlug = slug.toLowerCase().trim()
+      list = list.filter((p) => {
+        const pCat = (p.category || '').toLowerCase().trim()
+        const pSlug = (p.category_slug || '').toLowerCase().trim()
+        return (
+          pCat === targetSlug ||
+          pSlug === targetSlug ||
+          pCat.replace(/[^a-z0-9]+/g, '-') === targetSlug ||
+          pCat.includes(targetSlug) ||
+          targetSlug.includes(pCat)
+        )
+      })
     }
-    list = list.filter(
-      (p) => p.price >= filters.price[0] && p.price <= filters.price[1],
-    )
+
+    list = list.filter((p) => p.price >= filters.price[0] && p.price <= filters.price[1])
+
     if (filters.sizes.length) {
-      list = list.filter((p) => p.sizes.some((s) => filters.sizes.includes(s)))
+      list = list.filter((p) => (p.sizes || []).some((s) => filters.sizes.includes(s)))
     }
     if (filters.colors.length) {
-      list = list.filter((p) =>
-        p.colors.some((c) => filters.colors.includes(c)),
-      )
+      list = list.filter((p) => (p.colors || []).some((c) => filters.colors.includes(c)))
     }
     if (filters.fabric.length) {
       list = list.filter((p) => filters.fabric.includes(p.fabric))
@@ -125,16 +182,16 @@ export default function Shop() {
       list = list.filter((p) =>
         filters.discount.some((d) => {
           const min = parseInt(d, 10)
-          return p.discount >= min
-        }),
+          return (p.discount || 0) >= min
+        })
       )
     }
     if (filters.ratings.length) {
       list = list.filter((p) =>
         filters.ratings.some((r) => {
           const min = parseFloat(r)
-          return p.rating >= min
-        }),
+          return (p.rating || 0) >= min
+        })
       )
     }
     if (filters.availability.includes('In Stock')) {
@@ -149,19 +206,18 @@ export default function Shop() {
         list.sort((a, b) => b.price - a.price)
         break
       case 'popularity':
-        list.sort((a, b) => b.reviews - a.reviews)
+        list.sort((a, b) => (b.reviews || 0) - (a.reviews || 0))
         break
       case 'alpha':
-        list.sort((a, b) => a.title.localeCompare(b.title))
+        list.sort((a, b) => (a.title || '').localeCompare(b.title || ''))
         break
       default:
         list.sort((a, b) => (b.badges?.includes('new') ? 1 : 0) - (a.badges?.includes('new') ? 1 : 0))
     }
 
     return list
-  }, [filters, sort, apiProducts])
+  }, [filters, sort, apiProducts, slug])
 
-  // Show exactly 3 rows of data per page dynamically based on grid view (e.g. 4 cols x 3 rows = 12 items per page)
   const itemsPerRow = typeof view === 'number' ? view : 4
   const pageSize = itemsPerRow * 3
 
@@ -172,24 +228,36 @@ export default function Shop() {
 
   const clearFilters = () => setFilters(initialFilters())
 
-  const handleCategorySelect = (categoryId) => {
-    if (categoryId === 'all') {
-      setFilters((prev) => ({ ...prev, categories: [] }))
-    } else {
-      setFilters((prev) => ({ ...prev, categories: [categoryId] }))
-    }
-  }
-
   const recentlyViewed = SHOP_PRODUCTS.slice(0, 6)
   const alsoLike = SHOP_PRODUCTS.slice(6, 10)
-  const activeCategory = filters.categories.length === 1 ? filters.categories[0] : 'all'
 
   return (
-    <div className="bg-surface pb-12 lg:pb-0">
-      {/* MOBILE SHOP VIEW (< 1024px / lg) */}
+    <div className="bg-surface pb-12 lg:pb-0 min-h-screen">
+      
+      {/* MOBILE CATEGORY VIEW (< 1024px / lg) */}
       <div className="block lg:hidden">
-        {/* 1. Mobile Shop Hero */}
-        <MobileShopHero />
+        
+        {/* Mobile Hero Header */}
+        <section className="relative w-full bg-cover bg-center flex flex-col justify-center py-6 px-4 mb-3 overflow-hidden"
+          style={{ backgroundImage: `url(${categoryBanner})` }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-[#2A1A22]/90 via-[#2A1A22]/70 to-transparent z-[1]" />
+          <div className="relative z-10 space-y-1.5">
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-[11px] font-semibold text-rose-blush/80">
+              <Link to="/" className="hover:text-white transition">Home</Link>
+              <ChevronRight className="h-3 w-3 text-white/40" />
+              <Link to="/shop" className="hover:text-white transition">Shop</Link>
+              <ChevronRight className="h-3 w-3 text-white/40" />
+              <span className="text-white font-bold truncate">{categoryTitle}</span>
+            </nav>
+            <h1 className="font-heading text-2xl font-bold tracking-tight text-white leading-tight drop-shadow-md">
+              {categoryTitle}
+            </h1>
+            <p className="text-xs text-rose-light/90 line-clamp-2 drop-shadow-sm max-w-sm">
+              {categoryDescription}
+            </p>
+          </div>
+        </section>
 
         {/* 2. Filter / Sort Toolbar & Product Count */}
         <MobileShopToolbar
@@ -200,11 +268,18 @@ export default function Shop() {
           onOpenSort={() => setSortSheetOpen(true)}
         />
 
-        {/* 3. Horizontal Category Chips */}
+        {/* 3. Horizontal Category Navigation Chips */}
         <MobileCategoryChips
-          activeCategory={activeCategory}
-          onSelectCategory={handleCategorySelect}
+          activeCategory={slug || 'all'}
+          onSelectCategory={(catSlug) => {
+            if (catSlug === 'all') {
+              window.location.href = '/shop'
+            } else {
+              window.location.href = `/category/${catSlug}`
+            }
+          }}
         />
+
         {/* 4. Two-column Product Grid */}
         <div className="px-4">
           {loading ? (
@@ -218,7 +293,7 @@ export default function Shop() {
           ) : (
             <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
               {pageItems.map((product) => (
-                <MobileShopProductCard key={product.id} product={product} />
+                <MobileShopProductCard key={product.id || product.slug} product={product} />
               ))}
             </div>
           )}
@@ -253,12 +328,51 @@ export default function Shop() {
           sort={sort}
           onSortChange={setSort}
         />
+
+        {/* Filter Drawer */}
+        <MobileFilterSheet
+          isOpen={filterDrawerOpen}
+          onClose={() => setFilterDrawerOpen(false)}
+          filters={filters}
+          onFilterChange={setFilters}
+          onReset={clearFilters}
+          activeCategory={slug}
+          totalProducts={filtered.length}
+        />
       </div>
 
-      {/* DESKTOP SHOP VIEW (>= 1024px / lg) */}
+      {/* DESKTOP CATEGORY VIEW (>= 1024px / lg) */}
       <div className="hidden lg:block">
-        {/* Clean minimal non-sticky breadcrumb header */}
-        <ShopHero />
+        
+        {/* Editorial Compact Header with Background Banner */}
+        <section
+          className="relative w-full bg-cover bg-center flex flex-col justify-center py-8 md:py-10 overflow-hidden"
+          style={{ backgroundImage: `url(${categoryBanner})` }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-[#2A1A22]/90 via-[#2A1A22]/65 to-transparent z-[1]" />
+          <div className="relative z-10 container-luxury max-w-7xl px-4 sm:px-6 w-full space-y-2.5">
+            {/* Minimal Breadcrumb */}
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-rose-blush/80 font-semibold">
+              <Link to="/" className="transition hover:text-white">Home</Link>
+              <ChevronRight className="h-3.5 w-3.5 text-white/40" />
+              <Link to="/shop" className="transition hover:text-white">Shop</Link>
+              <ChevronRight className="h-3.5 w-3.5 text-white/40" />
+              <span className="font-bold text-white">{categoryTitle}</span>
+            </nav>
+
+            <div className="max-w-2xl">
+              <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-rose-blush mb-1 block">
+                Category Collection
+              </span>
+              <h1 className="font-heading text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white leading-tight mb-2 drop-shadow-md">
+                {categoryTitle}
+              </h1>
+              <p className="text-xs sm:text-sm text-rose-light/95 leading-relaxed drop-shadow-sm max-w-xl">
+                {categoryDescription}
+              </p>
+            </div>
+          </div>
+        </section>
 
         <div className="container-luxury py-8 max-w-7xl">
           {/* Top Non-Sticky Toolbar with Filter Popover Button */}
@@ -274,7 +388,7 @@ export default function Shop() {
             activeFilterCount={activeFilterCount}
           />
 
-          {/* Full-width Product Grid without Sidebar Column */}
+          {/* Full-width Product Grid */}
           <div className="mt-6">
             {!loading && filtered.length === 0 ? (
               <EmptyState onReset={clearFilters} />
@@ -288,14 +402,16 @@ export default function Shop() {
             )}
           </div>
 
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            onChange={(p) => {
-              setPage(p)
-              window.scrollTo({ top: 200, behavior: 'smooth' })
-            }}
-          />
+          {totalPages > 1 && (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onChange={(p) => {
+                setPage(p)
+                window.scrollTo({ top: 200, behavior: 'smooth' })
+              }}
+            />
+          )}
 
           {/* Desktop Recently Viewed Swiper */}
           <section className="mt-16" aria-labelledby="recently-viewed-desktop">
@@ -334,7 +450,7 @@ export default function Shop() {
             </h2>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
               {alsoLike.map((p) => (
-                <ShopProductCard key={p.id} product={p} onQuickView={setQuickView} />
+                <ShopProductCard key={p.id || p.slug} product={p} onQuickView={setQuickView} />
               ))}
             </div>
           </section>

@@ -14,6 +14,7 @@ import cmsRoutes from './routes/cmsRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import couponRoutes from './routes/couponRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 
 dotenv.config();
 
@@ -72,6 +73,7 @@ app.use('/api/cms', cmsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/coupons', couponRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

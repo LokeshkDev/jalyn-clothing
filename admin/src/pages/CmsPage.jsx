@@ -25,6 +25,15 @@ import {
   ChevronUp,
   ChevronDown,
   Phone,
+  Banknote,
+  CreditCard,
+  ShieldAlert,
+  Users,
+  UserPlus,
+  UserCheck,
+  Star,
+  Monitor,
+  Smartphone,
 } from 'lucide-react';
 import Header from '../components/Header';
 import ImageUploader from '../components/ImageUploader';
@@ -180,16 +189,216 @@ export default function CmsPage() {
       working_hours: 'Monday - Saturday: 10:00 AM - 7:00 PM IST',
       google_maps_url: 'https://maps.google.com/maps?q=Mumbai,Maharashtra&t=&z=13&ie=UTF8&iwloc=&output=embed',
     },
+    recently_viewed: {
+      title: 'Recently Viewed',
+      enabled: true,
+    },
+    you_may_also_like: {
+      title: 'You May Also Like',
+      enabled: true,
+    },
+    featured_edits: {
+      women: {
+        heading: 'Featured Edit',
+        title: 'Aesthetic Co-ord Sets',
+        image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=400&q=80',
+        cta_text: 'Shop Collection',
+        cta_link: '/shop',
+      },
+      kids: {
+        heading: 'Featured Edit',
+        title: 'Playful Toddler Wear',
+        image: 'https://images.unsplash.com/photo-1519457431-44ccd64a579b?auto=format&fit=crop&w=400&q=80',
+        cta_text: 'Shop Collection',
+        cta_link: '/shop',
+      }
+    },
   });
 
-  const [activeTab, setActiveTab] = useState('announcement_bar');
+  const [activeTab, setActiveTab] = useState('homepage');
+  const [layoutOrder, setLayoutOrder] = useState([
+    'announcement_bar',
+    'hero_banner',
+    'category_grid',
+    'featured_edits',
+    'why_jalyn',
+    'services_strip',
+    'promo_banner',
+    'new_arrivals',
+    'exclusive_sale',
+    'most_loved_styles',
+    'instagram_feed',
+  ]);
+  const [layoutVisibility, setLayoutVisibility] = useState({
+    announcement_bar: true,
+    hero_banner: true,
+    category_grid: true,
+    featured_edits: true,
+    why_jalyn: true,
+    services_strip: true,
+    promo_banner: true,
+    new_arrivals: true,
+    exclusive_sale: true,
+    most_loved_styles: true,
+    instagram_feed: true,
+  });
+
+  const [layoutDevice, setLayoutDevice] = useState('desktop'); // 'desktop' | 'mobile'
+  const MOBILE_DEFAULT_ORDER = [
+    'hero_banner',
+    'category_grid',
+    'new_arrivals',
+    'exclusive_sale',
+    'most_loved_styles',
+    'promo_banner',
+    'why_jalyn',
+    'services_strip',
+    'instagram_feed',
+  ];
+  const [mobileLayoutOrder, setMobileLayoutOrder] = useState(MOBILE_DEFAULT_ORDER);
+  const [mobileLayoutVisibility, setMobileLayoutVisibility] = useState({
+    hero_banner: true,
+    category_grid: true,
+    new_arrivals: true,
+    exclusive_sale: true,
+    most_loved_styles: true,
+    promo_banner: true,
+    why_jalyn: true,
+    services_strip: true,
+    instagram_feed: true,
+  });
+
+  const [expandedSections, setExpandedSections] = useState({
+    announcement_bar: true,
+  });
+
+  const toggleExpand = (sectionKey) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey],
+    }));
+  };
+
+  const handleSaveLayout = async (newOrder, newVisibility, device = layoutDevice) => {
+    try {
+      await api.put(`/cms/homepage/${device === 'mobile' ? 'mobile_homepage_layout' : 'desktop_homepage_layout'}`, {
+        order: newOrder,
+        visibility: newVisibility,
+      });
+    } catch (err) {
+      console.error('Failed to save layout configuration:', err);
+    }
+  };
+
+  const moveUp = (index) => {
+    if (index === 0) return;
+    if (layoutDevice === 'mobile') {
+      const newOrder = [...mobileLayoutOrder];
+      const temp = newOrder[index];
+      newOrder[index] = newOrder[index - 1];
+      newOrder[index - 1] = temp;
+      setMobileLayoutOrder(newOrder);
+      handleSaveLayout(newOrder, mobileLayoutVisibility, 'mobile');
+    } else {
+      const newOrder = [...layoutOrder];
+      const temp = newOrder[index];
+      newOrder[index] = newOrder[index - 1];
+      newOrder[index - 1] = temp;
+      setLayoutOrder(newOrder);
+      handleSaveLayout(newOrder, layoutVisibility, 'desktop');
+    }
+  };
+
+  const moveDown = (index) => {
+    const activeOrder = layoutDevice === 'mobile' ? mobileLayoutOrder : layoutOrder;
+    if (index === activeOrder.length - 1) return;
+    if (layoutDevice === 'mobile') {
+      const newOrder = [...mobileLayoutOrder];
+      const temp = newOrder[index];
+      newOrder[index] = newOrder[index + 1];
+      newOrder[index + 1] = temp;
+      setMobileLayoutOrder(newOrder);
+      handleSaveLayout(newOrder, mobileLayoutVisibility, 'mobile');
+    } else {
+      const newOrder = [...layoutOrder];
+      const temp = newOrder[index];
+      newOrder[index] = newOrder[index + 1];
+      newOrder[index + 1] = temp;
+      setLayoutOrder(newOrder);
+      handleSaveLayout(newOrder, layoutVisibility, 'desktop');
+    }
+  };
+
+  const toggleVisibility = (sectionKey) => {
+    if (layoutDevice === 'mobile') {
+      const newVisibility = {
+        ...mobileLayoutVisibility,
+        [sectionKey]: mobileLayoutVisibility[sectionKey] !== false ? false : true,
+      };
+      setMobileLayoutVisibility(newVisibility);
+      handleSaveLayout(mobileLayoutOrder, newVisibility, 'mobile');
+    } else {
+      const newVisibility = {
+        ...layoutVisibility,
+        [sectionKey]: layoutVisibility[sectionKey] !== false ? false : true,
+      };
+      setLayoutVisibility(newVisibility);
+      handleSaveLayout(layoutOrder, newVisibility, 'desktop');
+    }
+  };
+
+  
+
+  // Migrate old combined sections (recently_viewed / you_may_also_like) to separate keys
+  const migrateLayout = (order, visibility) => {
+    const oldKeys = ['recently_viewed', 'you_may_also_like'];
+    const newKeys = ['new_arrivals', 'exclusive_sale', 'most_loved_styles'];
+    const filtered = (order || []).filter((k) => !oldKeys.includes(k));
+    const replaceAt = (order || []).findIndex((k) => oldKeys.includes(k));
+    if (replaceAt === -1) {
+      newKeys.forEach((k) => {
+        if (!filtered.includes(k)) filtered.push(k);
+      });
+    } else {
+      let inserted = 0;
+      newKeys.forEach((k) => {
+        if (!filtered.includes(k)) {
+          filtered.splice(replaceAt + inserted, 0, k);
+          inserted += 1;
+        }
+      });
+    }
+    const vis = { ...(visibility || {}) };
+    newKeys.forEach((k) => {
+      if (vis[k] === undefined) vis[k] = true;
+    });
+    return { order: filtered, visibility: vis };
+  };
 
   useEffect(() => {
     async function fetchCmsData() {
       try {
         const response = await api.get('/cms/homepage');
         if (response.data?.data) {
-          setCmsData((prev) => ({ ...prev, ...response.data.data }));
+          setCmsData((prev) => ({
+            ...prev,
+            ...response.data.data,
+            recently_viewed: response.data.data.recently_viewed || prev.recently_viewed,
+            you_may_also_like: response.data.data.you_may_also_like || prev.you_may_also_like,
+            featured_edits: response.data.data.featured_edits || prev.featured_edits,
+          }));
+          const layout = response.data.data.homepage_layout || response.data.data.desktop_homepage_layout;
+          if (layout) {
+            const migrated = migrateLayout(layout.order, layout.visibility);
+            setLayoutOrder(migrated.order);
+            setLayoutVisibility(migrated.visibility);
+          }
+          const mobileLayout = response.data.data.mobile_homepage_layout;
+          if (mobileLayout) {
+            const migratedMobile = migrateLayout(mobileLayout.order, mobileLayout.visibility);
+            setMobileLayoutOrder(migratedMobile.order);
+            setMobileLayoutVisibility(migratedMobile.visibility);
+          }
         }
       } catch (err) {
         console.warn('Failed to load CMS data from API, using defaults:', err);
@@ -231,70 +440,50 @@ export default function CmsPage() {
     }));
   };
 
-  const tabs = [
-    { id: 'announcement_bar', label: 'Announcement Bar', icon: Megaphone },
-    { id: 'hero_banner', label: 'Hero Slides', icon: ImageIcon },
-    { id: 'category_grid', label: 'Curated Categories', icon: LayoutGrid },
-    { id: 'about_page', label: 'About Page', icon: Sparkles },
-    { id: 'contact_page', label: 'Contact Page', icon: Phone },
-    { id: 'why_jalyn', label: 'Why Jalyn Values', icon: Heart },
-    { id: 'services_strip', label: 'Services Promises', icon: Truck },
-    { id: 'promo_banner', label: 'Promo Banner', icon: Tag },
-    { id: 'instagram_feed', label: 'Instagram Posts', icon: Instagram },
-    { id: 'menu_arrangement', label: 'Header Menu', icon: Navigation },
-    { id: 'footer_settings', label: 'Footer Columns', icon: Columns },
-  ];
+  const [newUserForm, setNewUserForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: 'customer',
+  });
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [userList, setUserList] = useState([]);
 
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        const res = await api.get('/auth/users');
+        if (res.data?.data) setUserList(res.data.data);
+      } catch (e) {
+        console.warn('Could not fetch user list:', e.message);
+      }
+    }
+    fetchUsers();
+  }, []);
 
-  return (
-    <div className="flex-1 overflow-y-auto">
-      <Header
-        title="Homepage CMS & Layout Manager"
-        subtitle="Full CRUD control over every section, banner, menu link, and footer column across your store."
-      />
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    if (!newUserForm.name || !newUserForm.email || !newUserForm.password) return;
+    setCreatingUser(true);
+    try {
+      const res = await api.post('/auth/users', newUserForm);
+      if (res.data?.success) {
+        setMessage({ type: 'success', text: res.data.message });
+        setNewUserForm({ name: '', email: '', phone: '', password: '', role: 'customer' });
+        const resUsers = await api.get('/auth/users');
+        if (resUsers.data?.data) setUserList(resUsers.data.data);
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to create user' });
+    } finally {
+      setCreatingUser(false);
+    }
+  };
 
-      <main className="p-6 max-w-7xl mx-auto space-y-6">
-        {/* Notification Toast */}
-        {message.text && (
-          <div
-            className={`p-4 rounded-xl text-xs font-semibold flex items-center gap-2 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
-              }`}
-          >
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>{message.text}</span>
-          </div>
-        )}
 
-        {/* Tab Selector */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-gray-200">
-          {tabs.map((t) => {
-            const Icon = t.icon;
-            const isActive = activeTab === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setActiveTab(t.id)}
-                className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer ${isActive
-                  ? 'bg-brand-600 text-white shadow-sm'
-                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                  }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{t.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* 1. Announcement Bar Tab */}
-        {activeTab === 'announcement_bar' && (
+  const render_announcement_bar = () => (
+    
           <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
@@ -363,10 +552,11 @@ export default function CmsPage() {
               </div>
             </div>
           </div>
-        )}
+        
+  );
 
-        {/* 2. Hero Banner & Slides Tab (CRUD) */}
-        {activeTab === 'hero_banner' && (
+  const render_hero_banner = () => (
+    
           <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <div>
@@ -528,10 +718,11 @@ export default function CmsPage() {
               ))}
             </div>
           </div>
-        )}
+        
+  );
 
-        {/* 3. Curated Categories Tab (CRUD) */}
-        {activeTab === 'category_grid' && (
+  const render_category_grid = () => (
+    
           <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3">
               <div>
@@ -708,7 +899,803 @@ export default function CmsPage() {
               </div>
             </div>
           </div>
+        
+  );
+
+  const render_why_jalyn = () => (
+    
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                <Heart className="w-5 h-5 text-brand-600" /> Why Jalyn — Brand Values
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = [
+                      ...(cmsData.why_jalyn?.values || []),
+                      { title: 'New Brand Value', description: 'Description of brand promise' },
+                    ];
+                    updateSectionField('why_jalyn', 'values', next);
+                  }}
+                  className="px-3 py-2 rounded-xl border border-brand-200 bg-brand-50 text-brand-700 text-xs font-bold hover:bg-brand-100 transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Brand Value
+                </button>
+
+                <button
+                  onClick={() => handleSaveSection('why_jalyn')}
+                  disabled={savingSection === 'why_jalyn'}
+                  className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+                >
+                  {savingSection === 'why_jalyn' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Save Values</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Section Heading</label>
+                <input
+                  type="text"
+                  value={cmsData.why_jalyn?.title || ''}
+                  onChange={(e) => updateSectionField('why_jalyn', 'title', e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                />
+              </div>
+
+              <h4 className="font-bold text-gray-800 pt-2">Brand Values List ({cmsData.why_jalyn?.values?.length || 0})</h4>
+              {cmsData.why_jalyn?.values?.map((val, idx) => (
+                <div key={idx} className="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center gap-3">
+                  <div className="flex-1 grid grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      value={val.title}
+                      onChange={(e) => {
+                        const next = [...cmsData.why_jalyn.values];
+                        next[idx].title = e.target.value;
+                        updateSectionField('why_jalyn', 'values', next);
+                      }}
+                      placeholder="Value Title"
+                      className="px-2.5 py-1.5 rounded-lg border border-gray-300 font-bold text-gray-900 bg-white"
+                    />
+                    <input
+                      type="text"
+                      value={val.description}
+                      onChange={(e) => {
+                        const next = [...cmsData.why_jalyn.values];
+                        next[idx].description = e.target.value;
+                        updateSectionField('why_jalyn', 'values', next);
+                      }}
+                      placeholder="Description"
+                      className="px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = cmsData.why_jalyn.values.filter((_, i) => i !== idx);
+                      updateSectionField('why_jalyn', 'values', next);
+                    }}
+                    className="p-1 text-gray-400 hover:text-red-600 transition"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        
+  );
+
+  const render_services_strip = () => (
+    
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                <Truck className="w-5 h-5 text-brand-600" /> Services / Promises Strip
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = [
+                      ...(cmsData.services_strip?.promises || []),
+                      { icon: 'sparkles', title: 'New Promise', description: 'Service guarantee details' },
+                    ];
+                    updateSectionField('services_strip', 'promises', next);
+                  }}
+                  className="px-3 py-2 rounded-xl border border-brand-200 bg-brand-50 text-brand-700 text-xs font-bold hover:bg-brand-100 transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Promise Item
+                </button>
+
+                <button
+                  onClick={() => handleSaveSection('services_strip')}
+                  disabled={savingSection === 'services_strip'}
+                  className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+                >
+                  {savingSection === 'services_strip' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Save Promises</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <p className="text-gray-500">Manage service promises (icon keys: truck, refresh, shield, sparkles):</p>
+              {cmsData.services_strip?.promises?.map((p, idx) => (
+                <div key={idx} className="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center gap-3">
+                  <div className="flex-1 grid grid-cols-3 gap-3">
+                    <input
+                      type="text"
+                      value={p.icon}
+                      onChange={(e) => {
+                        const next = [...cmsData.services_strip.promises];
+                        next[idx].icon = e.target.value;
+                        updateSectionField('services_strip', 'promises', next);
+                      }}
+                      placeholder="Icon key"
+                      className="px-2.5 py-1.5 rounded-lg border border-gray-300 font-mono text-gray-600 bg-white"
+                    />
+                    <input
+                      type="text"
+                      value={p.title}
+                      onChange={(e) => {
+                        const next = [...cmsData.services_strip.promises];
+                        next[idx].title = e.target.value;
+                        updateSectionField('services_strip', 'promises', next);
+                      }}
+                      placeholder="Title"
+                      className="px-2.5 py-1.5 rounded-lg border border-gray-300 font-bold text-gray-800 bg-white"
+                    />
+                    <input
+                      type="text"
+                      value={p.description}
+                      onChange={(e) => {
+                        const next = [...cmsData.services_strip.promises];
+                        next[idx].description = e.target.value;
+                        updateSectionField('services_strip', 'promises', next);
+                      }}
+                      placeholder="Description"
+                      className="px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = cmsData.services_strip.promises.filter((_, i) => i !== idx);
+                      updateSectionField('services_strip', 'promises', next);
+                    }}
+                    className="p-1 text-gray-400 hover:text-red-600 transition"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        
+  );
+
+  const render_promo_banner = () => (
+    
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                <Tag className="w-5 h-5 text-brand-600" /> Promotional Festive Banner
+              </h3>
+              <button
+                onClick={() => handleSaveSection('promo_banner')}
+                disabled={savingSection === 'promo_banner'}
+                className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+              >
+                {savingSection === 'promo_banner' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>Save Banner</span>
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Badge Tagline</label>
+                  <input
+                    type="text"
+                    value={cmsData.promo_banner?.badge || ''}
+                    onChange={(e) => updateSectionField('promo_banner', 'badge', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-bold text-brand-600"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Title</label>
+                  <input
+                    type="text"
+                    value={cmsData.promo_banner?.title || ''}
+                    onChange={(e) => updateSectionField('promo_banner', 'title', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-bold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Subtitle</label>
+                <input
+                  type="text"
+                  value={cmsData.promo_banner?.subtitle || ''}
+                  onChange={(e) => updateSectionField('promo_banner', 'subtitle', e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">CTA Text</label>
+                  <input
+                    type="text"
+                    value={cmsData.promo_banner?.cta_text || ''}
+                    onChange={(e) => updateSectionField('promo_banner', 'cta_text', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">CTA Link</label>
+                  <input
+                    type="text"
+                    value={cmsData.promo_banner?.cta_link || ''}
+                    onChange={(e) => updateSectionField('promo_banner', 'cta_link', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-mono"
+                  />
+                </div>
+              </div>
+
+              <ImageUploader
+                label="Promo Background Image (Multer Upload)"
+                value={cmsData.promo_banner?.bg_image}
+                onChange={(url) => updateSectionField('promo_banner', 'bg_image', url)}
+                aspectRatio="aspect-[16/6]"
+              />
+            </div>
+          </div>
+        
+  );
+
+  const render_instagram_feed = () => (
+    
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                <Instagram className="w-5 h-5 text-brand-600" /> Instagram Feed Posts
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextPosts = [
+                      ...(cmsData.instagram_feed?.posts || []),
+                      { id: Date.now(), image: '', link: cmsData.instagram_feed?.url || '' },
+                    ];
+                    updateSectionField('instagram_feed', 'posts', nextPosts);
+                  }}
+                  className="px-3 py-2 rounded-xl border border-brand-200 bg-brand-50 text-brand-700 text-xs font-bold hover:bg-brand-100 transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Post Image
+                </button>
+
+                <button
+                  onClick={() => handleSaveSection('instagram_feed')}
+                  disabled={savingSection === 'instagram_feed'}
+                  className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+                >
+                  {savingSection === 'instagram_feed' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Save Feed</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Instagram Handle</label>
+                  <input
+                    type="text"
+                    value={cmsData.instagram_feed?.handle || ''}
+                    onChange={(e) => updateSectionField('instagram_feed', 'handle', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Profile URL</label>
+                  <input
+                    type="text"
+                    value={cmsData.instagram_feed?.url || ''}
+                    onChange={(e) => updateSectionField('instagram_feed', 'url', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-mono"
+                  />
+                </div>
+              </div>
+
+              <h4 className="font-bold text-gray-800 pt-2">
+                Post Images ({cmsData.instagram_feed?.posts?.length || 0})
+              </h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {cmsData.instagram_feed?.posts?.map((post, idx) => (
+                  <div key={idx} className="p-3 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-gray-700 text-[11px]">Post #{idx + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextPosts = cmsData.instagram_feed.posts.filter((_, i) => i !== idx);
+                          updateSectionField('instagram_feed', 'posts', nextPosts);
+                        }}
+                        className="p-1 text-gray-400 hover:text-red-600 transition"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </button>
+                    </div>
+
+                    <ImageUploader
+                      label="Upload Image (Multer)"
+                      value={typeof post === 'string' ? post : post.image}
+                      onChange={(url) => {
+                        const nextPosts = [...cmsData.instagram_feed.posts];
+                        nextPosts[idx] = { ...nextPosts[idx], image: url };
+                        updateSectionField('instagram_feed', 'posts', nextPosts);
+                      }}
+                      aspectRatio="aspect-square"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        
+  );
+
+  const render_featured_edits = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+        <div>
+          <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-brand-600" /> Megamenu Promo Cards
+          </h3>
+          <p className="text-[11px] text-gray-500">Edit the Featured Card content and upload images displayed in the Women and Kids megamenus.</p>
+        </div>
+        <button
+          onClick={() => handleSaveSection('featured_edits')}
+          disabled={savingSection === 'featured_edits'}
+          className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+        >
+          {savingSection === 'featured_edits' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          <span>Save Section</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Women Megamenu Featured Edit */}
+        <div className="border border-gray-100 rounded-2xl p-5 space-y-4 bg-gray-50/30">
+          <h4 className="font-bold text-sm text-gray-800 border-b border-gray-100 pb-2">Women Megamenu Promo Card</h4>
+          
+          <div className="space-y-3">
+            <div>
+              <label className="block font-semibold text-gray-700 mb-1">Badge Header</label>
+              <input
+                type="text"
+                value={cmsData.featured_edits?.women?.heading || 'Featured Edit'}
+                onChange={(e) => {
+                  const women = { ...(cmsData.featured_edits?.women || {}), heading: e.target.value };
+                  updateSectionField('featured_edits', 'women', women);
+                }}
+                className="w-full px-3 py-1.5 rounded-xl border border-gray-300 font-bold"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-gray-700 mb-1">Promo Title</label>
+              <input
+                type="text"
+                value={cmsData.featured_edits?.women?.title || 'Aesthetic Co-ord Sets'}
+                onChange={(e) => {
+                  const women = { ...(cmsData.featured_edits?.women || {}), title: e.target.value };
+                  updateSectionField('featured_edits', 'women', women);
+                }}
+                className="w-full px-3 py-1.5 rounded-xl border border-gray-300 font-bold"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">CTA Button Text</label>
+                <input
+                  type="text"
+                  value={cmsData.featured_edits?.women?.cta_text || 'Shop Collection'}
+                  onChange={(e) => {
+                    const women = { ...(cmsData.featured_edits?.women || {}), cta_text: e.target.value };
+                    updateSectionField('featured_edits', 'women', women);
+                  }}
+                  className="w-full px-3 py-1.5 rounded-xl border border-gray-300 font-medium"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">CTA Redirect Link</label>
+                <input
+                  type="text"
+                  value={cmsData.featured_edits?.women?.cta_link || '/shop'}
+                  onChange={(e) => {
+                    const women = { ...(cmsData.featured_edits?.women || {}), cta_link: e.target.value };
+                    updateSectionField('featured_edits', 'women', women);
+                  }}
+                  className="w-full px-3 py-1.5 rounded-xl border border-gray-300 font-mono text-[11px]"
+                />
+              </div>
+            </div>
+
+            <ImageUploader
+              label="Promo Image"
+              value={cmsData.featured_edits?.women?.image || ''}
+              onChange={(url) => {
+                const women = { ...(cmsData.featured_edits?.women || {}), image: url };
+                updateSectionField('featured_edits', 'women', women);
+              }}
+              aspectRatio="aspect-[3/4]"
+            />
+          </div>
+        </div>
+
+        {/* Kids Megamenu Featured Edit */}
+        <div className="border border-gray-100 rounded-2xl p-5 space-y-4 bg-gray-50/30">
+          <h4 className="font-bold text-sm text-gray-800 border-b border-gray-100 pb-2">Kids Megamenu Promo Card</h4>
+          
+          <div className="space-y-3">
+            <div>
+              <label className="block font-semibold text-gray-700 mb-1">Badge Header</label>
+              <input
+                type="text"
+                value={cmsData.featured_edits?.kids?.heading || 'Featured Edit'}
+                onChange={(e) => {
+                  const kids = { ...(cmsData.featured_edits?.kids || {}), heading: e.target.value };
+                  updateSectionField('featured_edits', 'kids', kids);
+                }}
+                className="w-full px-3 py-1.5 rounded-xl border border-gray-300 font-bold"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-gray-700 mb-1">Promo Title</label>
+              <input
+                type="text"
+                value={cmsData.featured_edits?.kids?.title || 'Playful Toddler Wear'}
+                onChange={(e) => {
+                  const kids = { ...(cmsData.featured_edits?.kids || {}), title: e.target.value };
+                  updateSectionField('featured_edits', 'kids', kids);
+                }}
+                className="w-full px-3 py-1.5 rounded-xl border border-gray-300 font-bold"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">CTA Button Text</label>
+                <input
+                  type="text"
+                  value={cmsData.featured_edits?.kids?.cta_text || 'Shop Collection'}
+                  onChange={(e) => {
+                    const kids = { ...(cmsData.featured_edits?.kids || {}), cta_text: e.target.value };
+                    updateSectionField('featured_edits', 'kids', kids);
+                  }}
+                  className="w-full px-3 py-1.5 rounded-xl border border-gray-300 font-medium"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">CTA Redirect Link</label>
+                <input
+                  type="text"
+                  value={cmsData.featured_edits?.kids?.cta_link || '/shop'}
+                  onChange={(e) => {
+                    const kids = { ...(cmsData.featured_edits?.kids || {}), cta_link: e.target.value };
+                    updateSectionField('featured_edits', 'kids', kids);
+                  }}
+                  className="w-full px-3 py-1.5 rounded-xl border border-gray-300 font-mono text-[11px]"
+                />
+              </div>
+            </div>
+
+            <ImageUploader
+              label="Promo Image"
+              value={cmsData.featured_edits?.kids?.image || ''}
+              onChange={(url) => {
+                const kids = { ...(cmsData.featured_edits?.kids || {}), image: url };
+                updateSectionField('featured_edits', 'kids', kids);
+              }}
+              aspectRatio="aspect-[3/4]"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const render_recently_viewed = () => (
+    <div className="space-y-4 text-xs pt-3 border-t border-gray-100">
+      <div>
+        <label className="block font-semibold text-gray-700 mb-1">Section Title</label>
+        <input
+          type="text"
+          value={cmsData.recently_viewed?.title || 'Recently Viewed'}
+          onChange={(e) => updateSectionField('recently_viewed', 'title', e.target.value)}
+          className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500 bg-white"
+        />
+      </div>
+      <div className="flex justify-end pt-2">
+        <button
+          onClick={() => handleSaveSection('recently_viewed')}
+          disabled={savingSection === 'recently_viewed'}
+          className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+        >
+          {savingSection === 'recently_viewed' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          <span>Save Recently Viewed</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  const render_you_may_also_like = () => (
+    <div className="space-y-4 text-xs pt-3 border-t border-gray-100">
+      <div>
+        <label className="block font-semibold text-gray-700 mb-1">Section Title</label>
+        <input
+          type="text"
+          value={cmsData.you_may_also_like?.title || 'You May Also Like'}
+          onChange={(e) => updateSectionField('you_may_also_like', 'title', e.target.value)}
+          className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500 bg-white"
+        />
+      </div>
+      <div className="flex justify-end pt-2">
+        <button
+          onClick={() => handleSaveSection('you_may_also_like')}
+          disabled={savingSection === 'you_may_also_like'}
+          className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+        >
+          {savingSection === 'you_may_also_like' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          <span>Save You May Also Like</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  const render_auto_section = () => (
+    <div className="text-xs pt-3 border-t border-gray-100 text-gray-500 leading-relaxed">
+      <p className="flex items-start gap-2">
+        <Sparkles className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
+        <span>
+          Auto-generated section pulled live from the product catalog. Control its visibility and position with the
+          toggle and arrows above. Products are managed from the <b>New Arrivals</b> / <b>Sale</b> manager pages in the
+          admin.
+        </span>
+      </p>
+    </div>
+  );
+
+  const tabs = [
+    { id: 'homepage', label: 'Homepage CMS', icon: Sliders },
+    { id: 'about_page', label: 'About Page', icon: Sparkles },
+    { id: 'contact_page', label: 'Contact Page', icon: Phone },
+    { id: 'menu_arrangement', label: 'Header Menu', icon: Navigation },
+    { id: 'footer_settings', label: 'Footer Columns', icon: Columns },
+    { id: 'cod_settings', label: 'Payment & COD', icon: Banknote },
+    { id: 'auth_page', label: 'Auth Editorial & Users', icon: Users },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto">
+      <Header
+        title="Homepage CMS & Layout Manager"
+        subtitle="Full CRUD control over every section, banner, menu link, and footer column across your store."
+      />
+
+      <main className="p-6 max-w-7xl mx-auto space-y-6">
+        {/* Notification Toast */}
+        {message.text && (
+          <div
+            className={`p-4 rounded-xl text-xs font-semibold flex items-center gap-2 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
+              }`}
+          >
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>{message.text}</span>
+          </div>
         )}
+
+        {/* Tab Selector */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-gray-200">
+          {tabs.map((t) => {
+            const Icon = t.icon;
+            const isActive = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id)}
+                className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer ${isActive
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        {/* Homepage CMS Layout Manager */}
+        {activeTab === 'homepage' && (
+          <div className="space-y-6">
+            {/* Device Switcher: Desktop vs Mobile layout */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="font-bold text-sm text-gray-900">Homepage Section Layout</h3>
+                <p className="text-[11px] text-gray-500 mt-0.5">Arrange and show/hide sections separately for desktop and mobile homepages.</p>
+              </div>
+              <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setLayoutDevice('desktop')}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${layoutDevice === 'desktop' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  <Monitor className="w-4 h-4" />
+                  Desktop
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLayoutDevice('mobile')}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${layoutDevice === 'mobile' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  <Smartphone className="w-4 h-4" />
+                  Mobile
+                </button>
+              </div>
+            </div>
+
+            {(
+              layoutDevice === 'mobile' ? mobileLayoutOrder : layoutOrder
+            ).map((sectionKey, index) => {
+              const activeOrder = layoutDevice === 'mobile' ? mobileLayoutOrder : layoutOrder;
+              const activeVisibility = layoutDevice === 'mobile' ? mobileLayoutVisibility : layoutVisibility;
+              const isExpanded = expandedSections[sectionKey];
+              const isVisible = activeVisibility[sectionKey] !== false;
+              
+              let title = '';
+              let Icon = Sliders;
+              switch (sectionKey) {
+                case 'announcement_bar': title = 'Top Announcement Bar'; Icon = Megaphone; break;
+                case 'hero_banner': title = 'Hero Slides'; Icon = ImageIcon; break;
+                case 'category_grid': title = 'Curated Categories'; Icon = LayoutGrid; break;
+                case 'featured_edits': title = 'Megamenu Promo Cards'; Icon = Sparkles; break;
+                case 'why_jalyn': title = 'Why Jalyn Values'; Icon = Heart; break;
+                case 'services_strip': title = 'Services Promises'; Icon = Truck; break;
+                case 'promo_banner': title = 'Promo Banner'; Icon = Tag; break;
+                case 'new_arrivals': title = 'New Arrivals'; Icon = Sparkles; break;
+                case 'exclusive_sale': title = 'Exclusive Sale'; Icon = Tag; break;
+                case 'most_loved_styles': title = 'Most Loved Styles'; Icon = Heart; break;
+                case 'recently_viewed': title = 'Recently Viewed'; Icon = Eye; break;
+                case 'you_may_also_like': title = 'You May Also Like'; Icon = Star; break;
+                case 'instagram_feed': title = 'Instagram Posts'; Icon = Instagram; break;
+                default: title = sectionKey;
+              }
+
+              let renderer = () => null;
+              if (sectionKey === 'announcement_bar') renderer = render_announcement_bar;
+              if (sectionKey === 'hero_banner') renderer = render_hero_banner;
+              if (sectionKey === 'category_grid') renderer = render_category_grid;
+              if (sectionKey === 'featured_edits') renderer = render_featured_edits;
+              if (sectionKey === 'why_jalyn') renderer = render_why_jalyn;
+              if (sectionKey === 'services_strip') renderer = render_services_strip;
+              if (sectionKey === 'promo_banner') renderer = render_promo_banner;
+              if (sectionKey === 'instagram_feed') renderer = render_instagram_feed;
+              if (sectionKey === 'recently_viewed') renderer = render_recently_viewed;
+              if (sectionKey === 'you_may_also_like') renderer = render_you_may_also_like;
+              if (sectionKey === 'new_arrivals' || sectionKey === 'exclusive_sale' || sectionKey === 'most_loved_styles') renderer = render_auto_section;
+
+              return (
+                <React.Fragment key={sectionKey}>
+                  <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                    {/* Card Header */}
+                    <div className="bg-gray-50/80 px-6 py-4 flex items-center justify-between border-b border-gray-200 select-none">
+                      <div className="flex items-center gap-3 cursor-pointer select-none" onClick={() => toggleExpand(sectionKey)}>
+                        <Icon className="w-5 h-5 text-brand-600" />
+                        <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                          {title}
+                          {!isVisible && (
+                            <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold uppercase">
+                              Hidden
+                            </span>
+                          )}
+                        </h3>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        {/* Visibility Switch */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold text-gray-500">{isVisible ? 'Visible' : 'Hidden'}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleVisibility(sectionKey)}
+                            className={`w-10 h-6 flex items-center rounded-full p-1 cursor-pointer transition ${
+                              isVisible ? 'bg-emerald-600 justify-end' : 'bg-gray-300 justify-start'
+                            }`}
+                          >
+                            <span className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                          </button>
+                        </div>
+
+                        {/* Reorder Controls */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => moveUp(index)}
+                            disabled={index === 0}
+                            className="p-1 rounded hover:bg-gray-200 text-gray-500 disabled:opacity-30 cursor-pointer"
+                            title="Move Up"
+                          >
+                            <ArrowUp className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveDown(index)}
+                            disabled={index === activeOrder.length - 1}
+                            className="p-1 rounded hover:bg-gray-200 text-gray-500 disabled:opacity-30 cursor-pointer"
+                            title="Move Down"
+                          >
+                            <ArrowDown className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {/* Expand Chevron */}
+                        <button
+                          type="button"
+                          onClick={() => toggleExpand(sectionKey)}
+                          className="p-1 rounded hover:bg-gray-200 text-gray-500 cursor-pointer"
+                        >
+                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Card Content */}
+                    {isExpanded && (
+                      <div className="p-6">
+                        {renderer()}
+                      </div>
+                    )}
+                  </div>
+                  {index < activeOrder.length - 1 && (
+                    <div className="w-full px-1 my-3">
+                      <div className="h-[1.5px] bg-[#AD4A85]/20" />
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        )}
+
+
+
+        {/* 1. Announcement Bar Tab */}
+        
+
+        {/* 2. Hero Banner & Slides Tab (CRUD) */}
+        
+
+        {/* 3. Curated Categories Tab (CRUD) */}
+        
 
         {/* 4. About Page CMS Tab */}
         {activeTab === 'about_page' && (
@@ -969,351 +1956,16 @@ export default function CmsPage() {
         )}
 
         {/* 4. Why Jalyn Values Tab (CRUD) */}
-        {activeTab === 'why_jalyn' && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
-                <Heart className="w-5 h-5 text-brand-600" /> Why Jalyn — Brand Values
-              </h3>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = [
-                      ...(cmsData.why_jalyn?.values || []),
-                      { title: 'New Brand Value', description: 'Description of brand promise' },
-                    ];
-                    updateSectionField('why_jalyn', 'values', next);
-                  }}
-                  className="px-3 py-2 rounded-xl border border-brand-200 bg-brand-50 text-brand-700 text-xs font-bold hover:bg-brand-100 transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Add Brand Value
-                </button>
-
-                <button
-                  onClick={() => handleSaveSection('why_jalyn')}
-                  disabled={savingSection === 'why_jalyn'}
-                  className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
-                >
-                  {savingSection === 'why_jalyn' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  <span>Save Values</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">Section Heading</label>
-                <input
-                  type="text"
-                  value={cmsData.why_jalyn?.title || ''}
-                  onChange={(e) => updateSectionField('why_jalyn', 'title', e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
-                />
-              </div>
-
-              <h4 className="font-bold text-gray-800 pt-2">Brand Values List ({cmsData.why_jalyn?.values?.length || 0})</h4>
-              {cmsData.why_jalyn?.values?.map((val, idx) => (
-                <div key={idx} className="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center gap-3">
-                  <div className="flex-1 grid grid-cols-2 gap-3">
-                    <input
-                      type="text"
-                      value={val.title}
-                      onChange={(e) => {
-                        const next = [...cmsData.why_jalyn.values];
-                        next[idx].title = e.target.value;
-                        updateSectionField('why_jalyn', 'values', next);
-                      }}
-                      placeholder="Value Title"
-                      className="px-2.5 py-1.5 rounded-lg border border-gray-300 font-bold text-gray-900 bg-white"
-                    />
-                    <input
-                      type="text"
-                      value={val.description}
-                      onChange={(e) => {
-                        const next = [...cmsData.why_jalyn.values];
-                        next[idx].description = e.target.value;
-                        updateSectionField('why_jalyn', 'values', next);
-                      }}
-                      placeholder="Description"
-                      className="px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = cmsData.why_jalyn.values.filter((_, i) => i !== idx);
-                      updateSectionField('why_jalyn', 'values', next);
-                    }}
-                    className="p-1 text-gray-400 hover:text-red-600 transition"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        
 
         {/* 5. Services Promises Tab (CRUD) */}
-        {activeTab === 'services_strip' && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
-                <Truck className="w-5 h-5 text-brand-600" /> Services / Promises Strip
-              </h3>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = [
-                      ...(cmsData.services_strip?.promises || []),
-                      { icon: 'sparkles', title: 'New Promise', description: 'Service guarantee details' },
-                    ];
-                    updateSectionField('services_strip', 'promises', next);
-                  }}
-                  className="px-3 py-2 rounded-xl border border-brand-200 bg-brand-50 text-brand-700 text-xs font-bold hover:bg-brand-100 transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Add Promise Item
-                </button>
-
-                <button
-                  onClick={() => handleSaveSection('services_strip')}
-                  disabled={savingSection === 'services_strip'}
-                  className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
-                >
-                  {savingSection === 'services_strip' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  <span>Save Promises</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <p className="text-gray-500">Manage service promises (icon keys: truck, refresh, shield, sparkles):</p>
-              {cmsData.services_strip?.promises?.map((p, idx) => (
-                <div key={idx} className="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center gap-3">
-                  <div className="flex-1 grid grid-cols-3 gap-3">
-                    <input
-                      type="text"
-                      value={p.icon}
-                      onChange={(e) => {
-                        const next = [...cmsData.services_strip.promises];
-                        next[idx].icon = e.target.value;
-                        updateSectionField('services_strip', 'promises', next);
-                      }}
-                      placeholder="Icon key"
-                      className="px-2.5 py-1.5 rounded-lg border border-gray-300 font-mono text-gray-600 bg-white"
-                    />
-                    <input
-                      type="text"
-                      value={p.title}
-                      onChange={(e) => {
-                        const next = [...cmsData.services_strip.promises];
-                        next[idx].title = e.target.value;
-                        updateSectionField('services_strip', 'promises', next);
-                      }}
-                      placeholder="Title"
-                      className="px-2.5 py-1.5 rounded-lg border border-gray-300 font-bold text-gray-800 bg-white"
-                    />
-                    <input
-                      type="text"
-                      value={p.description}
-                      onChange={(e) => {
-                        const next = [...cmsData.services_strip.promises];
-                        next[idx].description = e.target.value;
-                        updateSectionField('services_strip', 'promises', next);
-                      }}
-                      placeholder="Description"
-                      className="px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = cmsData.services_strip.promises.filter((_, i) => i !== idx);
-                      updateSectionField('services_strip', 'promises', next);
-                    }}
-                    className="p-1 text-gray-400 hover:text-red-600 transition"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        
 
         {/* 6. Promo Banner Tab */}
-        {activeTab === 'promo_banner' && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
-                <Tag className="w-5 h-5 text-brand-600" /> Promotional Festive Banner
-              </h3>
-              <button
-                onClick={() => handleSaveSection('promo_banner')}
-                disabled={savingSection === 'promo_banner'}
-                className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
-              >
-                {savingSection === 'promo_banner' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                <span>Save Banner</span>
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Badge Tagline</label>
-                  <input
-                    type="text"
-                    value={cmsData.promo_banner?.badge || ''}
-                    onChange={(e) => updateSectionField('promo_banner', 'badge', e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-bold text-brand-600"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Title</label>
-                  <input
-                    type="text"
-                    value={cmsData.promo_banner?.title || ''}
-                    onChange={(e) => updateSectionField('promo_banner', 'title', e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-bold"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">Subtitle</label>
-                <input
-                  type="text"
-                  value={cmsData.promo_banner?.subtitle || ''}
-                  onChange={(e) => updateSectionField('promo_banner', 'subtitle', e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">CTA Text</label>
-                  <input
-                    type="text"
-                    value={cmsData.promo_banner?.cta_text || ''}
-                    onChange={(e) => updateSectionField('promo_banner', 'cta_text', e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">CTA Link</label>
-                  <input
-                    type="text"
-                    value={cmsData.promo_banner?.cta_link || ''}
-                    onChange={(e) => updateSectionField('promo_banner', 'cta_link', e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-mono"
-                  />
-                </div>
-              </div>
-
-              <ImageUploader
-                label="Promo Background Image (Multer Upload)"
-                value={cmsData.promo_banner?.bg_image}
-                onChange={(url) => updateSectionField('promo_banner', 'bg_image', url)}
-                aspectRatio="aspect-[16/6]"
-              />
-            </div>
-          </div>
-        )}
+        
 
         {/* 7. Instagram Feed Tab (CRUD) */}
-        {activeTab === 'instagram_feed' && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
-                <Instagram className="w-5 h-5 text-brand-600" /> Instagram Feed Posts
-              </h3>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextPosts = [
-                      ...(cmsData.instagram_feed?.posts || []),
-                      { id: Date.now(), image: '', link: cmsData.instagram_feed?.url || '' },
-                    ];
-                    updateSectionField('instagram_feed', 'posts', nextPosts);
-                  }}
-                  className="px-3 py-2 rounded-xl border border-brand-200 bg-brand-50 text-brand-700 text-xs font-bold hover:bg-brand-100 transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Add Post Image
-                </button>
-
-                <button
-                  onClick={() => handleSaveSection('instagram_feed')}
-                  disabled={savingSection === 'instagram_feed'}
-                  className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
-                >
-                  {savingSection === 'instagram_feed' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  <span>Save Feed</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Instagram Handle</label>
-                  <input
-                    type="text"
-                    value={cmsData.instagram_feed?.handle || ''}
-                    onChange={(e) => updateSectionField('instagram_feed', 'handle', e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Profile URL</label>
-                  <input
-                    type="text"
-                    value={cmsData.instagram_feed?.url || ''}
-                    onChange={(e) => updateSectionField('instagram_feed', 'url', e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-mono"
-                  />
-                </div>
-              </div>
-
-              <h4 className="font-bold text-gray-800 pt-2">
-                Post Images ({cmsData.instagram_feed?.posts?.length || 0})
-              </h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {cmsData.instagram_feed?.posts?.map((post, idx) => (
-                  <div key={idx} className="p-3 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-gray-700 text-[11px]">Post #{idx + 1}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const nextPosts = cmsData.instagram_feed.posts.filter((_, i) => i !== idx);
-                          updateSectionField('instagram_feed', 'posts', nextPosts);
-                        }}
-                        className="p-1 text-gray-400 hover:text-red-600 transition"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </button>
-                    </div>
-
-                    <ImageUploader
-                      label="Upload Image (Multer)"
-                      value={typeof post === 'string' ? post : post.image}
-                      onChange={(url) => {
-                        const nextPosts = [...cmsData.instagram_feed.posts];
-                        nextPosts[idx] = { ...nextPosts[idx], image: url };
-                        updateSectionField('instagram_feed', 'posts', nextPosts);
-                      }}
-                      aspectRatio="aspect-square"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        
 
         {/* 8. Header Navigation Menu Tab (Order Placement & Submenu CRUD) */}
         {activeTab === 'menu_arrangement' && (
@@ -1729,6 +2381,515 @@ export default function CmsPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 12. Payment & COD Settings Tab */}
+        {activeTab === 'cod_settings' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6 shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div>
+                <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                  <Banknote className="w-5 h-5 text-brand-600" /> Payment & Cash on Delivery (COD) Settings
+                </h3>
+                <p className="text-xs text-gray-500">Enable or disable COD storewide, configure fees, and set up Cashfree online payment options.</p>
+              </div>
+              <button
+                onClick={() => handleSaveSection('cod_settings')}
+                disabled={savingSection === 'cod_settings'}
+                className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+              >
+                {savingSection === 'cod_settings' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>Save Payment Settings</span>
+              </button>
+            </div>
+
+            <div className="space-y-6 text-xs">
+              {/* COD Enable / Disable Toggle Card */}
+              <div className="p-5 bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                    <Banknote className="w-4 h-4 text-emerald-600" /> Enable Cash on Delivery (COD)
+                  </h4>
+                  <p className="text-xs text-gray-500 mt-1">
+                    When enabled, customers can choose Cash on Delivery at checkout. When disabled, COD option is hidden/disabled on checkout.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={cmsData.cod_settings?.enabled ?? true}
+                    onChange={(e) => updateSectionField('cod_settings', 'enabled', e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {/* Fee & Threshold Parameters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
+                  <label className="block font-semibold text-gray-700">Minimum Order Amount for COD (₹)</label>
+                  <input
+                    type="number"
+                    value={cmsData.cod_settings?.min_order_amount ?? 0}
+                    onChange={(e) => updateSectionField('cod_settings', 'min_order_amount', Number(e.target.value))}
+                    placeholder="0 (No minimum)"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                  <p className="text-[11px] text-gray-400">Set 0 for no minimum amount requirement.</p>
+                </div>
+
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
+                  <label className="block font-semibold text-gray-700">Additional COD Handling Fee (₹)</label>
+                  <input
+                    type="number"
+                    value={cmsData.cod_settings?.cod_fee ?? 0}
+                    onChange={(e) => updateSectionField('cod_settings', 'cod_fee', Number(e.target.value))}
+                    placeholder="0 (Free COD)"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                  <p className="text-[11px] text-gray-400">Set 0 if Cash on Delivery is free.</p>
+                </div>
+              </div>
+
+              {/* COD Customer Notice */}
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
+                <label className="block font-semibold text-gray-700">COD Checkout Customer Notice</label>
+                <textarea
+                  rows={2}
+                  value={cmsData.cod_settings?.notice || ''}
+                  onChange={(e) => updateSectionField('cod_settings', 'notice', e.target.value)}
+                  placeholder="Pay cash upon delivery at your doorstep."
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                />
+              </div>
+            </div>
+
+            {/* DELIVERY SETTINGS SHOW/HIDE CARD */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div>
+                  <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                    <Truck className="w-5 h-5 text-brand-600" /> Website Delivery &amp; Pincode Settings
+                  </h3>
+                  <p className="text-xs text-gray-500">Show or hide delivery settings, pincode checkers, and shipping notices across PDP and Checkout.</p>
+                </div>
+                <button
+                  onClick={() => handleSaveSection('delivery_settings')}
+                  disabled={savingSection === 'delivery_settings'}
+                  className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+                >
+                  {savingSection === 'delivery_settings' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Save Delivery Settings</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-gray-900">Enable Delivery Settings &amp; Pincode Checker</h4>
+                    <p className="text-gray-500 text-[11px]">When disabled, delivery pincode widgets will be hidden from PDP.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={cmsData.delivery_settings?.enabled ?? true}
+                      onChange={(e) => updateSectionField('delivery_settings', 'enabled', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
+                  <label className="block font-semibold text-gray-700">Shipping Notice / Banner Text</label>
+                  <input
+                    type="text"
+                    value={cmsData.delivery_settings?.shipping_notice || ''}
+                    onChange={(e) => updateSectionField('delivery_settings', 'shipping_notice', e.target.value)}
+                    placeholder="Free Express Delivery on orders above ₹1,999"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* TAX ESTIMATION & BILLING SETTINGS CARD */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div>
+                  <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                    <Banknote className="w-5 h-5 text-brand-600" /> Tax Estimation &amp; Billing Calculation
+                  </h3>
+                  <p className="text-xs text-gray-500">Configure exact tax percentage (e.g. 18% GST) and enable/disable the tax section during checkout billing.</p>
+                </div>
+                <button
+                  onClick={() => handleSaveSection('tax_settings')}
+                  disabled={savingSection === 'tax_settings'}
+                  className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+                >
+                  {savingSection === 'tax_settings' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Save Tax Settings</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-gray-900">Enable Tax Section in Billing</h4>
+                    <p className="text-gray-500 text-[11px]">When disabled, tax line item will be hidden from checkout.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={cmsData.tax_settings?.enabled ?? true}
+                      onChange={(e) => updateSectionField('tax_settings', 'enabled', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
+                  <label className="block font-semibold text-gray-700">Exact Tax Percentage (%)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={cmsData.tax_settings?.tax_percent ?? 18}
+                    onChange={(e) => updateSectionField('tax_settings', 'tax_percent', Number(e.target.value))}
+                    placeholder="18"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                  <p className="text-[11px] text-gray-400">e.g. 18 for 18% GST or 5 for 5% tax.</p>
+                </div>
+
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
+                  <label className="block font-semibold text-gray-700">Custom Tax Display Label</label>
+                  <input
+                    type="text"
+                    value={cmsData.tax_settings?.tax_label || ''}
+                    onChange={(e) => updateSectionField('tax_settings', 'tax_label', e.target.value)}
+                    placeholder="GST (18%)"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                  <p className="text-[11px] text-gray-400">Displayed on the checkout order summary bill.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 13. Auth Editorial & Role-Based User Creation Tab */}
+        {activeTab === 'auth_page' && (
+          <div className="space-y-6">
+            {/* Editorial Content & Banner Image Card */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6 shadow-sm">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div>
+                  <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-brand-600" /> Auth Left Editorial Column Settings
+                  </h3>
+                  <p className="text-xs text-gray-500">Edit the left editorial image, badge, headline, and subtitle on the Login & Registration pages.</p>
+                </div>
+                <button
+                  onClick={() => handleSaveSection('auth_page')}
+                  disabled={savingSection === 'auth_page'}
+                  className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+                >
+                  {savingSection === 'auth_page' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Save Auth Editorial</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div className="space-y-3">
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Badge Text</label>
+                    <input
+                      type="text"
+                      value={cmsData.auth_page?.badge || ''}
+                      onChange={(e) => updateSectionField('auth_page', 'badge', e.target.value)}
+                      placeholder="JALYN EXCLUSIVE CLUB"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Headline Title</label>
+                    <input
+                      type="text"
+                      value={cmsData.auth_page?.title || ''}
+                      onChange={(e) => updateSectionField('auth_page', 'title', e.target.value)}
+                      placeholder="Timeless Grace,"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Headline Highlight (Italic Accent)</label>
+                    <input
+                      type="text"
+                      value={cmsData.auth_page?.title_highlight || ''}
+                      onChange={(e) => updateSectionField('auth_page', 'title_highlight', e.target.value)}
+                      placeholder="Crafted for You."
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Subtitle Text</label>
+                    <textarea
+                      rows={3}
+                      value={cmsData.auth_page?.subtitle || ''}
+                      onChange={(e) => updateSectionField('auth_page', 'subtitle', e.target.value)}
+                      placeholder="Sign in to manage your orders..."
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <ImageUploader
+                    label="Editorial Auth Backdrop Image"
+                    recommendedSize="Recommended: 1400 × 1600 px (Auth Editorial Banner)"
+                    value={cmsData.auth_page?.image || ''}
+                    onChange={(url) => updateSectionField('auth_page', 'image', url)}
+                    aspectRatio="portrait"
+                  />
+                </div>
+              </div>
+
+              {/* 3-SLIDE REVIEWS CAROUSEL EDITOR */}
+              <div className="border-t border-gray-100 pt-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                      <Star className="w-4 h-4 text-amber-500 fill-amber-500" /> 3-Slide Customer Reviews Carousel
+                    </h4>
+                    <p className="text-xs text-gray-500">Edit the 3 customer review slides displayed on the left column.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {(cmsData.auth_page?.reviews || [
+                    { rating: 5, text: 'The fit and fabric quality from Jalyn are unmatched.', name: 'Ananya Kapoor', role: 'Verified Jalyn Collector', initials: 'AK' },
+                    { rating: 5, text: 'Exquisite hand craftsmanship and incredible attention to detail.', name: 'Riddhi Sen', role: 'Luxury Fashion Enthusiast', initials: 'RS' },
+                    { rating: 5, text: 'The custom fit assistance helped me get the perfect size co-ord set.', name: 'Meera Rajput', role: 'Loyal Jalyn Client', initials: 'MR' },
+                  ]).map((rev, rIdx) => (
+                    <div key={rIdx} className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-brand-600">Review Slide #{rIdx + 1}</span>
+                        <div className="flex items-center gap-1">
+                          <label className="text-[10px] text-gray-500 font-semibold">Rating:</label>
+                          <select
+                            value={rev.rating || 5}
+                            onChange={(e) => {
+                              const nextRevs = [...(cmsData.auth_page?.reviews || [])];
+                              if (!nextRevs[rIdx]) nextRevs[rIdx] = { ...rev };
+                              nextRevs[rIdx].rating = Number(e.target.value);
+                              updateSectionField('auth_page', 'reviews', nextRevs);
+                            }}
+                            className="px-1 py-0.5 rounded border border-gray-300 font-bold bg-white text-[11px]"
+                          >
+                            <option value={5}>5 Stars ★★★★★</option>
+                            <option value={4}>4 Stars ★★★★</option>
+                            <option value={3}>3 Stars ★★★</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <textarea
+                        rows={3}
+                        value={rev.text || ''}
+                        onChange={(e) => {
+                          const nextRevs = [...(cmsData.auth_page?.reviews || [])];
+                          if (!nextRevs[rIdx]) nextRevs[rIdx] = { ...rev };
+                          nextRevs[rIdx].text = e.target.value;
+                          updateSectionField('auth_page', 'reviews', nextRevs);
+                        }}
+                        placeholder="Review quote text..."
+                        className="w-full px-2 py-1.5 rounded-lg border border-gray-300 font-medium"
+                      />
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={rev.name || ''}
+                          onChange={(e) => {
+                            const nextRevs = [...(cmsData.auth_page?.reviews || [])];
+                            if (!nextRevs[rIdx]) nextRevs[rIdx] = { ...rev };
+                            nextRevs[rIdx].name = e.target.value;
+                            updateSectionField('auth_page', 'reviews', nextRevs);
+                          }}
+                          placeholder="Author Name"
+                          className="px-2 py-1 rounded-lg border border-gray-300 font-medium"
+                        />
+
+                        <input
+                          type="text"
+                          value={rev.initials || ''}
+                          onChange={(e) => {
+                            const nextRevs = [...(cmsData.auth_page?.reviews || [])];
+                            if (!nextRevs[rIdx]) nextRevs[rIdx] = { ...rev };
+                            nextRevs[rIdx].initials = e.target.value;
+                            updateSectionField('auth_page', 'reviews', nextRevs);
+                          }}
+                          placeholder="Initials (e.g. AK)"
+                          className="px-2 py-1 rounded-lg border border-gray-300 font-medium"
+                        />
+                      </div>
+
+                      <input
+                        type="text"
+                        value={rev.role || ''}
+                        onChange={(e) => {
+                          const nextRevs = [...(cmsData.auth_page?.reviews || [])];
+                          if (!nextRevs[rIdx]) nextRevs[rIdx] = { ...rev };
+                          nextRevs[rIdx].role = e.target.value;
+                          updateSectionField('auth_page', 'reviews', nextRevs);
+                        }}
+                        placeholder="Role / Tagline (e.g. Verified Client)"
+                        className="w-full px-2 py-1 rounded-lg border border-gray-300 font-medium"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* ROLE-BASED USER CREATION & MANAGEMENT CARD */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6 shadow-sm">
+              <div className="border-b border-gray-100 pb-3">
+                <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-brand-600" /> Role-Based User Creation &amp; Management
+                </h3>
+                <p className="text-xs text-gray-500">Create new user accounts directly in MySQL DB and assign system roles (Customer, Admin, Store Manager, Staff).</p>
+              </div>
+
+              {/* Add User Form */}
+              <form onSubmit={handleCreateUser} className="p-5 bg-gray-50 rounded-2xl border border-gray-200 space-y-4 text-xs">
+                <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-brand-600" /> Create New User Account
+                </h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={newUserForm.name}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
+                      placeholder="e.g. Rahul Verma"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      value={newUserForm.email}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
+                      placeholder="user@jalyn.in"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Phone Number</label>
+                    <input
+                      type="tel"
+                      value={newUserForm.phone}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, phone: e.target.value })}
+                      placeholder="+91 98765 43210"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={newUserForm.password}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                      placeholder="••••••••"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Assigned Role</label>
+                    <select
+                      value={newUserForm.role}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-bold bg-white"
+                    >
+                      <option value="customer">Customer</option>
+                      <option value="admin">Admin</option>
+                      <option value="manager">Store Manager</option>
+                      <option value="staff">Support Staff</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-end">
+                    <button
+                      type="submit"
+                      disabled={creatingUser}
+                      className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {creatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                      <span>Create Account</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              {/* User List Table */}
+              <div className="space-y-3">
+                <h4 className="font-bold text-xs text-gray-700 uppercase tracking-wider">Existing System Users ({userList.length})</h4>
+                <div className="overflow-x-auto border border-gray-200 rounded-xl">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-50 border-b border-gray-200 font-bold text-gray-700 uppercase">
+                      <tr>
+                        <th className="p-3">ID</th>
+                        <th className="p-3">Name</th>
+                        <th className="p-3">Email</th>
+                        <th className="p-3">Phone</th>
+                        <th className="p-3">Role</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {userList.map((u) => (
+                        <tr key={u.id} className="hover:bg-gray-50">
+                          <td className="p-3 font-mono font-bold text-gray-500">#{u.id}</td>
+                          <td className="p-3 font-bold text-gray-900">{u.name}</td>
+                          <td className="p-3 text-gray-600">{u.email}</td>
+                          <td className="p-3 text-gray-600">{u.phone || '—'}</td>
+                          <td className="p-3">
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                              u.role === 'admin'
+                                ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                : u.role === 'manager'
+                                  ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                  : u.role === 'staff'
+                                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                    : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            }`}>
+                              {u.role}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>

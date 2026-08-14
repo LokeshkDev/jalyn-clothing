@@ -1,8 +1,9 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import MainLayout from '@/components/layout/MainLayout'
 import HomePage from '@/pages/HomePage'
+import loaderGif from '@/assets/loader-logo.gif'
 
 // Lazy loaded secondary pages for minimum initial bundle size & green LCP
 const Shop = lazy(() => import('@/pages/Shop'))
@@ -11,10 +12,17 @@ const Checkout = lazy(() => import('@/pages/Checkout'))
 const OrderSuccess = lazy(() => import('@/pages/OrderSuccess'))
 const OrderFailure = lazy(() => import('@/pages/OrderFailure'))
 const PaymentFailure = lazy(() => import('@/pages/PaymentFailure'))
+const NewArrivals = lazy(() => import('@/pages/NewArrivals'))
+const Sale = lazy(() => import('@/pages/Sale'))
+const CategoryPage = lazy(() => import('@/pages/CategoryPage'))
 
 const AboutPage = lazy(() => import('@/pages/AboutPage'))
 const ContactPage = lazy(() => import('@/pages/ContactPage'))
 const PolicyPage = lazy(() => import('@/pages/PolicyPage'))
+
+// Standalone Auth Pages (No Header / No Footer)
+const LoginPage = lazy(() => import('@/pages/LoginPage'))
+const RegisterPage = lazy(() => import('@/pages/RegisterPage'))
 
 // Profile & Account Pages Lazy Loaded
 const ProfileLayout = lazy(() => import('@/pages/profile/ProfileLayout'))
@@ -36,21 +44,54 @@ const queryClient = new QueryClient({
   },
 })
 
+function PageLoader() {
+  return (
+    <div className="fixed inset-0 z-[9999] bg-[#FFF6F9] flex flex-col items-center justify-center">
+      <img src={loaderGif} alt="Loading Jalyn..." className="h-32 w-auto object-contain" />
+    </div>
+  )
+}
+
 function AppRoutes() {
   useSmoothScroll()
 
+  const [initialLoading, setInitialLoading] = useState(true)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialLoading(false)
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (initialLoading) {
+    return <PageLoader />
+  }
+
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-[#FFF6F9] flex items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
-      }
-    >
+    <Suspense fallback={<PageLoader />}>
       <Routes>
+        {/* STANDALONE AUTH ROUTES (NO HEADER & NO FOOTER) */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/signup" element={<RegisterPage />} />
+        <Route path="/create-account" element={<RegisterPage />} />
+
+        {/* MAIN STORE ROUTES (WITH HEADER & FOOTER) */}
         <Route element={<MainLayout />}>
           <Route index element={<HomePage />} />
           <Route path="shop" element={<Shop />} />
+          <Route path="new-arrivals" element={<NewArrivals />} />
+          <Route path="collections/new-arrivals" element={<NewArrivals />} />
+          <Route path="sale" element={<Sale />} />
+          <Route path="sales" element={<Sale />} />
+          <Route path="collections/sale" element={<Sale />} />
+
+          {/* Dedicated Category Collection Pages */}
+          <Route path="category/:slug" element={<CategoryPage />} />
+          <Route path="categories/:slug" element={<CategoryPage />} />
+          <Route path="collections/:slug" element={<CategoryPage />} />
+
           <Route path="products/:slug" element={<ProductDetails />} />
           <Route path="product/:slug" element={<ProductDetails />} />
 
@@ -111,6 +152,8 @@ function AppRoutes() {
 
           {/* Status & Outcome Pages */}
           <Route path="order-success" element={<OrderSuccess />} />
+          <Route path="order-success/:id" element={<OrderSuccess />} />
+          <Route path="order-success/:orderId" element={<OrderSuccess />} />
           <Route path="order-failure" element={<OrderFailure />} />
           <Route path="payment-failure" element={<PaymentFailure />} />
 

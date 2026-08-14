@@ -1,4 +1,4 @@
-import { useLocation, Link } from 'react-router-dom'
+import { useLocation, useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Check, Calendar, ShoppingBag, ArrowRight, PackageCheck, ShieldCheck } from 'lucide-react'
 import { useOrderStore } from '@/store'
@@ -9,15 +9,16 @@ import { SHOP_PRODUCTS } from '@/constants/shopProducts'
 
 export default function OrderSuccess() {
   const location = useLocation()
+  const { id: paramId, orderId: paramOrderId } = useParams()
   const orders = useOrderStore((s) => s.orders)
   const activeOrder = useOrderStore((s) => s.activeOrder)
 
-  const orderId = location.state?.orderId || activeOrder?.id || orders[0]?.id || 'JALYN10245'
-  const order = orders.find((o) => o.id === orderId) || activeOrder || orders[0]
+  const targetId = paramId || paramOrderId || location.state?.orderId || activeOrder?.id || orders[0]?.id || 'JALYN10245'
+  const order = orders.find((o) => o.id === targetId || o.order_number === targetId) || activeOrder || orders[0]
 
-  const isCOD =
-    order?.paymentMethod?.toLowerCase().includes('cash') ||
-    order?.paymentMethod?.toLowerCase().includes('cod')
+  const isCOD = ['cod', 'cash on delivery'].some((m) =>
+    order?.paymentMethod?.toLowerCase().includes(m),
+  )
 
   const recommendations = SHOP_PRODUCTS.slice(0, 6)
 

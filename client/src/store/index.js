@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import api from '@/services/api'
 
 export const useCartStore = create(
   persist(
@@ -108,85 +109,120 @@ export const useUIStore = create((set) => ({
 export const useUserStore = create(
   persist(
     (set, get) => ({
-      user: {
-        firstName: 'Ananya',
-        lastName: 'Sharma',
-        email: 'ananya.sharma@example.com',
-        phone: '+91 98765 43210',
-        avatar:
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-      },
-      addresses: [
-        {
-          id: 'addr-1',
-          type: 'Home',
-          name: 'Ananya Sharma',
-          phone: '+91 98765 43210',
-          addressLine1: 'Flat 402, Rosewood Apartments',
-          addressLine2: '12th Main Road, Indiranagar',
-          landmark: 'Near Metro Station',
-          city: 'Bengaluru',
-          state: 'Karnataka',
-          pincode: '560038',
-          isDefault: true,
-        },
-        {
-          id: 'addr-2',
-          type: 'Work',
-          name: 'Ananya Sharma',
-          phone: '+91 98765 43210',
-          addressLine1: 'Tech Park Tower B, 6th Floor',
-          addressLine2: 'Outer Ring Road, Marathahalli',
-          landmark: 'Opposite Barclays',
-          city: 'Bengaluru',
-          state: 'Karnataka',
-          pincode: '560103',
-          isDefault: false,
-        },
-      ],
+      user: null,
+      token: null,
+      addresses: [],
       coupons: [],
-      notifications: [
-        {
-          id: 'n1',
-          title: 'Order Dispatched!',
-          message: 'Your order #JALYN10245 has been shipped via BlueDart.',
-          time: '2 hours ago',
-          read: false,
-        },
-        {
-          id: 'n2',
-          title: 'Exclusive Offer',
-          message: 'Use code LUXE15 to get 15% off on your next purchase.',
-          time: '1 day ago',
-          read: true,
-        },
-      ],
+      notifications: [],
+
+      login: (userObj, token) =>
+        set({
+          user: {
+            ...userObj,
+            firstName: userObj.name ? userObj.name.split(' ')[0] : 'Customer',
+            lastName: userObj.name && userObj.name.split(' ').length > 1 ? userObj.name.split(' ').slice(1).join(' ') : '',
+            isAuthenticated: true,
+          },
+          token: token || userObj.token || null,
+        }),
+
+      register: (userObj, token) =>
+        set({
+          user: {
+            ...userObj,
+            firstName: userObj.name ? userObj.name.split(' ')[0] : 'Customer',
+            lastName: userObj.name && userObj.name.split(' ').length > 1 ? userObj.name.split(' ').slice(1).join(' ') : '',
+            isAuthenticated: true,
+          },
+          token: token || userObj.token || null,
+        }),
+
+      logout: () =>
+        set({
+          user: null,
+          token: null,
+          addresses: [],
+          notifications: [],
+        }),
+
       updateProfile: (updatedData) =>
         set({ user: { ...get().user, ...updatedData } }),
-      addAddress: (newAddr) => {
-        const id = `addr-${Date.now()}`
-        const addresses = newAddr.isDefault
-          ? get().addresses.map((a) => ({ ...a, isDefault: false }))
-          : [...get().addresses]
-        set({ addresses: [{ ...newAddr, id }, ...addresses] })
+
+      fetchAddresses: async () => {
+        try {
+          const response = await api.get('/auth/addresses')
+          if (response.data?.success) {
+            set({ addresses: response.data.data })
+          }
+        } catch (error) {
+          console.warn('Failed to fetch addresses from backend:', error.message)
+        }
       },
-      updateAddress: (id, updated) => {
-        const addresses = get().addresses.map((a) => {
-          if (a.id === id) return { ...a, ...updated }
-          if (updated.isDefault) return { ...a, isDefault: false }
-          return a
-        })
-        set({ addresses })
+
+      addAddress: async (newAddr) => {
+        try {
+          const response = await api.post('/auth/addresses', newAddr)
+          if (response.data?.success) {
+            await get().fetchAddresses()
+          }
+        } catch (error) {
+          console.error('Failed to create address in DB:', error.message)
+          const id = `addr-${Date.now()}`
+          const addresses = newAddr.isDefault
+            ? get().addresses.map((a) => ({ ...a, isDefault: false }))
+            : [...get().addresses]
+          set({ addresses: [{ ...newAddr, id }, ...addresses] })
+        }
       },
-      deleteAddress: (id) =>
-        set({ addresses: get().addresses.filter((a) => a.id !== id) }),
-      setDefaultAddress: (id) =>
-        set({
-          addresses: get().addresses.map((a) => ({
-            ...a,
-            isDefault: a.id === id,
-          })),
-        }),
+
+      updateAddress: async (id, updated) => {
+        try {
+          if (String(id).startsWith('addr-')) {
+            await api.post('/auth/addresses', updated)
+          } else {
+            await api.put(`/auth/addresses/${id}`, updated)
+          }
+          await get().fetchAddresses()
+        } catch (error) {
+          console.error('Failed to update address in DB:', error.message)
+          const addresses = get().addresses.map((a) => {
+            if (a.id === id) return { ...a, ...updated }
+            if (updated.isDefault) return { ...a, isDefault: false }
+            return a
+          })
+          set({ addresses })
+        }
+      },
+
+      deleteAddress: async (id) => {
+        try {
+          if (!String(id).startsWith('addr-')) {
+            await api.delete(`/auth/addresses/${id}`)
+          }
+          await get().fetchAddresses()
+        } catch (error) {
+          console.error('Failed to delete address in DB:', error.message)
+          set({ addresses: get().addresses.filter((a) => a.id !== id) })
+        }
+      },
+
+      setDefaultAddress: async (id) => {
+        try {
+          const current = get().addresses.find((a) => a.id === id)
+          if (current) {
+            await api.put(`/auth/addresses/${id}`, { ...current, isDefault: true })
+            await get().fetchAddresses()
+          }
+        } catch (error) {
+          console.error('Failed to set default address in DB:', error.message)
+          set({
+            addresses: get().addresses.map((a) => ({
+              ...a,
+              isDefault: a.id === id,
+            })),
+          })
+        }
+      },
     }),
     { name: 'jalyn-user' },
   ),
@@ -195,166 +231,107 @@ export const useUserStore = create(
 export const useOrderStore = create(
   persist(
     (set, get) => ({
-      orders: [
-        {
-          id: 'JALYN10245',
-          date: '08 Aug 2026',
-          status: 'Shipped',
-          paymentStatus: 'Paid',
-          paymentMethod: 'Online Payment (UPI)',
-          shippingMethod: 'Standard Delivery',
-          shippingCost: 0,
-          courier: 'BlueDart Express',
-          trackingId: 'BD987654321IN',
-          expectedDelivery: '11 Aug 2026',
-          address: {
-            name: 'Ananya Sharma',
-            phone: '+91 98765 43210',
-            addressLine1: 'Flat 402, Rosewood Apartments',
-            city: 'Bengaluru',
-            state: 'Karnataka',
-            pincode: '560038',
-          },
-          items: [
-            {
-              id: 'sp1',
-              name: 'Floral Midi Dress',
-              price: 1899,
-              image:
-                'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80',
-              size: 'M',
-              color: 'rose',
-              qty: 1,
-              href: '/products/floral-midi-dress',
-            },
-            {
-              id: 'sp3',
-              name: 'Linen Wrap Top',
-              price: 1299,
-              image:
-                'https://images.unsplash.com/photo-1551163943-3f6fa0d40dc1?auto=format&fit=crop&w=800&q=80',
-              size: 'S',
-              color: 'cream',
-              qty: 1,
-              href: '/products/linen-wrap-top',
-            },
-          ],
-          subtotal: 3198,
-          discount: 320,
-          tax: 144,
-          total: 3022,
-          timeline: [
-            { title: 'Order Placed', time: '08 Aug 2026, 09:30 AM', completed: true },
-            { title: 'Confirmed', time: '08 Aug 2026, 10:15 AM', completed: true },
-            { title: 'Packed', time: '08 Aug 2026, 02:00 PM', completed: true },
-            { title: 'Shipped', time: '08 Aug 2026, 06:30 PM', completed: true },
-            { title: 'Out for Delivery', time: 'Expected 11 Aug', completed: false },
-            { title: 'Delivered', time: 'Expected 11 Aug', completed: false },
-          ],
-        },
-        {
-          id: 'JALYN10212',
-          date: '28 Jul 2026',
-          status: 'Delivered',
-          paymentStatus: 'Paid',
-          paymentMethod: 'Cash on Delivery',
-          shippingMethod: 'Standard Delivery',
-          shippingCost: 0,
-          courier: 'Delhivery',
-          trackingId: 'DEL99887766',
-          expectedDelivery: '01 Aug 2026',
-          address: {
-            name: 'Ananya Sharma',
-            phone: '+91 98765 43210',
-            addressLine1: 'Flat 402, Rosewood Apartments',
-            city: 'Bengaluru',
-            state: 'Karnataka',
-            pincode: '560038',
-          },
-          items: [
-            {
-              id: 'sp4',
-              name: 'Pleated Mauve Dress',
-              price: 2499,
-              image:
-                'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?auto=format&fit=crop&w=800&q=80',
-              size: 'M',
-              color: 'mauve',
-              qty: 1,
-              href: '/products/pleated-mauve-dress',
-            },
-          ],
-          subtotal: 2499,
-          discount: 250,
-          tax: 112,
-          total: 2361,
-          timeline: [
-            { title: 'Order Placed', time: '28 Jul 2026, 03:20 PM', completed: true },
-            { title: 'Confirmed', time: '28 Jul 2026, 04:00 PM', completed: true },
-            { title: 'Packed', time: '29 Jul 2026, 11:00 AM', completed: true },
-            { title: 'Shipped', time: '29 Jul 2026, 04:30 PM', completed: true },
-            { title: 'Out for Delivery', time: '01 Aug 2026, 09:00 AM', completed: true },
-            { title: 'Delivered', time: '01 Aug 2026, 02:15 PM', completed: true },
-          ],
-        },
-      ],
-      activeOrder: null,
-      setActiveOrder: (order) => set({ activeOrder: order }),
+      orders: [],
       addOrder: (orderData) => {
-        const orderId = `JALYN${Math.floor(10000 + Math.random() * 90000)}`
+        const id = `JALYN${Math.floor(10000 + Math.random() * 90000)}`
+        const dateStr = new Date().toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        })
         const newOrder = {
-          id: orderId,
-          date: new Date().toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-          }),
-          status: 'Processing',
-          paymentStatus: orderData.paymentMethod === 'cod' ? 'Pending (COD)' : 'Paid',
-          paymentMethod:
-            orderData.paymentMethod === 'cod'
-              ? 'Cash on Delivery'
-              : 'Online Payment (UPI/Card)',
-          shippingMethod:
-            orderData.shippingMethod === 'express'
-              ? 'Express Delivery'
-              : 'Standard Delivery',
+          id,
+          date: dateStr,
+          status: 'Confirmed',
+          paymentStatus: orderData.paymentStatus || 'pending',
+          paymentMethod: orderData.paymentMethod || 'Online Payment',
+          shippingMethod: orderData.shippingMethod || 'Standard Delivery',
           shippingCost: orderData.shippingCost || 0,
           courier: 'BlueDart Express',
           trackingId: `BD${Math.floor(100000000 + Math.random() * 900000000)}IN`,
-          expectedDelivery: new Date(
-            Date.now() + (orderData.shippingMethod === 'express' ? 2 : 4) * 86400000,
-          ).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-          }),
+          expectedDelivery: '3 to 5 business days',
+          customer_email: orderData.customer_email || orderData.customerEmail,
           address: orderData.address,
           items: orderData.items,
           subtotal: orderData.subtotal,
-          discount: orderData.discount,
-          tax: orderData.tax,
+          discount: orderData.discount || 0,
+          tax: orderData.tax || 0,
           total: orderData.total,
           timeline: [
-            {
-              title: 'Order Placed',
-              time: `${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}, Just Now`,
-              completed: true,
-            },
-            { title: 'Confirmed', time: 'In Progress', completed: true },
-            { title: 'Packed', time: 'Expected Tomorrow', completed: false },
+            { title: 'Order Placed', time: `${dateStr}, Just Now`, completed: true },
+            { title: 'Confirmed', time: `${dateStr}, Just Now`, completed: true },
+            { title: 'Quality Inspection', time: 'In Progress', completed: false },
             { title: 'Shipped', time: 'Pending', completed: false },
-            { title: 'Out for Delivery', time: 'Pending', completed: false },
-            { title: 'Delivered', time: 'Pending', completed: false },
+            { title: 'Delivered', time: '3-5 Business Days', completed: false },
           ],
         }
-        set({
-          orders: [newOrder, ...get().orders],
-          activeOrder: newOrder,
-        })
+        const orders = [newOrder, ...get().orders]
+        set({ orders, activeOrder: newOrder })
         return newOrder
+      },
+      getOrderById: (id) => get().orders.find((o) => o.id === id),
+      clearOrders: () => set({ orders: [] }),
+      fetchOrders: async (email) => {
+        try {
+          const response = await api.get(`/orders?email=${email}`)
+          if (response.data?.success) {
+            const mappedOrders = response.data.orders.map((o) => {
+              const dateObj = new Date(o.created_at || Date.now());
+              const dateStr = dateObj.toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+              });
+
+              const items = Array.isArray(o.items) ? o.items.map((it) => ({
+                name: it.product_name,
+                price: Number(it.price) || 0,
+                qty: Number(it.quantity) || 1,
+                size: it.size || 'M',
+                color: it.color || 'Default',
+                image: it.image_url || 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80',
+              })) : [];
+
+              return {
+                id: o.order_number || String(o.id),
+                date: dateStr,
+                status: o.order_status || 'Confirmed',
+                paymentStatus: o.payment_status || 'pending',
+                paymentMethod: o.payment_method || 'Online Payment',
+                shippingMethod: o.shipping_method || 'Standard Delivery',
+                shippingCost: Number(o.shipping_cost) || 0,
+                courier: o.courier || 'BlueDart Express',
+                trackingId: o.tracking_id || 'BD987654321IN',
+                expectedDelivery: o.expected_delivery || '3 to 5 business days',
+                customer_email: o.customer_email,
+                address: {
+                  name: o.customer_name,
+                  email: o.customer_email,
+                  phone: o.customer_phone,
+                  addressLine1: o.shipping_address,
+                },
+                items,
+                subtotal: Number(o.subtotal) || Number(o.total_amount) || 0,
+                discount: Number(o.discount) || 0,
+                tax: Number(o.tax) || 0,
+                total: Number(o.total_amount) || 0,
+                timeline: [
+                  { title: 'Order Placed', time: dateStr, completed: true },
+                  { title: 'Confirmed', time: dateStr, completed: true },
+                  { title: 'Quality Inspection', time: o.order_status !== 'pending' ? 'Completed' : 'In Progress', completed: o.order_status !== 'pending' },
+                  { title: 'Shipped', time: ['shipped', 'delivered'].includes(o.order_status?.toLowerCase()) ? 'Shipped' : 'Pending', completed: ['shipped', 'delivered'].includes(o.order_status?.toLowerCase()) },
+                  { title: 'Delivered', time: o.order_status?.toLowerCase() === 'delivered' ? 'Delivered' : '3-5 Business Days', completed: o.order_status?.toLowerCase() === 'delivered' },
+                ],
+              };
+            });
+            set({ orders: mappedOrders });
+          }
+        } catch (error) {
+          console.warn('Failed to fetch orders from backend:', error.message);
+        }
       },
     }),
     { name: 'jalyn-orders' },
   ),
 )
+

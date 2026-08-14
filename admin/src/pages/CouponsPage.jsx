@@ -215,7 +215,7 @@ export default function CouponsPage() {
   }, [coupons, search, filter]);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50/50 min-h-screen">
+    <div className="flex-1 overflow-y-auto">
       <Header title="Coupon Code Manager" subtitle="Generate, create, and manage promo codes that reflect live on checkout and PDP offers." />
 
       {toast && (

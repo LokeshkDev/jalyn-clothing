@@ -4,14 +4,22 @@
 
 html {
   font-size: 17px;
+  height: 100%;
 }
 
 body {
   margin: 0;
+  height: 100%;
+  overflow: hidden;
   background-color: #F9FAFB;
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   color: #111827;
   font-size: 1rem;
+}
+
+#root {
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Global Heading & Subheading Typography in Admin */

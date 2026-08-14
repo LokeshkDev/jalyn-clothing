@@ -96,6 +96,39 @@ export function useCmsData() {
 
   const aboutPage = cmsData?.about_page || null;
   const contactPage = cmsData?.contact_page || null;
+  const authPage = cmsData?.auth_page || null;
+  const codSettings = cmsData?.cod_settings || {
+    enabled: true,
+    min_order_amount: 0,
+    cod_fee: 0,
+    notice: 'Pay cash upon delivery at your doorstep.',
+  };
+  const deliverySettings = cmsData?.delivery_settings || {
+    enabled: true,
+    show_pincode_checker: true,
+    shipping_notice: 'Free Express Delivery on orders above ₹1,999',
+  };
+  const taxSettings = cmsData?.tax_settings || {
+    enabled: true,
+    tax_percent: 18,
+    tax_label: 'GST (18%)',
+    inclusive: false,
+  };
+  const shippingMethods = cmsData?.shipping_methods || {
+    standard: {
+      enabled: true,
+      title: 'Standard Delivery',
+      subtitle: 'Delivery in 3 to 5 business days',
+      price: 99,
+      free_threshold: 1999,
+    },
+    express: {
+      enabled: true,
+      title: 'Express Delivery',
+      subtitle: 'Fast delivery in 1 to 2 business days',
+      price: 199,
+    },
+  };
 
   return {
     cmsData,
@@ -108,6 +141,11 @@ export function useCmsData() {
     footerSettings,
     aboutPage,
     contactPage,
+    authPage,
+    codSettings,
+    deliverySettings,
+    taxSettings,
+    shippingMethods,
     announcementBar: cmsData?.announcement_bar || null,
     promoBanner: cmsData?.promo_banner || null,
     loading,
