@@ -419,7 +419,7 @@ export default function SalePage() {
             {/* Quick Actions (Preview, Reorder Save) */}
             <div className="flex flex-wrap items-center gap-2">
               <a
-                href="http://localhost:5173/sale"
+                href={`${import.meta.env.VITE_CLIENT_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5173' : 'https://jalyn.in')}/sale`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-4 py-2 rounded-xl transition shadow-xs cursor-pointer"

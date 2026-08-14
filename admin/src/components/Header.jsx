@@ -12,7 +12,7 @@ export default function Header({ title, subtitle }) {
       <div className="flex items-center gap-4">
         {/* Quick Links & Status Badges */}
         <a
-          href="http://localhost:5173"
+          href={import.meta.env.VITE_CLIENT_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5173' : 'https://jalyn.in')}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 text-xs font-semibold text-brand-600 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-lg transition"
