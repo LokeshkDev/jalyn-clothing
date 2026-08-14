@@ -2092,7 +2092,7 @@ export default function CmsPage() {
                         placeholder="/href"
                       />
                     </div>
-                    <div className="flex items-center gap-4 pt-4">
+                    <div className="flex items-center gap-6 pt-4">
                       <label className="flex items-center gap-1.5 font-semibold text-gray-700 cursor-pointer">
                         <input
                           type="checkbox"
@@ -2106,11 +2106,161 @@ export default function CmsPage() {
                         />
                         <span className="text-red-600 font-bold">Accent Red Text</span>
                       </label>
+
+                      <label className="flex items-center gap-1.5 font-semibold text-gray-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={item.isMega || false}
+                          onChange={(e) => {
+                            const nextLinks = [...cmsData.menu_arrangement.nav_links];
+                            nextLinks[idx].isMega = e.target.checked;
+                            if (e.target.checked && !nextLinks[idx].groups) {
+                              nextLinks[idx].groups = [];
+                            }
+                            updateSectionField('menu_arrangement', 'nav_links', nextLinks);
+                          }}
+                          className="h-4 w-4 text-brand-600 rounded"
+                        />
+                        <span>Is Mega Dropdown (Multi-column with headers)</span>
+                      </label>
                     </div>
                   </div>
 
-                  {/* Submenu Dropdown Items Section (CRUD) */}
-                  <div className="pt-2 border-t border-gray-200/80 space-y-2">
+                  {/* Mega Menu Groups (Multi-Column) vs Flat Dropdown Submenus */}
+                  {item.isMega ? (
+                    <div className="pt-2 border-t border-gray-200/80 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-700 text-xs flex items-center gap-1">
+                          Mega Menu Columns / Groups ({item.groups?.length || 0})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextLinks = [...cmsData.menu_arrangement.nav_links];
+                            if (!nextLinks[idx].groups) nextLinks[idx].groups = [];
+                            nextLinks[idx].groups.push({
+                              title: 'New Column Title',
+                              items: [],
+                            });
+                            updateSectionField('menu_arrangement', 'nav_links', nextLinks);
+                          }}
+                          className="text-[11px] font-bold text-brand-600 hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="w-3 h-3" /> Add Mega Column
+                        </button>
+                      </div>
+
+                      {item.groups?.length > 0 ? (
+                        <div className="space-y-4 pl-3 border-l-2 border-brand-500">
+                          {item.groups.map((group, groupIdx) => (
+                            <div key={groupIdx} className="p-3 bg-gray-50/50 rounded-xl border border-gray-200 space-y-3">
+                              {/* Group Header: Column Title & Delete */}
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex-1 flex items-center gap-2">
+                                  <span className="text-[10px] uppercase font-bold text-gray-400">Col Title:</span>
+                                  <input
+                                    type="text"
+                                    value={group.title}
+                                    onChange={(e) => {
+                                      const nextLinks = [...cmsData.menu_arrangement.nav_links];
+                                      nextLinks[idx].groups[groupIdx].title = e.target.value;
+                                      updateSectionField('menu_arrangement', 'nav_links', nextLinks);
+                                    }}
+                                    className="px-2 py-1 rounded border border-gray-300 font-bold text-gray-900 flex-1 text-xs"
+                                    placeholder="Column Header Title"
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const nextLinks = [...cmsData.menu_arrangement.nav_links];
+                                    nextLinks[idx].groups = nextLinks[idx].groups.filter((_, i) => i !== groupIdx);
+                                    updateSectionField('menu_arrangement', 'nav_links', nextLinks);
+                                  }}
+                                  className="text-gray-400 hover:text-red-650 transition"
+                                  title="Delete Mega Column"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                </button>
+                              </div>
+
+                              {/* Group Items / Sublinks List */}
+                              <div className="space-y-2 pl-3 border-l-2 border-gray-300">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-bold text-gray-500">Links ({group.items?.length || 0})</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const nextLinks = [...cmsData.menu_arrangement.nav_links];
+                                      if (!nextLinks[idx].groups[groupIdx].items) {
+                                        nextLinks[idx].groups[groupIdx].items = [];
+                                      }
+                                      nextLinks[idx].groups[groupIdx].items.push({
+                                        label: 'New Link',
+                                        href: '/shop',
+                                      });
+                                      updateSectionField('menu_arrangement', 'nav_links', nextLinks);
+                                    }}
+                                    className="text-[10px] font-bold text-brand-600 hover:underline flex items-center gap-0.5 cursor-pointer"
+                                  >
+                                    <Plus className="w-2.5 h-2.5" /> Add Link
+                                  </button>
+                                </div>
+
+                                {group.items?.length > 0 ? (
+                                  <div className="space-y-1.5">
+                                    {group.items.map((subItem, subItemIdx) => (
+                                      <div key={subItemIdx} className="flex items-center gap-2 bg-white p-1.5 rounded border border-gray-200">
+                                        <input
+                                          type="text"
+                                          value={subItem.label}
+                                          onChange={(e) => {
+                                            const nextLinks = [...cmsData.menu_arrangement.nav_links];
+                                            nextLinks[idx].groups[groupIdx].items[subItemIdx].label = e.target.value;
+                                            updateSectionField('menu_arrangement', 'nav_links', nextLinks);
+                                          }}
+                                          placeholder="Label"
+                                          className="flex-1 px-1.5 py-0.5 rounded border border-gray-300 text-xs font-semibold text-gray-800 bg-white"
+                                        />
+                                        <input
+                                          type="text"
+                                          value={subItem.href}
+                                          onChange={(e) => {
+                                            const nextLinks = [...cmsData.menu_arrangement.nav_links];
+                                            nextLinks[idx].groups[groupIdx].items[subItemIdx].href = e.target.value;
+                                            updateSectionField('menu_arrangement', 'nav_links', nextLinks);
+                                          }}
+                                          placeholder="URL"
+                                          className="flex-1 px-1.5 py-0.5 rounded border border-gray-300 text-[10px] font-mono text-gray-500 bg-white"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const nextLinks = [...cmsData.menu_arrangement.nav_links];
+                                            nextLinks[idx].groups[groupIdx].items = nextLinks[idx].groups[groupIdx].items.filter((_, i) => i !== subItemIdx);
+                                            updateSectionField('menu_arrangement', 'nav_links', nextLinks);
+                                          }}
+                                          className="text-gray-400 hover:text-red-500 transition"
+                                          title="Delete Link"
+                                        >
+                                          <Trash2 className="w-3 h-3 text-red-400" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] text-gray-400 italic">No links in this column.</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-gray-400 italic pl-2">No mega columns configured.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="pt-2 border-t border-gray-200/80 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-gray-700 text-xs flex items-center gap-1">
                         Submenu Items ({item.children?.length || 0})
@@ -2225,6 +2375,7 @@ export default function CmsPage() {
                       <p className="text-[11px] text-gray-400 italic pl-2">No submenu dropdown items configured for this link.</p>
                     )}
                   </div>
+                  )}
                 </div>
               ))}
             </div>

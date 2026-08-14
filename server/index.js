@@ -30,6 +30,8 @@ const allowedOrigins = [
   process.env.ADMIN_URL || 'http://localhost:5174',
   'https://jalyn.vercel.app',
   'https://www.jalyn.vercel.app',
+  'https://jalyn-admin.vercel.app',
+  'https://www.jalyn-admin.vercel.app',
   'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:5174',
