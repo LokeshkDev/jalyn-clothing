@@ -11,6 +11,9 @@ import OrdersPage from './pages/OrdersPage';
 import CouponsPage from './pages/CouponsPage';
 import AuthUsersPage from './pages/AuthUsersPage';
 import LoginPage from './pages/LoginPage';
+import ScannerPage from './pages/ScannerPage';
+import BarcodesPage from './pages/BarcodesPage';
+import StockHistoryPage from './pages/StockHistoryPage';
 
 function ProtectedLayout({ user, onLogout }) {
   if (!user) {
@@ -31,6 +34,9 @@ function ProtectedLayout({ user, onLogout }) {
           <Route path="/sale" element={<SalePage />} />
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/coupons" element={<CouponsPage />} />
+          <Route path="/scanner" element={<ScannerPage />} />
+          <Route path="/barcodes" element={<BarcodesPage />} />
+          <Route path="/stock-history" element={<StockHistoryPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

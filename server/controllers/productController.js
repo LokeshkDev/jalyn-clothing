@@ -1,5 +1,6 @@
 import pool from '../config/db.js';
 import { processAndStoreImage } from '../services/imageService.js';
+import { generateUniqueBarcodeNumber } from './barcodeController.js';
 
 // Rich seed product catalog used across server DB seeding & in-memory fallbacks
 export const SEED_PRODUCTS = [
@@ -492,6 +493,31 @@ export const createProduct = async (req, res) => {
         parsedSizeGuide ? JSON.stringify(parsedSizeGuide) : null,
       ]
     );
+
+    // Auto-generate barcodes for new product
+    try {
+      const productId = result.insertId;
+      // Generate primary barcode
+      const primaryBarcode = await generateUniqueBarcodeNumber();
+      await pool.query(
+        'INSERT INTO product_barcodes (product_id, barcode, is_primary, created_by) VALUES (?, ?, 1, ?)',
+        [productId, primaryBarcode, req.user?.id || null]
+      );
+      // Generate variant barcodes
+      if (parsedVariants && parsedVariants.length > 0) {
+        for (const variant of parsedVariants) {
+          const variantBarcode = await generateUniqueBarcodeNumber();
+          await pool.query(
+            'INSERT INTO product_barcodes (product_id, size, color, barcode, is_primary, created_by) VALUES (?, ?, ?, ?, 0, ?)',
+            [productId, variant.size || null, variant.color || null, variantBarcode, req.user?.id || null]
+          );
+        }
+      }
+    } catch (barcodeError) {
+      console.warn('⚠️ Auto-barcode generation failed:', barcodeError.message);
+      // Don't block product creation
+    }
+
     return res.status(201).json({
       success: true, message: 'Product created successfully!',
       productId: result.insertId, product: { ...newProd, id: result.insertId },

@@ -15,6 +15,8 @@ import uploadRoutes from './routes/uploadRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import couponRoutes from './routes/couponRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
+import barcodeRoutes from './routes/barcodeRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 dotenv.config();
 
@@ -80,6 +82,8 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/barcodes', barcodeRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

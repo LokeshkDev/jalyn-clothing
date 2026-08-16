@@ -47,7 +47,7 @@ const queryClient = new QueryClient({
 function PageLoader() {
   return (
     <div className="fixed inset-0 z-[9999] bg-[#FFF6F9] flex flex-col items-center justify-center">
-      <img src={loaderGif} alt="Loading Jalyn..." className="h-32 w-auto object-contain" />
+      <img src={loaderGif} alt="Loading Jalyn..." className="h-48 w-auto object-contain" />
     </div>
   )
 }

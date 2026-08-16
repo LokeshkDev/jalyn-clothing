@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import ImageUploader from '../components/ImageUploader';
+import BarcodeLabel from '../components/BarcodeLabel';
+import BarcodePrintModal from '../components/BarcodePrintModal';
 import api from '../services/api';
+import { generateBarcodeSVG } from '../utils/barcodeEncoder';
 import {
   Plus, Edit, Trash2, Search, Sparkles, RefreshCw, Loader2, X, Globe, Store,
-  Layers, Palette, Ruler, ShieldAlert, History, Zap, Check, AlertCircle, ShoppingBag
+  Layers, Palette, Ruler, ShieldAlert, History, Zap, Check, AlertCircle, ShoppingBag,
+  Barcode, Printer, Download, RotateCcw, Eye
 } from 'lucide-react';
 
 const SIZE_PRESETS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
@@ -33,6 +37,12 @@ export default function ProductsPage() {
   const [offlineSaleModal, setOfflineSaleModal] = useState({ open: false, product: null, variant: null, qty: 1, reference: '' });
   const [adjustStockModal, setAdjustStockModal] = useState({ open: false, product: null, variant: null, newQty: 0, reason: '' });
   const [auditTrailModal, setAuditTrailModal] = useState({ open: false, transactions: [], loading: false });
+
+  // Barcode State
+  const [productBarcodes, setProductBarcodes] = useState([]);
+  const [barcodesLoading, setBarcodesLoading] = useState(false);
+  const [barcodePrintModal, setBarcodePrintModal] = useState({ open: false, barcodes: [] });
+  const [barcodePreview, setBarcodePreview] = useState(null);
 
   // Form State for Product Add/Edit
   const [formData, setFormData] = useState({
@@ -97,6 +107,7 @@ export default function ProductsPage() {
 
   const handleOpenAddModal = () => {
     setEditingId(null);
+    setProductBarcodes([]);
     setActiveTab('basic');
     setFormData({
       title: '',
@@ -180,6 +191,14 @@ export default function ProductsPage() {
       },
     });
     setIsModalOpen(true);
+
+    // Load barcodes for this product
+    setProductBarcodes([]);
+    setBarcodesLoading(true);
+    api.get(`/barcodes/product/${p.id}`)
+      .then(res => setProductBarcodes(res.data.data || []))
+      .catch(() => setProductBarcodes([]))
+      .finally(() => setBarcodesLoading(false));
   };
 
   // Automated Variant Matrix Generation
@@ -443,6 +462,9 @@ export default function ProductsPage() {
                 <p className="text-xl font-bold text-amber-600">
                   {products.filter((p) => (p.stock || 0) <= (p.low_stock_threshold || 5)).length}
                 </p>
+                <p className="text-[10px] font-semibold text-red-600">
+                  {products.filter((p) => (p.stock || 0) < 3).length} critical (&lt; 3 qty)
+                </p>
               </div>
             </div>
             <button
@@ -522,6 +544,7 @@ export default function ProductsPage() {
               <tbody className="divide-y divide-gray-100 font-medium">
                 {filteredProducts.map((p) => {
                   const hasLowStock = (p.stock || 0) <= (p.low_stock_threshold || 5);
+                  const isCritical = (p.stock || 0) < 3;
                   const variantCount = Array.isArray(p.variants) ? p.variants.length : 0;
 
                   return (
@@ -588,10 +611,14 @@ export default function ProductsPage() {
                       <td className="py-3 px-4">
                         <span
                           className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1 ${
-                            hasLowStock ? 'bg-amber-100 text-amber-800 border border-amber-200 animate-pulse' : 'bg-emerald-100 text-emerald-800'
+                            isCritical
+                              ? 'bg-red-100 text-red-700 border border-red-200 animate-pulse'
+                              : hasLowStock
+                                ? 'bg-amber-100 text-amber-800 border border-amber-200 animate-pulse'
+                                : 'bg-emerald-100 text-emerald-800'
                           }`}
                         >
-                          {p.stock || 0} in stock {hasLowStock && ' (Low)'}
+                          {p.stock || 0} in stock {isCritical ? ' (Critical)' : hasLowStock ? ' (Low)' : ''}
                         </span>
                       </td>
 
@@ -1320,6 +1347,166 @@ export default function ProductsPage() {
                 </div>
               </div>
 
+              {/* SECTION 8: BARCODES (only shown when editing an existing product) */}
+              {editingId && (
+                <div>
+                  <div className="h-[1.5px] bg-brand-600/20 my-6" />
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-brand-700">
+                        <Barcode className="w-4 h-4" />
+                        <span className="font-bold text-xs uppercase tracking-wider">8. Barcode Management</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setBarcodesLoading(true);
+                          try {
+                            await api.post(`/barcodes/generate/${editingId}`);
+                            showToast('Barcodes generated successfully!');
+                            const res = await api.get(`/barcodes/product/${editingId}`);
+                            setProductBarcodes(res.data.data || []);
+                          } catch (err) {
+                            showToast(err.response?.data?.message || 'Failed to generate barcodes', 'error');
+                          } finally {
+                            setBarcodesLoading(false);
+                          }
+                        }}
+                        disabled={barcodesLoading}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-[11px] rounded-lg shadow-sm transition cursor-pointer disabled:opacity-50"
+                      >
+                        {barcodesLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                        Generate Barcodes
+                      </button>
+                    </div>
+                    <div className="h-[1.5px] bg-brand-600/20 my-2" />
+
+                    {barcodesLoading ? (
+                      <div className="p-6 text-center text-gray-400 text-xs">
+                        <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2 text-brand-600" />
+                        Loading barcodes...
+                      </div>
+                    ) : productBarcodes.length === 0 ? (
+                      <div className="p-6 text-center text-gray-400 text-xs">
+                        <Barcode className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                        No barcodes generated yet. Click "Generate Barcodes" to create them.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {/* Primary Barcode */}
+                        {productBarcodes.filter(b => b.is_primary).map(b => (
+                          <div key={b.id} className="p-3 bg-brand-50/50 rounded-xl border border-brand-200/50">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] bg-brand-600 text-white px-2 py-0.5 rounded font-bold">PRIMARY</span>
+                                <span className="font-mono text-xs font-bold text-gray-900">{b.barcode}</span>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${b.status === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                                  {b.status}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button type="button" onClick={() => setBarcodePreview(b)} className="p-1 text-gray-400 hover:text-brand-600 rounded hover:bg-brand-50" title="Preview">
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                <button type="button" onClick={() => setBarcodePrintModal({ open: true, barcodes: [{ barcode: b.barcode, productName: formData.title, color: b.color, size: b.size, price: formData.price }] })} className="p-1 text-gray-400 hover:text-brand-600 rounded hover:bg-brand-50" title="Print">
+                                  <Printer className="w-3.5 h-3.5" />
+                                </button>
+                                <button type="button" onClick={async () => {
+                                  if (!confirm('Regenerate this barcode? The old one will be deactivated.')) return;
+                                  try {
+                                    await api.post(`/barcodes/regenerate/${b.id}`);
+                                    showToast('Barcode regenerated!');
+                                    const res = await api.get(`/barcodes/product/${editingId}`);
+                                    setProductBarcodes(res.data.data || []);
+                                  } catch (err) {
+                                    showToast('Failed to regenerate', 'error');
+                                  }
+                                }} className="p-1 text-gray-400 hover:text-amber-600 rounded hover:bg-amber-50" title="Regenerate">
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            <div dangerouslySetInnerHTML={{ __html: generateBarcodeSVG(b.barcode, { height: 35, moduleWidth: 1.5 }) }} className="flex justify-center" />
+                          </div>
+                        ))}
+
+                        {/* Variant Barcodes Table */}
+                        {productBarcodes.filter(b => !b.is_primary).length > 0 && (
+                          <div className="border border-gray-200 rounded-xl overflow-hidden">
+                            <table className="w-full text-left text-xs">
+                              <thead className="bg-gray-100 text-gray-600 font-bold text-[10px] uppercase">
+                                <tr>
+                                  <th className="py-2 px-3">Color</th>
+                                  <th className="py-2 px-3">Size</th>
+                                  <th className="py-2 px-3">Barcode</th>
+                                  <th className="py-2 px-3">Status</th>
+                                  <th className="py-2 px-3 text-center">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100 font-medium">
+                                {productBarcodes.filter(b => !b.is_primary).map(b => (
+                                  <tr key={b.id} className="hover:bg-gray-50">
+                                    <td className="py-2 px-3">{b.color || '-'}</td>
+                                    <td className="py-2 px-3">{b.size || '-'}</td>
+                                    <td className="py-2 px-3 font-mono font-semibold">{b.barcode}</td>
+                                    <td className="py-2 px-3">
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${b.status === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                                        {b.status}
+                                      </span>
+                                    </td>
+                                    <td className="py-2 px-3 text-center">
+                                      <div className="flex items-center justify-center gap-1">
+                                        <button type="button" onClick={() => setBarcodePreview(b)} className="p-1 text-gray-400 hover:text-brand-600 rounded hover:bg-brand-50" title="Preview">
+                                          <Eye className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button type="button" onClick={() => setBarcodePrintModal({ open: true, barcodes: [{ barcode: b.barcode, productName: formData.title, color: b.color, size: b.size, price: formData.price }] })} className="p-1 text-gray-400 hover:text-brand-600 rounded hover:bg-brand-50" title="Print">
+                                          <Printer className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button type="button" onClick={async () => {
+                                          if (!confirm('Regenerate this barcode?')) return;
+                                          try {
+                                            await api.post(`/barcodes/regenerate/${b.id}`);
+                                            showToast('Barcode regenerated!');
+                                            const res = await api.get(`/barcodes/product/${editingId}`);
+                                            setProductBarcodes(res.data.data || []);
+                                          } catch (err) {
+                                            showToast('Failed to regenerate', 'error');
+                                          }
+                                        }} className="p-1 text-gray-400 hover:text-amber-600 rounded hover:bg-amber-50" title="Regenerate">
+                                          <RotateCcw className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+
+                        {/* Bulk Print Button */}
+                        <button
+                          type="button"
+                          onClick={() => setBarcodePrintModal({
+                            open: true,
+                            barcodes: productBarcodes.filter(b => b.status === 'active').map(b => ({
+                              barcode: b.barcode,
+                              productName: formData.title,
+                              color: b.color,
+                              size: b.size,
+                              price: formData.price
+                            }))
+                          })}
+                          className="w-full py-2 rounded-xl border border-brand-200 bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+                        >
+                          <Printer className="w-3.5 h-3.5" /> Print All Active Barcodes
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Bottom Actions Bar */}
               <div className="pt-4 border-t border-gray-200 flex items-center justify-between">
                 <p className="text-[11px] text-gray-400 font-medium">
@@ -1414,6 +1601,41 @@ export default function ProductsPage() {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Barcode Print Modal */}
+      <BarcodePrintModal
+        isOpen={barcodePrintModal.open}
+        onClose={() => setBarcodePrintModal({ open: false, barcodes: [] })}
+        barcodes={barcodePrintModal.barcodes}
+      />
+
+      {/* Barcode Preview Modal */}
+      {barcodePreview && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setBarcodePreview(null)}>
+          <div className="bg-white rounded-2xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                <Eye className="w-4 h-4 text-brand-600" /> Barcode Preview
+              </h3>
+              <button onClick={() => setBarcodePreview(null)} className="p-1 text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex justify-center">
+              <BarcodeLabel
+                barcode={barcodePreview.barcode}
+                productName={formData.title}
+                color={barcodePreview.color}
+                size={barcodePreview.size}
+                price={formData.price}
+              />
+            </div>
+            <p className="text-center text-[10px] text-gray-400 mt-3">
+              Exact preview at 76.2mm × 50.8mm (3″ × 2″)
+            </p>
           </div>
         </div>
       )}

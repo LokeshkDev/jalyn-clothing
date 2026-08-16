@@ -10,6 +10,7 @@ import {
   Upload,
   CheckCircle2,
   AlertTriangle,
+  PackageX,
 } from 'lucide-react';
 import Header from '../components/Header';
 import api from '../services/api';
@@ -21,14 +22,16 @@ export default function DashboardPage() {
     ordersCount: 0,
     serverStatus: 'checking',
   });
+  const [notifications, setNotifications] = useState({ newOrders: [], lowStock: [] });
 
   useEffect(() => {
     async function loadStats() {
       try {
-        const [prodRes, catRes, orderRes] = await Promise.allSettled([
+        const [prodRes, catRes, orderRes, notifRes] = await Promise.allSettled([
           api.get('/products'),
           api.get('/categories'),
           api.get('/orders'),
+          api.get('/notifications'),
         ]);
 
         setStats({
@@ -37,6 +40,9 @@ export default function DashboardPage() {
           ordersCount: orderRes.status === 'fulfilled' ? orderRes.value.data?.orders?.length || 0 : 0,
           serverStatus: 'online',
         });
+        if (notifRes.status === 'fulfilled') {
+          setNotifications(notifRes.value.data?.data || { newOrders: [], lowStock: [] });
+        }
       } catch (err) {
         setStats((prev) => ({ ...prev, serverStatus: 'error' }));
       }
@@ -79,6 +85,93 @@ export default function DashboardPage() {
               </Link>
             );
           })}
+        </div>
+
+        {/* Alerts & Updates */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* New Orders */}
+          <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                <ShoppingBasket className="w-4 h-4 text-blue-600" />
+                New Orders
+                {notifications.newOrders.length > 0 && (
+                  <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold">
+                    {notifications.newOrders.length}
+                  </span>
+                )}
+              </h3>
+              <Link to="/orders" className="text-xs font-semibold text-brand-600 hover:underline">
+                View All &rarr;
+              </Link>
+            </div>
+            <div className="space-y-2 text-xs">
+              {notifications.newOrders.length === 0 ? (
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 text-center">
+                  <CheckCircle2 className="w-6 h-6 mx-auto text-emerald-500 mb-1.5" />
+                  <p className="text-gray-500 font-medium">No pending orders right now</p>
+                </div>
+              ) : (
+                notifications.newOrders.slice(0, 5).map((o) => (
+                  <Link
+                    key={o.id}
+                    to="/orders"
+                    className="p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-blue-50 hover:border-blue-100 transition flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="font-semibold text-gray-800">{o.order_number}</p>
+                      <p className="text-[11px] text-gray-500">{o.customer_name || 'Customer'}</p>
+                    </div>
+                    <span className="text-[11px] font-semibold text-gray-700">₹{o.total_amount}</span>
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Low Stock Alerts */}
+          <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                Low Stock Alerts
+                {notifications.lowStock.length > 0 && (
+                  <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">
+                    {notifications.lowStock.length}
+                  </span>
+                )}
+              </h3>
+              <Link to="/products" className="text-xs font-semibold text-brand-600 hover:underline">
+                View All &rarr;
+              </Link>
+            </div>
+            <div className="space-y-2 text-xs">
+              {notifications.lowStock.length === 0 ? (
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 text-center">
+                  <CheckCircle2 className="w-6 h-6 mx-auto text-emerald-500 mb-1.5" />
+                  <p className="text-gray-500 font-medium">All products well stocked</p>
+                </div>
+              ) : (
+                notifications.lowStock.slice(0, 5).map((p) => (
+                  <Link
+                    key={p.id}
+                    to="/products"
+                    className="p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-amber-50 hover:border-amber-100 transition flex items-center gap-3"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                      <PackageX className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-800 truncate">{p.title}</p>
+                      <p className="text-[11px] text-red-600 font-semibold">
+                        {p.stock} left {p.stock === 0 && '— out of stock'}
+                      </p>
+                    </div>
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
         {/* CMS Quick Management Cards */}

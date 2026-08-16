@@ -106,6 +106,49 @@ export const testConnection = async () => {
       await connection.query("ALTER TABLE products ADD COLUMN sale_published TINYINT(1) DEFAULT 1");
     } catch (e) {}
 
+    // Ensure product_barcodes table exists
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS product_barcodes (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          product_id INT NOT NULL,
+          size VARCHAR(30) NULL,
+          color VARCHAR(50) NULL,
+          barcode VARCHAR(30) NOT NULL UNIQUE,
+          barcode_type VARCHAR(20) DEFAULT 'code128',
+          status ENUM('active', 'inactive') DEFAULT 'active',
+          is_primary TINYINT(1) DEFAULT 0,
+          generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          created_by INT NULL,
+          FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+          INDEX idx_barcode_status (barcode, status),
+          INDEX idx_product_barcodes (product_id, status)
+        )
+      `);
+    } catch (e) {
+      console.warn('⚠️ Warning creating product_barcodes table: ' + e.message);
+    }
+
+    // Ensure inventory_transactions new columns exist
+    try {
+      await connection.query("ALTER TABLE inventory_transactions ADD COLUMN size VARCHAR(30) NULL");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE inventory_transactions ADD COLUMN color VARCHAR(50) NULL");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE inventory_transactions ADD COLUMN barcode VARCHAR(30) NULL");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE inventory_transactions ADD COLUMN quantity_before INT NULL");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE inventory_transactions ADD COLUMN source VARCHAR(50) NULL");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE inventory_transactions ADD COLUMN user_id INT NULL");
+    } catch (e) {}
+
     connection.release();
     return true;
   } catch (error) {

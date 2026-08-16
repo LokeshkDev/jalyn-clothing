@@ -11,6 +11,9 @@ import {
   BadgePercent,
   Users,
   Tag,
+  Scan,
+  Barcode,
+  History,
 } from 'lucide-react';
 
 export default function Sidebar({ currentUser, onLogout }) {
@@ -24,6 +27,10 @@ export default function Sidebar({ currentUser, onLogout }) {
     { label: 'Sale Catalog', path: '/sale', icon: Tag },
     { label: 'Orders', path: '/orders', icon: ShoppingBasket },
     { label: 'Coupons', path: '/coupons', icon: BadgePercent },
+    { separator: 'Inventory' },
+    { label: 'Scanner', path: '/scanner', icon: Scan, badge: 'SCAN' },
+    { label: 'Barcodes', path: '/barcodes', icon: Barcode },
+    { label: 'Stock History', path: '/stock-history', icon: History },
   ];
 
   return (
@@ -47,6 +54,16 @@ export default function Sidebar({ currentUser, onLogout }) {
           Management
         </div>
         {navItems.map((item) => {
+          if (item.separator) {
+            return (
+              <div key={item.separator} className="pt-3 pb-1">
+                <div className="border-t border-rose-950/50 mb-2" />
+                <div className="px-3 pb-1 text-[10px] font-bold text-rose-300/40 uppercase tracking-wider">
+                  {item.separator}
+                </div>
+              </div>
+            );
+          }
           const Icon = item.icon;
           return (
             <NavLink

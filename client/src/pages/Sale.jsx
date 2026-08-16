@@ -478,15 +478,14 @@ export default function Sale() {
       {/* Main Content Product Grid */}
       <div className="container-luxury max-w-7xl px-0 sm:px-6 relative z-10 min-h-[300px]">
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5 sm:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
             {Array.from({ length: 12 }).map((_, idx) => (
               <SkeletonCard key={idx} />
             ))}
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-16 px-4 bg-white border border-[#EFD7E3]/40 rounded-3xl max-w-xl mx-auto shadow-soft">
-            <span className="text-4xl mb-4">🏷️</span>
-            <h2 className="font-heading text-lg font-bold text-ink mb-2">Sale Items Coming Soon</h2>
+           <h2 className="font-heading text-lg font-bold text-ink mb-2">Sale Items Coming Soon</h2>
             <p className="text-xs text-ink-muted max-w-xs mb-6">
               We're preparing something beautiful for you. Check back soon for our latest markdowns.
             </p>
@@ -502,7 +501,7 @@ export default function Sale() {
             <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mb-4 px-1">
               Showing {filteredProducts.length} of {products.length} Sale Items
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5 sm:gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
               {filteredProducts.map((prod) => (
                 <ProductCard
                   key={prod.id}
