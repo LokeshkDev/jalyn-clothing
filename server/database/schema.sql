@@ -215,5 +215,5 @@ ON DUPLICATE KEY UPDATE `updated_at` = CURRENT_TIMESTAMP;
 -- Hash generated via bcrypt
 -- --------------------------------------------------------
 INSERT INTO `users` (`name`, `email`, `password`, `role`) VALUES
-('Admin User', 'admin@jalyn.com', '$2a$10$wT55T9X/6mE9xJtN9Q7iNeN.z4yvP45Pq.uW0E3t/Y4M9Z3s/1a6y', 'admin')
+('Admin User', 'admin@jalyn.com', '$2a$10$VjcdeZGOavcnOmZNxCRVu.0iTnc7GXUl2qiiT0ROvObI3pWYI3pRy', 'admin')
 ON DUPLICATE KEY UPDATE `id` = `id`;

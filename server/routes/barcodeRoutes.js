@@ -1,5 +1,5 @@
 import express from 'express';
-import { verifyToken, adminOnly } from '../middleware/auth.js';
+import { verifyToken, staffOrAbove } from '../middleware/auth.js';
 import {
   scanBarcode,
   generateProductBarcodes,
@@ -11,11 +11,11 @@ import {
 
 const router = express.Router();
 
-router.post('/scan', verifyToken, adminOnly, scanBarcode);
-router.post('/generate/:productId', verifyToken, adminOnly, generateProductBarcodes);
-router.post('/regenerate/:barcodeId', verifyToken, adminOnly, regenerateBarcode);
-router.get('/', verifyToken, adminOnly, getBarcodes);
-router.get('/stock-history', verifyToken, adminOnly, getStockHistory);
-router.get('/product/:productId', verifyToken, adminOnly, getBarcodesByProduct);
+router.post('/scan', verifyToken, staffOrAbove, scanBarcode);
+router.post('/generate/:productId', verifyToken, staffOrAbove, generateProductBarcodes);
+router.post('/regenerate/:barcodeId', verifyToken, staffOrAbove, regenerateBarcode);
+router.get('/', verifyToken, staffOrAbove, getBarcodes);
+router.get('/stock-history', verifyToken, staffOrAbove, getStockHistory);
+router.get('/product/:productId', verifyToken, staffOrAbove, getBarcodesByProduct);
 
 export default router;

@@ -35,11 +35,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      // Clear token if invalid in production or unauthenticated
-      if (!window.location.pathname.includes('/login') && localStorage.getItem('admin_token')) {
+    if (error.response && error.response.status === 401) {
+      // 401 Unauthorized: token expired or invalid
+      if (!window.location.pathname.includes('/login')) {
         localStorage.removeItem('admin_token');
         localStorage.removeItem('admin_user');
+        window.dispatchEvent(new Event('auth:unauthorized'));
       }
     }
     return Promise.reject(error);

@@ -11,6 +11,12 @@ import {
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
+  ShieldAlert,
+  Edit2,
+  Trash2,
+  Key,
+  X,
+  Lock,
 } from 'lucide-react';
 import Header from '../components/Header';
 import ImageUploader from '../components/ImageUploader';
@@ -62,10 +68,27 @@ export default function AuthUsersPage() {
     email: '',
     phone: '',
     password: '',
-    role: 'customer',
+    role: 'staff',
   });
   const [creatingUser, setCreatingUser] = useState(false);
   const [userList, setUserList] = useState([]);
+  const [roleFilter, setRoleFilter] = useState('all');
+
+  // Edit User Modal State
+  const [editingUser, setEditingUser] = useState(null);
+  const [updatingUser, setUpdatingUser] = useState(false);
+
+  // Quick Password Reset Modal State
+  const [resetModal, setResetModal] = useState({ open: false, user: null, newPassword: '', loading: false });
+
+  // Current logged in user from localStorage
+  const currentAdmin = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('admin_user')) || {};
+    } catch {
+      return {};
+    }
+  })();
 
   // Fetch CMS & User List on mount
   useEffect(() => {
@@ -123,7 +146,7 @@ export default function AuthUsersPage() {
       const res = await api.post('/auth/users', newUserForm);
       if (res.data?.success) {
         setMessage({ type: 'success', text: res.data.message });
-        setNewUserForm({ name: '', email: '', phone: '', password: '', role: 'customer' });
+        setNewUserForm({ name: '', email: '', phone: '', password: '', role: 'staff' });
         fetchUsers();
       } else {
         throw new Error(res.data?.message || 'User creation failed');
@@ -135,6 +158,109 @@ export default function AuthUsersPage() {
     }
   };
 
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setUpdatingUser(true);
+    setMessage(null);
+
+    try {
+      const payload = {
+        name: editingUser.name,
+        email: editingUser.email,
+        phone: editingUser.phone,
+        role: editingUser.role,
+      };
+      if (editingUser.password && editingUser.password.trim()) {
+        payload.password = editingUser.password.trim();
+      }
+
+      const res = await api.put(`/auth/users/${editingUser.id}`, payload);
+      if (res.data?.success) {
+        setMessage({ type: 'success', text: res.data.message });
+        setEditingUser(null);
+        fetchUsers();
+      } else {
+        throw new Error(res.data?.message || 'Failed to update user');
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err.response?.data?.message || err.message });
+    } finally {
+      setUpdatingUser(false);
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (user.id === currentAdmin.id || user.email === currentAdmin.email) {
+      setMessage({ type: 'error', text: 'You cannot delete your own active logged-in account.' });
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to permanently delete user "${user.name}" (${user.email})?`)) {
+      return;
+    }
+
+    setMessage(null);
+    try {
+      const res = await api.delete(`/auth/users/${user.id}`);
+      if (res.data?.success) {
+        setMessage({ type: 'success', text: res.data.message });
+        fetchUsers();
+      } else {
+        throw new Error(res.data?.message || 'Failed to delete user');
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err.response?.data?.message || err.message });
+    }
+  };
+
+  const handleQuickResetPassword = async (e) => {
+    e.preventDefault();
+    if (!resetModal.user || !resetModal.newPassword || resetModal.newPassword.length < 6) {
+      setMessage({ type: 'error', text: 'New password must be at least 6 characters long.' });
+      return;
+    }
+
+    setResetModal((prev) => ({ ...prev, loading: true }));
+    setMessage(null);
+    try {
+      const res = await api.post(`/auth/users/${resetModal.user.id}/reset-password`, {
+        newPassword: resetModal.newPassword,
+      });
+      if (res.data?.success) {
+        setMessage({ type: 'success', text: res.data.message });
+        setResetModal({ open: false, user: null, newPassword: '', loading: false });
+      } else {
+        throw new Error(res.data?.message || 'Failed to reset password');
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err.response?.data?.message || err.message });
+      setResetModal((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
+  const getRoleBadge = (role) => {
+    switch (role) {
+      case 'superadmin':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-purple-800 border border-purple-200">SUPER ADMIN</span>;
+      case 'admin':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-indigo-100 text-indigo-800 border border-indigo-200">ADMIN</span>;
+      case 'manager':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-100 text-blue-800 border border-blue-200">STORE MANAGER</span>;
+      case 'staff':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200">STAFF POS</span>;
+      case 'customer':
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">CUSTOMER</span>;
+      default:
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-gray-100 text-gray-800">{role}</span>;
+    }
+  };
+
+  const filteredUsers = userList.filter((u) => {
+    if (roleFilter === 'all') return true;
+    return u.role === roleFilter;
+  });
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-[400px]">
@@ -144,10 +270,10 @@ export default function AuthUsersPage() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto font-['Plus_Jakarta_Sans',sans-serif]">
       <Header
         title="Auth Editorial & User Management"
-        subtitle="Manage website login page editorial banner, 3-slide review carousel, and role-based user accounts."
+        subtitle="Manage website login page editorial banner and Super-Admin role-based user accounts."
       />
 
       <main className="p-6 max-w-7xl mx-auto w-full space-y-6">
@@ -170,14 +296,243 @@ export default function AuthUsersPage() {
           </div>
         )}
 
-        {/* SECTION 1: AUTH EDITORIAL LEFT COLUMN SETTINGS */}
+        {/* SUPER ADMIN EXCLUSIVE ACCESS BADGE */}
+        <div className="p-4 bg-gradient-to-r from-purple-900/10 via-brand-600/10 to-rose-400/10 border border-purple-200/80 rounded-2xl flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shadow-md">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                Super Admin Security &amp; Role Control
+                <span className="text-[10px] bg-purple-600 text-white px-2 py-0.5 rounded font-bold uppercase">SUPERADMIN ONLY</span>
+              </h4>
+              <p className="text-xs text-gray-600">
+                You have exclusive authority to create accounts, adjust system roles, reset passwords, and manage permissions.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 1: ROLE-BASED USER CREATION & SYSTEM USER MANAGEMENT */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6 shadow-sm">
           <div className="flex items-center justify-between border-b border-gray-100 pb-4">
             <div>
               <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
-                Auth Left Editorial Column Settings
+                <UserPlus className="w-5 h-5 text-brand-600" /> Role-Based User Creation
               </h3>
-              <p className="text-xs text-gray-500">Edit the left editorial image, badge, headline, and subtitle on the Login &amp; Registration pages.</p>
+              <p className="text-xs text-gray-500">Create new user accounts directly in assign system roles.</p>
+            </div>
+            <button
+              onClick={fetchUsers}
+              className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-brand-200 hover:bg-brand-50 transition cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Refresh Users</span>
+            </button>
+          </div>
+
+          {/* Add User Form */}
+          <form onSubmit={handleCreateUser} className="p-5 bg-gray-50 rounded-2xl border border-gray-200 space-y-4 text-xs">
+            <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-brand-600" /> Create New User Account
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={newUserForm.name}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
+                  placeholder="e.g. Rahul Verma"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white outline-none focus:border-brand-600"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Email Address *</label>
+                <input
+                  type="email"
+                  required
+                  value={newUserForm.email}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
+                  placeholder="user@jalyn.in"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white outline-none focus:border-brand-600"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Phone Number</label>
+                <input
+                  type="tel"
+                  value={newUserForm.phone}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, phone: e.target.value })}
+                  placeholder="+91 98765 43210"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white outline-none focus:border-brand-600"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Password *</label>
+                <input
+                  type="password"
+                  required
+                  value={newUserForm.password}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white outline-none focus:border-brand-600"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Assigned Role *</label>
+                <select
+                  value={newUserForm.role}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-bold bg-white outline-none focus:border-brand-600"
+                >
+                  <option value="superadmin">Super Admin (Full Access &amp; User Management)</option>
+                  <option value="admin">Admin (CMS, Products, Coupons, Orders)</option>
+                  <option value="manager">Store Manager (Products, Categories, Orders, Inventory)</option>
+                  <option value="staff">Staff (Scanner, Barcodes, Stock History, Orders)</option>
+                  <option value="customer">Customer (Storefront Only)</option>
+                </select>
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  disabled={creatingUser}
+                  className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {creatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                  <span>Create Account</span>
+                </button>
+              </div>
+            </div>
+          </form>
+
+          {/* Role Filter Tabs */}
+          <div className="flex items-center gap-2 border-b border-gray-200 pb-3 flex-wrap">
+            <span className="text-xs font-bold text-gray-500 mr-2">Filter by Role:</span>
+            {[
+              { label: 'All Users', val: 'all' },
+              { label: 'Super Admin', val: 'superadmin' },
+              { label: 'Admin', val: 'admin' },
+              { label: 'Store Manager', val: 'manager' },
+              { label: 'Staff POS', val: 'staff' },
+              { label: 'Customer', val: 'customer' },
+            ].map((f) => (
+              <button
+                key={f.val}
+                onClick={() => setRoleFilter(f.val)}
+                className={`text-xs px-3 py-1 rounded-lg font-semibold transition cursor-pointer ${
+                  roleFilter === f.val
+                    ? 'bg-brand-600 text-white shadow-xs'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* User List Table */}
+          <div className="space-y-3">
+            <h4 className="font-bold text-xs text-gray-700 uppercase tracking-wider">
+              System Users ({filteredUsers.length})
+            </h4>
+            <div className="overflow-x-auto border border-gray-200 rounded-xl">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50 border-b border-gray-200 font-bold text-gray-700 uppercase">
+                  <tr>
+                    <th className="p-3">ID</th>
+                    <th className="p-3">Name</th>
+                    <th className="p-3">Email</th>
+                    <th className="p-3">Phone</th>
+                    <th className="p-3">Role</th>
+                    <th className="p-3">Saved Addresses</th>
+                    <th className="p-3 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 font-medium">
+                  {filteredUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="p-8 text-center text-gray-400">
+                        No users found matching the selected filter.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredUsers.map((u) => (
+                      <tr key={u.id} className="hover:bg-gray-50 transition border-b border-gray-100">
+                        <td className="p-3 font-mono font-bold text-gray-500">#{u.id}</td>
+                        <td className="p-3 font-bold text-gray-900">{u.name}</td>
+                        <td className="p-3 text-gray-600">{u.email}</td>
+                        <td className="p-3 text-gray-600">{u.phone || '—'}</td>
+                        <td className="p-3">
+                          {getRoleBadge(u.role)}
+                        </td>
+                        <td className="p-3 text-gray-600 max-w-xs">
+                          {u.addresses && u.addresses.length > 0 ? (
+                            <div className="space-y-1">
+                              {u.addresses.map((addr, aIdx) => (
+                                <div key={addr.id || aIdx} className="text-[10px] bg-pink-50/50 border border-pink-100 px-2 py-1 rounded-lg text-gray-800">
+                                  <span className="font-bold text-brand-600">{addr.type || 'Home'}</span>: {addr.addressLine1 || addr.address_line1}, {addr.city} ({addr.pincode})
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 italic">No saved addresses</span>
+                          )}
+                        </td>
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setResetModal({ open: true, user: u, newPassword: '', loading: false })}
+                              className="p-1.5 text-gray-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 transition cursor-pointer"
+                              title="Direct Password Reset"
+                            >
+                              <Key className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingUser({ ...u, password: '' })}
+                              className="p-1.5 text-gray-400 hover:text-brand-600 rounded-lg hover:bg-brand-50 transition cursor-pointer"
+                              title="Edit User & Role"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteUser(u)}
+                              disabled={u.id === currentAdmin.id || u.email === currentAdmin.email}
+                              className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                              title={u.id === currentAdmin.id ? 'Cannot delete logged-in account' : 'Delete User'}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 2: AUTH EDITORIAL LEFT COLUMN SETTINGS (WEBSITE LOGIN PAGE) */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6 shadow-sm">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div>
+              <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                Website Login Page Editorial Settings
+              </h3>
+              <p className="text-xs text-gray-500">Edit the left editorial banner, badge, headline, and subtitle on the storefront Login &amp; Registration pages.</p>
             </div>
             <button
               onClick={handleSaveAuthEditorial}
@@ -246,149 +601,45 @@ export default function AuthUsersPage() {
               />
             </div>
           </div>
-
-          {/* 3-SLIDE REVIEWS CAROUSEL EDITOR */}
-          <div className="border-t border-gray-100 pt-6 space-y-4">
-            <div>
-              <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2">
-                <Star className="w-4 h-4 text-amber-500 fill-amber-500" /> 3-Slide Customer Reviews Carousel
-              </h4>
-              <p className="text-xs text-gray-500">Edit the 3 customer review slides displayed on the left column.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(authData.reviews || [
-                { rating: 5, text: 'The fit and fabric quality from Jalyn are unmatched.', name: 'Ananya Kapoor', role: 'Verified Jalyn Collector', initials: 'AK' },
-                { rating: 5, text: 'Exquisite hand craftsmanship and incredible attention to detail.', name: 'Riddhi Sen', role: 'Luxury Fashion Enthusiast', initials: 'RS' },
-                { rating: 5, text: 'The custom fit assistance helped me get the perfect size co-ord set.', name: 'Meera Rajput', role: 'Loyal Jalyn Client', initials: 'MR' },
-              ]).map((rev, rIdx) => (
-                <div key={rIdx} className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2.5 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-brand-600">Review Slide #{rIdx + 1}</span>
-                    <div className="flex items-center gap-1">
-                      <label className="text-[10px] text-gray-500 font-semibold">Rating:</label>
-                      <select
-                        value={rev.rating || 5}
-                        onChange={(e) => {
-                          const nextRevs = [...(authData.reviews || [])];
-                          if (!nextRevs[rIdx]) nextRevs[rIdx] = { ...rev };
-                          nextRevs[rIdx].rating = Number(e.target.value);
-                          setAuthData({ ...authData, reviews: nextRevs });
-                        }}
-                        className="px-1 py-0.5 rounded border border-gray-300 font-bold bg-white text-[11px]"
-                      >
-                        <option value={5}>5 Stars ★★★★★</option>
-                        <option value={4}>4 Stars ★★★★</option>
-                        <option value={3}>3 Stars ★★★</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <textarea
-                    rows={3}
-                    value={rev.text || ''}
-                    onChange={(e) => {
-                      const nextRevs = [...(authData.reviews || [])];
-                      if (!nextRevs[rIdx]) nextRevs[rIdx] = { ...rev };
-                      nextRevs[rIdx].text = e.target.value;
-                      setAuthData({ ...authData, reviews: nextRevs });
-                    }}
-                    placeholder="Review quote text..."
-                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white"
-                  />
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      value={rev.name || ''}
-                      onChange={(e) => {
-                        const nextRevs = [...(authData.reviews || [])];
-                        if (!nextRevs[rIdx]) nextRevs[rIdx] = { ...rev };
-                        nextRevs[rIdx].name = e.target.value;
-                        setAuthData({ ...authData, reviews: nextRevs });
-                      }}
-                      placeholder="Author Name"
-                      className="px-2.5 py-1.5 rounded-lg border border-gray-300 font-medium bg-white"
-                    />
-
-                    <input
-                      type="text"
-                      value={rev.initials || ''}
-                      onChange={(e) => {
-                        const nextRevs = [...(authData.reviews || [])];
-                        if (!nextRevs[rIdx]) nextRevs[rIdx] = { ...rev };
-                        nextRevs[rIdx].initials = e.target.value;
-                        setAuthData({ ...authData, reviews: nextRevs });
-                      }}
-                      placeholder="Initials (AK)"
-                      className="px-2.5 py-1.5 rounded-lg border border-gray-300 font-medium bg-white"
-                    />
-                  </div>
-
-                  <input
-                    type="text"
-                    value={rev.role || ''}
-                    onChange={(e) => {
-                      const nextRevs = [...(authData.reviews || [])];
-                      if (!nextRevs[rIdx]) nextRevs[rIdx] = { ...rev };
-                      nextRevs[rIdx].role = e.target.value;
-                      setAuthData({ ...authData, reviews: nextRevs });
-                    }}
-                    placeholder="Role / Tagline (e.g. Verified Client)"
-                    className="w-full px-2.5 py-1.5 rounded-lg border border-gray-300 font-medium bg-white"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
+      </main>
 
-        {/* SECTION 2: ROLE-BASED USER CREATION & SYSTEM USER MANAGEMENT */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6 shadow-sm">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-            <div>
-              <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-brand-600" /> Role-Based User Creation &amp; System Users
+      {/* EDIT USER & ROLE MODAL */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-brand-600" /> Edit User &amp; Assign Role
               </h3>
-              <p className="text-xs text-gray-500">Create new user accounts directly in MySQL DB and assign system roles (Customer, Admin, Store Manager, Staff).</p>
+              <button
+                onClick={() => setEditingUser(null)}
+                className="p-1 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <button
-              onClick={fetchUsers}
-              className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-brand-200 hover:bg-brand-50 transition cursor-pointer"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Refresh Users</span>
-            </button>
-          </div>
 
-          {/* Add User Form */}
-          <form onSubmit={handleCreateUser} className="p-5 bg-gray-50 rounded-2xl border border-gray-200 space-y-4 text-xs">
-            <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-brand-600" /> Create New User Account
-            </h4>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            <form onSubmit={handleUpdateUser} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Full Name *</label>
+                <label className="block font-semibold text-gray-700 mb-1">Full Name</label>
                 <input
                   type="text"
                   required
-                  value={newUserForm.name}
-                  onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
-                  placeholder="e.g. Rahul Verma"
-                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white"
+                  value={editingUser.name || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Email Address *</label>
+                <label className="block font-semibold text-gray-700 mb-1">Email Address</label>
                 <input
                   type="email"
                   required
-                  value={newUserForm.email}
-                  onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
-                  placeholder="user@jalyn.in"
-                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white"
+                  value={editingUser.email || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
                 />
               </div>
 
@@ -396,108 +647,124 @@ export default function AuthUsersPage() {
                 <label className="block font-semibold text-gray-700 mb-1">Phone Number</label>
                 <input
                   type="tel"
-                  value={newUserForm.phone}
-                  onChange={(e) => setNewUserForm({ ...newUserForm, phone: e.target.value })}
-                  placeholder="+91 98765 43210"
-                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white"
+                  value={editingUser.phone || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Password *</label>
-                <input
-                  type="password"
-                  required
-                  value={newUserForm.password}
-                  onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">Assigned Role *</label>
+                <label className="block font-semibold text-gray-700 mb-1">Assigned Role</label>
                 <select
-                  value={newUserForm.role}
-                  onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value })}
+                  value={editingUser.role || 'staff'}
+                  onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl border border-gray-300 font-bold bg-white"
                 >
-                  <option value="customer">Customer</option>
-                  <option value="admin">Admin</option>
-                  <option value="manager">Store Manager</option>
-                  <option value="staff">Support Staff</option>
+                  <option value="superadmin">Super Admin (Full Access &amp; User Management)</option>
+                  <option value="admin">Admin (CMS, Products, Coupons, Orders)</option>
+                  <option value="manager">Store Manager (Products, Categories, Orders, Inventory)</option>
+                  <option value="staff">Staff (Scanner, Barcodes, Stock History, Orders)</option>
+                  <option value="customer">Customer (Storefront Only)</option>
                 </select>
               </div>
 
-              <div className="flex items-end">
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1 flex items-center justify-between">
+                  <span>Reset Password</span>
+                  <span className="text-[10px] text-gray-400 font-normal">Leave blank to keep unchanged</span>
+                </label>
+                <div className="relative">
+                  <Key className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
+                  <input
+                    type="password"
+                    value={editingUser.password || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, password: e.target.value })}
+                    placeholder="New password (optional)"
+                    className="w-full pl-8 pr-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-100 font-semibold text-gray-600"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
-                  disabled={creatingUser}
-                  className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={updatingUser}
+                  className="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold flex items-center gap-2 shadow-md cursor-pointer"
                 >
-                  {creatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                  <span>Create Account</span>
+                  {updatingUser && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Save Changes
                 </button>
               </div>
-            </div>
-          </form>
-
-          {/* User List Table */}
-          <div className="space-y-3">
-            <h4 className="font-bold text-xs text-gray-700 uppercase tracking-wider">Existing System Users ({userList.length})</h4>
-            <div className="overflow-x-auto border border-gray-200 rounded-xl">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50 border-b border-gray-200 font-bold text-gray-700 uppercase">
-                  <tr>
-                    <th className="p-3">ID</th>
-                    <th className="p-3">Name</th>
-                    <th className="p-3">Email</th>
-                    <th className="p-3">Phone</th>
-                    <th className="p-3">Role</th>
-                    <th className="p-3">Saved Addresses</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {userList.map((u) => (
-                    <tr key={u.id} className="hover:bg-gray-50 transition border-b border-gray-100">
-                      <td className="p-3 font-mono font-bold text-gray-500">#{u.id}</td>
-                      <td className="p-3 font-bold text-gray-900">{u.name}</td>
-                      <td className="p-3 text-gray-600">{u.email}</td>
-                      <td className="p-3 text-gray-600">{u.phone || '—'}</td>
-                      <td className="p-3">
-                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                          u.role === 'admin'
-                            ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                            : u.role === 'manager'
-                              ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                              : u.role === 'staff'
-                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                        }`}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="p-3 text-gray-600 max-w-xs">
-                        {u.addresses && u.addresses.length > 0 ? (
-                          <div className="space-y-1">
-                            {u.addresses.map((addr, aIdx) => (
-                              <div key={addr.id || aIdx} className="text-[10px] bg-pink-50/50 border border-pink-100 px-2 py-1 rounded-lg text-gray-800">
-                                <span className="font-bold text-brand-600">{addr.type || 'Home'}</span>: {addr.addressLine1 || addr.address_line1}, {addr.city} ({addr.pincode})
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 italic">No saved addresses</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            </form>
           </div>
         </div>
-      </main>
+      )}
+
+      {/* QUICK RESET PASSWORD MODAL */}
+      {resetModal.open && resetModal.user && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                <Key className="w-4 h-4 text-amber-600" /> Direct Password Reset
+              </h3>
+              <button
+                onClick={() => setResetModal({ open: false, user: null, newPassword: '', loading: false })}
+                className="p-1 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200/60 text-xs text-amber-900">
+              Resetting password for <span className="font-bold">{resetModal.user.name}</span> ({resetModal.user.email}).
+            </div>
+
+            <form onSubmit={handleQuickResetPassword} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">New Password *</label>
+                <div className="relative">
+                  <Lock className="w-3.5 h-3.5 absolute left-3 top-3 text-gray-400" />
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={resetModal.newPassword}
+                    onChange={(e) => setResetModal({ ...resetModal, newPassword: e.target.value })}
+                    placeholder="Enter new password (min. 6 chars)"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-300 font-medium outline-none focus:border-brand-600"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setResetModal({ open: false, user: null, newPassword: '', loading: false })}
+                  className="px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-100 font-semibold text-gray-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={resetModal.loading}
+                  className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold flex items-center gap-2 shadow-md cursor-pointer"
+                >
+                  {resetModal.loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Confirm Reset Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

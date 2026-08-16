@@ -31,13 +31,13 @@ export const loginUser = async (req, res) => {
       console.warn('DB query failed in login, falling back to default admin check:', dbErr.message);
     }
 
-    // Default admin check fallback if DB table not seeded
+    // Default super admin check fallback if DB table not seeded
     if (!user && email === 'admin@jalyn.com' && password === 'admin123') {
       user = {
         id: 1,
-        name: 'Admin User',
+        name: 'Super Admin',
         email: 'admin@jalyn.com',
-        role: 'admin',
+        role: 'superadmin',
       };
       isMatch = true;
     }
@@ -76,10 +76,24 @@ export const loginUser = async (req, res) => {
 };
 
 export const getMe = async (req, res) => {
-  return res.json({
-    success: true,
-    user: req.user,
-  });
+  try {
+    const [rows] = await pool.query('SELECT id, name, email, phone, role, avatar, created_at FROM users WHERE id = ?', [req.user.id]);
+    if (rows.length > 0) {
+      return res.json({
+        success: true,
+        user: rows[0],
+      });
+    }
+    return res.json({
+      success: true,
+      user: req.user,
+    });
+  } catch (err) {
+    return res.json({
+      success: true,
+      user: req.user,
+    });
+  }
 };
 
 export const registerUser = async (req, res) => {
@@ -281,6 +295,194 @@ export const getAllUsers = async (req, res) => {
     return res.json({
       success: true,
       data: inMemoryUsers,
+    });
+  }
+};
+
+export const updateUserByAdmin = async (req, res) => {
+  const { id } = req.params;
+  const { name, email, phone, role, password } = req.body;
+
+  try {
+    const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    const user = rows[0];
+
+    // Prevent removing the last superadmin
+    if (user.role === 'superadmin' && role && role !== 'superadmin') {
+      const [superCount] = await pool.query("SELECT COUNT(*) as count FROM users WHERE role = 'superadmin'");
+      if (superCount[0].count <= 1) {
+        return res.status(400).json({ success: false, message: 'Cannot demote the only remaining Super Admin account.' });
+      }
+    }
+
+    const fields = [];
+    const params = [];
+
+    if (name) { fields.push('name = ?'); params.push(name); }
+    if (email) { fields.push('email = ?'); params.push(email); }
+    if (phone !== undefined) { fields.push('phone = ?'); params.push(phone || null); }
+    if (role) { fields.push('role = ?'); params.push(role); }
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      fields.push('password = ?');
+      params.push(hashedPassword);
+    }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields provided to update.' });
+    }
+
+    const query = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
+    params.push(id);
+
+    await pool.query(query, params);
+
+    // Sync inMemoryUsers if present
+    const inMemIdx = inMemoryUsers.findIndex((u) => u.id === parseInt(id, 10) || u.email === user.email);
+    if (inMemIdx !== -1) {
+      if (name) inMemoryUsers[inMemIdx].name = name;
+      if (email) inMemoryUsers[inMemIdx].email = email;
+      if (phone !== undefined) inMemoryUsers[inMemIdx].phone = phone;
+      if (role) inMemoryUsers[inMemIdx].role = role;
+    }
+
+    const [updatedRows] = await pool.query('SELECT id, name, email, phone, role, created_at FROM users WHERE id = ?', [id]);
+    return res.json({
+      success: true,
+      message: `User "${name || user.name}" updated successfully!`,
+      user: updatedRows[0] || { id, name, email, phone, role },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to update user: ' + error.message });
+  }
+};
+
+export const deleteUserByAdmin = async (req, res) => {
+  const { id } = req.params;
+
+  // Prevent superadmin from deleting their own logged-in account
+  if (parseInt(id, 10) === parseInt(req.user.id, 10) || req.user.email === 'admin@jalyn.com' && parseInt(id, 10) === 1) {
+    return res.status(400).json({ success: false, message: 'You cannot delete your own active Super Admin account.' });
+  }
+
+  try {
+    const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    const user = rows[0];
+    if (user.role === 'superadmin') {
+      const [superCount] = await pool.query("SELECT COUNT(*) as count FROM users WHERE role = 'superadmin'");
+      if (superCount[0].count <= 1) {
+        return res.status(400).json({ success: false, message: 'Cannot delete the only remaining Super Admin account.' });
+      }
+    }
+
+    await pool.query('DELETE FROM users WHERE id = ?', [id]);
+
+    const inMemIdx = inMemoryUsers.findIndex((u) => u.id === parseInt(id, 10) || u.email === user.email);
+    if (inMemIdx !== -1) {
+      inMemoryUsers.splice(inMemIdx, 1);
+    }
+
+    return res.json({
+      success: true,
+      message: `User "${user.name}" (${user.email}) deleted successfully.`,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to delete user: ' + error.message });
+  }
+};
+
+/**
+ * Self-Service Password Change
+ * Available to any logged-in user (Super Admin, Admin, Manager, Staff, Customer)
+ */
+export const changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({
+      success: false,
+      message: 'Please provide both your current password and a new password.',
+    });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({
+      success: false,
+      message: 'New password must be at least 6 characters long.',
+    });
+  }
+
+  try {
+    const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [req.user.id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User account not found.' });
+    }
+
+    const user = rows[0];
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect. Please verify and try again.',
+      });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password = ? WHERE id = ?', [hashedNewPassword, req.user.id]);
+
+    return res.json({
+      success: true,
+      message: 'Password changed successfully! You can use your new password next time you sign in.',
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update password: ' + error.message,
+    });
+  }
+};
+
+/**
+ * Targeted Password Reset (Super Admin exclusive)
+ * Super Admin can reset the password for any account directly without knowing the old password.
+ */
+export const superAdminResetPassword = async (req, res) => {
+  const { id } = req.params;
+  const { newPassword } = req.body;
+
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({
+      success: false,
+      message: 'New password must be at least 6 characters long.',
+    });
+  }
+
+  try {
+    const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    const user = rows[0];
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, id]);
+
+    return res.json({
+      success: true,
+      message: `Password for "${user.name}" (${user.email}) has been successfully reset!`,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to reset password: ' + error.message,
     });
   }
 };

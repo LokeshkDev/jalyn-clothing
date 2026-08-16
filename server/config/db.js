@@ -145,8 +145,22 @@ export const testConnection = async () => {
     try {
       await connection.query("ALTER TABLE inventory_transactions ADD COLUMN source VARCHAR(50) NULL");
     } catch (e) {}
+
+    // Ensure users table supports all system roles
     try {
-      await connection.query("ALTER TABLE inventory_transactions ADD COLUMN user_id INT NULL");
+      await connection.query("ALTER TABLE users MODIFY COLUMN role VARCHAR(50) DEFAULT 'customer'");
+    } catch (e) {}
+
+    // Ensure default super admin account exists with superadmin role
+    try {
+      await connection.query(
+        "UPDATE users SET role = 'superadmin' WHERE email = 'admin@jalyn.com'"
+      );
+      await connection.query(
+        `INSERT INTO users (name, email, password, role) 
+         VALUES ('Super Admin', 'admin@jalyn.com', '$2a$10$VjcdeZGOavcnOmZNxCRVu.0iTnc7GXUl2qiiT0ROvObI3pWYI3pRy', 'superadmin')
+         ON DUPLICATE KEY UPDATE role = 'superadmin'`
+      );
     } catch (e) {}
 
     connection.release();
