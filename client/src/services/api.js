@@ -39,5 +39,22 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Response Interceptor: expire the session on any 401 (stale/invalid token)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const url = error.config?.url || '';
+    const isAuthEndpoint =
+      url.includes('/auth/login') ||
+      url.includes('/auth/register') ||
+      url.includes('/auth/google');
+    if (error.response?.status === 401 && !isAuthEndpoint) {
+      localStorage.removeItem('jalyn-user');
+      window.dispatchEvent(new Event('jalyn-session-expired'));
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
 

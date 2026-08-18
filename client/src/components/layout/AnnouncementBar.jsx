@@ -1,8 +1,17 @@
+import { useEffect, useState } from 'react'
 import { useCmsData } from '@/hooks/useCmsData'
 
 export default function AnnouncementBar() {
   const { cmsData, announcementBar } = useCmsData()
   const isVisible = cmsData?.homepage_layout?.visibility?.announcement_bar !== false
+  const [hidden, setHidden] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setHidden(window.scrollY > 60)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   if (!isVisible || (announcementBar && announcementBar.enabled === false)) {
     return null
@@ -15,13 +24,19 @@ export default function AnnouncementBar() {
   return (
     <div
       style={{ backgroundColor: bgColor, color: textColor }}
-      className="relative z-[60] flex h-11 items-center justify-center px-4 text-center text-[11px] font-medium tracking-wide sm:text-xs whitespace-nowrap overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className={`relative z-[60] grid transition-all duration-300 ease-luxury ${
+        hidden ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
+      }`}
       role="region"
       aria-label="Store announcements"
     >
-      <p className="flex items-center gap-2">
-        <span>{text}</span>
-      </p>
+      <div className="overflow-hidden">
+        <div className="flex items-center justify-center px-4 py-1.5 text-center">
+          <div className="max-w-7xl mx-auto px-2 text-center text-[10px] sm:text-xs font-semibold tracking-wider uppercase leading-snug flex items-center justify-center gap-2">
+            <span>{text}</span>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

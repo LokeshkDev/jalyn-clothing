@@ -16,6 +16,7 @@ import {
   History,
   Key,
   Lock,
+  Mail,
   X,
   Loader2,
   CheckCircle2,
@@ -47,6 +48,7 @@ export default function Sidebar({ currentUser, onLogout }) {
     { label: 'New Arrivals', path: '/new-arrivals', icon: Sparkles, roles: ['superadmin', 'admin'] },
     { label: 'Sale Catalog', path: '/sale', icon: Tag, roles: ['superadmin', 'admin'] },
     { label: 'Coupons', path: '/coupons', icon: BadgePercent, roles: ['superadmin', 'admin'] },
+    { label: 'Newsletter', path: '/newsletter', icon: Mail, roles: ['superadmin', 'admin'] },
     { label: 'CMS Homepage Settings', path: '/cms', icon: Sliders, badge: 'CMS', roles: ['superadmin', 'admin'] },
     
     // Super Admin Exclusive

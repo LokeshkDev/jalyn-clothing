@@ -45,9 +45,11 @@ export default function MobileCategories() {
                     alt={title}
                     className="h-full w-full object-cover"
                     loading="lazy"
+                    decoding="async"
+                    width="80"
+                    height="80"
                     onError={(e) => {
-                      e.currentTarget.src =
-                        'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+                      e.currentTarget.src = '/images/home/categories/dresses.webp'
                     }}
                   />
                 </div>

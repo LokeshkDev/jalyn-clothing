@@ -6,6 +6,9 @@ import { normalizeProduct } from '@/hooks/useProductsApi'
 import ProductCard from '@/components/shop/ProductCard'
 import SkeletonCard from '@/components/shop/SkeletonCard'
 import QuickViewModal from '@/components/shop/QuickViewModal'
+import FilterSidebar from '@/components/shop/FilterSidebar'
+import ProductToolbar from '@/components/shop/ProductToolbar'
+import { PRICE_BOUNDS } from '@/constants/shopProducts'
 import Services from '@/components/home/Services'
 import { cn } from '@/lib/utils'
 
@@ -40,7 +43,7 @@ export default function NewArrivals() {
   const [pageData, setPageData] = useState({
     title: 'New Arrivals',
     description: 'Discover the latest styles handpicked for you. From effortless everyday looks to statement pieces, our new arrivals are designed to keep you ahead in fashion.',
-    bg_image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1920&q=80',
+    bg_image: '/images/home/hero/hero-slide-1.webp',
     slug: 'new-arrivals',
     meta_title: 'New Arrivals | JALYN Store',
     meta_description: 'Discover the latest women\'s fashion arrivals at JALYN. Shop new dresses, co-ord sets, ethnic wear, tops and more.'
@@ -52,6 +55,23 @@ export default function NewArrivals() {
   const [selectedColors, setSelectedColors] = useState([])
   const [priceRange, setPriceRange] = useState({ min: '', max: '' })
   const [sortOption, setSortOption] = useState('newest')
+
+  const [sidebarFilters, setSidebarFilters] = useState({
+    categories: [],
+    price: [PRICE_BOUNDS.min, PRICE_BOUNDS.max],
+    sizes: [],
+    colors: [],
+    availability: [],
+    discount: [],
+    sleeve: [],
+    fabric: [],
+    occasion: [],
+    fit: [],
+    pattern: [],
+    season: [],
+    ratings: [],
+    brand: [],
+  })
 
   // UI Dropdowns state
   const [activeDropdown, setActiveDropdown] = useState(null)
@@ -115,37 +135,40 @@ export default function NewArrivals() {
   // Client-side filtering logic for Size, Color, Price Range, and Category
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      // Category Filter
+      if (sidebarFilters.categories.length > 0) {
+        if (!sidebarFilters.categories.includes(p.category_slug) && !sidebarFilters.categories.includes(p.category)) {
+          return false
+        }
+      }
       if (selectedCategories.length > 0) {
         if (!selectedCategories.includes(p.category_slug) && !selectedCategories.includes(p.category)) {
           return false
         }
       }
-
-      // Size Filter
-      if (selectedSizes.length > 0) {
-        const hasSize = p.sizes?.some((s) => selectedSizes.includes(s))
+      if (sidebarFilters.sizes.length > 0 || selectedSizes.length > 0) {
+        const sizesToCheck = [...sidebarFilters.sizes, ...selectedSizes]
+        const hasSize = (p.sizes || []).some((s) => sizesToCheck.includes(s))
         if (!hasSize) return false
       }
-
-      // Color Filter
-      if (selectedColors.length > 0) {
-        const hasColor = p.colors?.some((c) => selectedColors.includes(c?.toLowerCase()))
+      if (sidebarFilters.colors.length > 0 || selectedColors.length > 0) {
+        const colorsToCheck = [...sidebarFilters.colors, ...selectedColors]
+        const hasColor = (p.colors || []).some((c) => colorsToCheck.includes(c?.toLowerCase()))
         if (!hasColor) return false
       }
 
-      // Price Range Filter
       const priceVal = Number(p.price)
-      if (priceRange.min !== '') {
-        if (priceVal < Number(priceRange.min)) return false
-      }
-      if (priceRange.max !== '') {
-        if (priceVal > Number(priceRange.max)) return false
-      }
+      if (sidebarFilters.price[0] > PRICE_BOUNDS.min && priceVal < sidebarFilters.price[0]) return false
+      if (sidebarFilters.price[1] < PRICE_BOUNDS.max && priceVal > sidebarFilters.price[1]) return false
+      if (priceRange.min !== '' && priceVal < Number(priceRange.min)) return false
+      if (priceRange.max !== '' && priceVal > Number(priceRange.max)) return false
+
+      if (sidebarFilters.fabric.length && !sidebarFilters.fabric.includes(p.fabric)) return false
+      if (sidebarFilters.sleeve.length && !sidebarFilters.sleeve.includes(p.sleeve)) return false
+      if (sidebarFilters.occasion.length && !sidebarFilters.occasion.includes(p.occasion)) return false
 
       return true
     })
-  }, [products, selectedCategories, selectedSizes, selectedColors, priceRange])
+  }, [products, sidebarFilters, selectedCategories, selectedSizes, selectedColors, priceRange])
 
   // Toggle filter selections
   const toggleCategory = (slug) => {
@@ -171,6 +194,22 @@ export default function NewArrivals() {
     setSelectedSizes([])
     setSelectedColors([])
     setPriceRange({ min: '', max: '' })
+    setSidebarFilters({
+      categories: [],
+      price: [PRICE_BOUNDS.min, PRICE_BOUNDS.max],
+      sizes: [],
+      colors: [],
+      availability: [],
+      discount: [],
+      sleeve: [],
+      fabric: [],
+      occasion: [],
+      fit: [],
+      pattern: [],
+      season: [],
+      ratings: [],
+      brand: [],
+    })
   }
 
   const activeFiltersCount = useMemo(() => {
@@ -178,9 +217,12 @@ export default function NewArrivals() {
     if (selectedCategories.length) count += selectedCategories.length
     if (selectedSizes.length) count += selectedSizes.length
     if (selectedColors.length) count += selectedColors.length
+    if (sidebarFilters.categories.length) count += sidebarFilters.categories.length
+    if (sidebarFilters.sizes.length) count += sidebarFilters.sizes.length
+    if (sidebarFilters.colors.length) count += sidebarFilters.colors.length
     if (priceRange.min !== '' || priceRange.max !== '') count += 1
     return count
-  }, [selectedCategories, selectedSizes, selectedColors, priceRange])
+  }, [selectedCategories, selectedSizes, selectedColors, sidebarFilters])
 
   return (
     <div className="min-h-screen bg-[#FFF6F9]/10 pb-16 text-ink">
@@ -188,13 +230,13 @@ export default function NewArrivals() {
       {/* Editorial Hero Banner (Full-Width with Background Image) */}
       <div 
         className="relative w-full bg-cover bg-center flex flex-col justify-center py-8 md:py-10 mb-8 overflow-hidden"
-        style={{ backgroundImage: `url(${pageData.bg_image || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1920&q=80'})` }}
+        style={{ backgroundImage: `url(${pageData.bg_image || '/images/home/hero/hero-slide-1.webp'})` }}
       >
         {/* Dark linear gradient mask overlay for pristine legibility */}
         <div className="absolute inset-0 bg-gradient-to-r from-[#2A1A22]/90 via-[#2A1A22]/65 to-transparent z-[1]" />
         
         {/* Content Container (Constrained matching store layout width but z-indexed above the mask) */}
-        <div className="relative z-10 container-luxury max-w-7xl px-4 sm:px-6 w-full space-y-3">
+        <div className="relative z-10 container-luxury max-w-7xl px-0 sm:px-6 w-full space-y-3">
           
           {/* Top Row: Breadcrumbs over image */}
           <div className="text-xs font-semibold text-rose-blush/80 flex items-center gap-1.5">
@@ -475,46 +517,61 @@ export default function NewArrivals() {
 
       </div>
 
-      {/* Main Content Product Grid */}
+      {/* Main Content Area: 2-Column Grid on Desktop */}
       <div className="container-luxury max-w-7xl px-0 sm:px-6 relative z-10 min-h-[300px]">
-        {loading ? (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-            {Array.from({ length: 12 }).map((_, idx) => (
-              <SkeletonCard key={idx} />
-            ))}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* Desktop Left Sticky Sidebar (Col-3) */}
+          <aside className="hidden lg:block lg:col-span-3 sticky top-24 z-20">
+            <FilterSidebar
+              filters={sidebarFilters}
+              onChange={setSidebarFilters}
+              onClear={clearAllFilters}
+            />
+          </aside>
+
+          {/* Right Product Grid & Mobile Toolbar (Col-9) */}
+          <div className="lg:col-span-9 space-y-5">
+            {loading ? (
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+                {Array.from({ length: 9 }).map((_, idx) => (
+                  <SkeletonCard key={idx} />
+                ))}
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-center py-16 px-4 bg-white border border-[#EFD7E3]/40 rounded-3xl max-w-xl mx-auto shadow-soft">
+                <h2 className="font-heading text-lg font-bold text-ink mb-2">New Arrivals Coming Soon</h2>
+                <p className="text-xs text-ink-muted max-w-xs mb-6">
+                  We're preparing something beautiful for you. Check back soon for our newest arrivals.
+                </p>
+                <Link
+                  to="/shop"
+                  className="bg-primary hover:bg-primary-deep text-white text-xs font-bold px-6 py-3 rounded-xl transition shadow-md hover:shadow-lg active:scale-95"
+                >
+                  SHOP ALL PRODUCTS
+                </Link>
+              </div>
+            ) : (
+              <>
+                <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mb-2 px-1">
+                  Showing {filteredProducts.length} of {products.length} New Arrivals
+                </p>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                  {filteredProducts.map((prod) => (
+                    <ProductCard
+                      key={prod.id}
+                      product={{
+                        ...prod,
+                        badges: ['new']
+                      }}
+                      onQuickView={(p) => setQuickViewProduct(p)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center text-center py-16 px-4 bg-white border border-[#EFD7E3]/40 rounded-3xl max-w-xl mx-auto shadow-soft">
-           <h2 className="font-heading text-lg font-bold text-ink mb-2">New Arrivals Coming Soon</h2>
-            <p className="text-xs text-ink-muted max-w-xs mb-6">
-              We're preparing something beautiful for you. Check back soon for our latest styles.
-            </p>
-            <Link
-              to="/shop"
-              className="bg-primary hover:bg-primary-deep text-white text-xs font-bold px-6 py-3 rounded-xl transition shadow-md hover:shadow-lg active:scale-95"
-            >
-              SHOP ALL PRODUCTS
-            </Link>
-          </div>
-        ) : (
-          <>
-            <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mb-4 px-1">
-              Showing {filteredProducts.length} of {products.length} New Arrivals
-            </p>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-              {filteredProducts.map((prod) => (
-                <ProductCard
-                  key={prod.id}
-                  product={{
-                    ...prod,
-                    badges: prod.is_new_arrival ? ['new'] : []
-                  }}
-                  onQuickView={(p) => setQuickViewProduct(p)}
-                />
-              ))}
-            </div>
-          </>
-        )}
+        </div>
       </div>
 
       {/* Services Strip promises */}

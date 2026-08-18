@@ -8,7 +8,7 @@ export default function InstagramFeed({ customData }) {
 
   return (
     <motion.section
-      className="relative overflow-hidden bg-surface pt-16 md:pt-20 mb-[15px] lg:mb-5"
+      className="relative overflow-hidden bg-surface py-10 md:py-14"
       aria-labelledby="ig-heading"
       initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -41,7 +41,7 @@ export default function InstagramFeed({ customData }) {
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6 md:gap-3">
           {posts.map((item, i) => {
-            const imgUrl = typeof item === 'string' ? item : item?.image || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80'
+            const imgUrl = typeof item === 'string' ? item : item?.image || `/images/home/instagram/instagram-${(i % 6) + 1}.webp`
             const itemLink = item?.link || IG_URL
             return (
               <motion.a
@@ -61,10 +61,12 @@ export default function InstagramFeed({ customData }) {
                   src={imgUrl}
                   alt={`JALYN Instagram post ${i + 1}`}
                   loading="lazy"
+                  decoding="async"
+                  width="240"
+                  height="240"
                   className="h-full w-full object-cover transition-transform duration-700 ease-luxury group-hover:scale-110"
                   onError={(e) => {
-                    e.currentTarget.src =
-                      'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80'
+                    e.currentTarget.src = `/images/home/instagram/instagram-${(i % 6) + 1}.webp`
                   }}
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-primary/0 opacity-0 transition-all duration-400 group-hover:bg-primary/50 group-hover:opacity-100">

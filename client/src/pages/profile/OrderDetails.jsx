@@ -12,7 +12,7 @@ import {
   Package,
   AlertCircle,
 } from 'lucide-react'
-import { useOrderStore } from '@/store'
+import { useOrderStore, useUserStore } from '@/store'
 import { formatINR, cn } from '@/lib/utils'
 import api from '@/services/api'
 import logo from '@/assets/jalyn-logo.png'
@@ -21,8 +21,13 @@ export default function OrderDetails() {
   const { id } = useParams()
   const [dbOrder, setDbOrder] = useState(null)
   const [loading, setLoading] = useState(true)
+  const userToken = useUserStore((s) => s.token)
 
   useEffect(() => {
+    if (!userToken) {
+      setLoading(false)
+      return
+    }
     const fetchOrder = async () => {
       try {
         const res = await api.get(`/orders/${id}`)
@@ -36,7 +41,7 @@ export default function OrderDetails() {
       }
     }
     fetchOrder()
-  }, [id])
+  }, [id, userToken])
 
   const storeOrders = useOrderStore((s) => s.orders)
 

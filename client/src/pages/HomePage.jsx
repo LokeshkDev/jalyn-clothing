@@ -10,10 +10,25 @@ import Newsletter from '@/components/home/Newsletter'
 import MobileHome from '@/components/mobile/MobileHome'
 import MobileRecentlyViewed from '@/components/shop/MobileRecentlyViewed'
 import { NewArrivalsCarousel, SaleCarousel } from '@/components/home/HomeCarousels'
+import HomePageSkeleton from '@/components/home/HomePageSkeleton'
 import { useCmsData } from '@/hooks/useCmsData'
 
 export default function HomePage() {
-  const { cmsData } = useCmsData()
+  const { cmsData, loading } = useCmsData()
+  const [isMobile, setIsMobile] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 1024
+    }
+    return false
+  })
+
+  React.useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)')
+    const handler = (e) => setIsMobile(e.matches)
+    setIsMobile(mq.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
   
   const layout = cmsData?.desktop_homepage_layout || cmsData?.homepage_layout
   const order = layout?.order || [
@@ -63,20 +78,24 @@ export default function HomePage() {
 
   return (
     <>
-      {/* App-style layout — mobile & tablet */}
-      <div className="lg:hidden">
-        <MobileHome />
-      </div>
-
-      {/* Desktop editorial layout */}
-      <div className="hidden lg:block bg-white">
-        {activeSections.map((sec) => (
-          <React.Fragment key={sec.key}>
-            {sec.element}
-          </React.Fragment>
-        ))}
-        <Newsletter />
-      </div>
+      {loading ? (
+        <HomePageSkeleton />
+      ) : isMobile ? (
+        /* App-style layout — mobile & tablet */
+        <div className="lg:hidden">
+          <MobileHome />
+        </div>
+      ) : (
+        /* Desktop editorial layout */
+        <div className="hidden lg:block bg-white">
+          {activeSections.map((sec) => (
+            <React.Fragment key={sec.key}>
+              {sec.element}
+            </React.Fragment>
+          ))}
+          <Newsletter />
+        </div>
+      )}
     </>
   )
 }

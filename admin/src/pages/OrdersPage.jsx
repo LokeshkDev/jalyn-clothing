@@ -5,7 +5,7 @@ import {
   ShoppingBasket, Search, RefreshCw, Plus, Loader2, Eye, Trash2, X,
   Clock, Package, PackageCheck, Truck, CheckCircle2, XCircle,
   Check, AlertCircle, Pencil, MapPin, Phone, Mail, User,
-  CreditCard, IndianRupee, ChevronRight, Save, Ban, Undo2,
+  CreditCard, IndianRupee, ChevronRight, Save, Ban, Undo2, FileDown, Send,
 } from 'lucide-react';
 
 const ORDER_STATUS = {
@@ -36,6 +36,121 @@ const formatDate = (val) => {
 const money = (v) => '₹' + Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
 const itemTotal = (items) => (items || []).reduce((s, i) => s + (Number(i.price) || 0) * (Number(i.quantity) || 1), 0);
+
+const escapeHtml = (v) =>
+  String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const invoiceRowsHtml = (items) =>
+  (items || [])
+    .map((it, i) => {
+      const qty = Number(it.quantity) || 1;
+      const price = Number(it.price) || 0;
+      const variant = [it.size && `Size: ${it.size}`, it.color && `Colour: ${it.color}`].filter(Boolean).join(' · ');
+      return `
+      <tr>
+        <td class="c">${i + 1}</td>
+        <td>${escapeHtml(it.product_name)}${variant ? `<div class="sub">${escapeHtml(variant)}</div>` : ''}</td>
+        <td class="c">${qty}</td>
+        <td class="r">${money(price)}</td>
+        <td class="r">${money(price * qty)}</td>
+      </tr>`;
+    })
+    .join('');
+
+const buildInvoiceHtml = (order) => {
+  const items = order.items || [];
+  const subtotal = itemTotal(items);
+  const discount = Number(order.discount_amount) || 0;
+  const shipping = Number(order.shipping_amount) || 0;
+  const total = Number(order.total_amount) || Math.max(subtotal + shipping - discount, 0);
+  const paymentLabel = PAYMENT_STATUS[order.payment_status]?.label || order.payment_status || '—';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JALYN Invoice - ${escapeHtml(order.order_number)}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; color: #2b2b2b; background: #f2eee9; }
+  .sheet { max-width: 800px; margin: 24px auto; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,.08); }
+  header { background: linear-gradient(135deg, #1c1418 0%, #3a2433 100%); color: #fff; padding: 28px 36px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .logo { font-size: 26px; font-weight: 800; letter-spacing: 6px; }
+  .logo span { color: #e8b4c9; }
+  .tag { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #c9b8c1; margin-top: 2px; }
+  .inv-meta { text-align: right; }
+  .inv-meta h1 { font-size: 16px; letter-spacing: 4px; text-transform: uppercase; color: #e8b4c9; margin-bottom: 6px; }
+  .inv-meta p { font-size: 12px; color: #d8cdd2; line-height: 1.7; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 26px 36px; border-bottom: 1px solid #eee; }
+  .parties h4 { font-size: 10px; letter-spacing: 2.5px; color: #a63d78; text-transform: uppercase; margin-bottom: 8px; }
+  .parties p { font-size: 12.5px; line-height: 1.75; color: #4a4a4a; }
+  .parties strong { color: #1c1418; }
+  .items { width: 100%; border-collapse: collapse; padding: 0 36px; }
+  .items th { background: #faf5f7; color: #a63d78; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; text-align: left; padding: 12px 16px; }
+  .items td { padding: 13px 16px; font-size: 12.5px; border-bottom: 1px solid #f1ece8; vertical-align: top; }
+  .items .c { text-align: center; } .items .r { text-align: right; white-space: nowrap; }
+  .items .sub { font-size: 11px; color: #8a8a8a; margin-top: 2px; }
+  .totals { display: flex; justify-content: space-between; gap: 24px; padding: 24px 36px 30px; }
+  .left { font-size: 11.5px; color: #666; line-height: 1.9; }
+  .right { min-width: 230px; }
+  .right p { display: flex; justify-content: space-between; font-size: 12.5px; color: #555; padding: 4px 0; }
+  .right .grand { font-size: 15px; font-weight: 800; color: #1c1418; border-top: 2px solid #e8b4c9; margin-top: 8px; padding-top: 10px; }
+  .grand span { color: #a63d78; }
+  footer { background: #faf5f7; text-align: center; padding: 18px; font-size: 11.5px; color: #8a6b78; }
+  footer strong { color: #a63d78; }
+  @media print { body { background: #fff; } .sheet { box-shadow: none; margin: 0; border-radius: 0; } }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <header>
+      <div>
+        <div class="logo">JAL<span>YN</span></div>
+        <div class="tag">Luxury Ethnic Wear</div>
+      </div>
+      <div class="inv-meta">
+        <h1>Tax Invoice</h1>
+        <p>Invoice No: ${escapeHtml(order.order_number)}</p>
+        <p>Date: ${formatDate(order.created_at)}</p>
+      </div>
+    </header>
+    <section class="parties">
+      <div>
+        <h4>Sold By</h4>
+        <p><strong>JALYN Apparels</strong><br />Luxury Ethnic &amp; Occasion Wear<br />support@jalyn.in &middot; +91 98765 43210</p>
+      </div>
+      <div>
+        <h4>Billed To</h4>
+        <p><strong>${escapeHtml(order.customer_name)}</strong><br />${escapeHtml(order.customer_phone)}<br />${escapeHtml(order.customer_email)}<br />${escapeHtml(order.shipping_address)}</p>
+      </div>
+    </section>
+    <table class="items">
+      <thead>
+        <tr><th style="width:36px">#</th><th>Item</th><th style="width:70px">Qty</th><th style="width:110px">Price</th><th style="width:130px">Amount</th></tr>
+      </thead>
+      <tbody>
+        ${invoiceRowsHtml(items)}
+      </tbody>
+    </table>
+    <div class="totals">
+      <div class="left">
+        <p>Payment: <strong>${escapeHtml(order.payment_method || '—')}</strong></p>
+        <p>Payment Status: <strong>${escapeHtml(paymentLabel)}</strong></p>
+        <p>Order Status: <strong>${escapeHtml(ORDER_STATUS[order.order_status]?.label || order.order_status || '—')}</strong></p>
+        ${order.tracking_id ? `<p>Tracking (AWB): <strong>${escapeHtml(order.tracking_id)}</strong></p>` : ''}
+      </div>
+      <div class="right">
+        <p>Subtotal <span>${money(subtotal)}</span></p>
+        ${discount > 0 ? `<p>Discount <span>− ${money(discount)}</span></p>` : ''}
+        ${shipping > 0 ? `<p>Shipping <span>${money(shipping)}</span></p>` : ''}
+        <p class="grand">Grand Total <span>${money(total)}</span></p>
+      </div>
+    </div>
+    <footer>This is a computer generated invoice &middot; <strong>JALYN Apparels</strong> &middot; Luxury Ethnic Wear</footer>
+  </div>
+</body>
+</html>`;
+};
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -105,6 +220,46 @@ export default function OrdersPage() {
   const updateLocalOrder = (updated) => {
     setOrders((prev) => prev.map((o) => (o.id === updated.id ? { ...o, ...updated } : o)));
     setDetailOrder((prev) => (prev && (prev.id === updated.id || prev.order_number === updated.order_number) ? { ...prev, ...updated } : prev));
+  };
+
+  const downloadInvoice = (order) => {
+    const win = window.open('', '_blank');
+    if (!win) {
+      showToast('Popup blocked — please allow popups for this site.', 'error');
+      return;
+    }
+    win.document.open();
+    win.document.write(buildInvoiceHtml(order));
+    win.document.close();
+    win.focus();
+  };
+
+  const sendInvoiceWhatsApp = (order) => {
+    const phone = String(order.customer_phone || '').replace(/\D/g, '');
+    if (!phone) {
+      showToast('No WhatsApp number on this order.', 'error');
+      return;
+    }
+    const lines = [
+      `*JALYN Apparels — Invoice ${order.order_number}*`,
+      `Date: ${formatDate(order.created_at)}`,
+      '',
+      `Customer: ${order.customer_name}`,
+      `Phone: ${order.customer_phone}`,
+      '',
+      '*Items:*',
+      ...(order.items || []).map((it) => {
+        const variant = [it.size && `Size ${it.size}`, it.color && `Colour ${it.color}`].filter(Boolean).join(' · ');
+        return `• ${it.product_name}${variant ? ` (${variant})` : ''} x${Number(it.quantity) || 1} — ${money((Number(it.price) || 0) * (Number(it.quantity) || 1))}`;
+      }),
+      '',
+      `*Order Total: ${money(order.total_amount)}*`,
+      `Payment: ${PAYMENT_STATUS[order.payment_status]?.label || order.payment_status}${order.payment_method ? ` (${order.payment_method})` : ''}`,
+      `Status: ${ORDER_STATUS[order.order_status]?.label || order.order_status}`,
+      '',
+      'Thank you for shopping with JALYN!',
+    ];
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
   };
 
   const handleStatusChange = async (id, payload) => {
@@ -191,19 +346,42 @@ export default function OrdersPage() {
     return { pending, inTransit, delivered, revenue };
   }, [orders]);
 
+  const [dateSort, setDateSort] = useState('newest');
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return orders.filter((o) => {
+    const list = orders.filter((o) => {
       const matchesSearch =
         !q ||
         (o.order_number || '').toLowerCase().includes(q) ||
         (o.customer_name || '').toLowerCase().includes(q) ||
-        (o.customer_email || '').toLowerCase().includes(q);
+        (o.customer_email || '').toLowerCase().includes(q) ||
+        (o.customer_phone || '').toLowerCase().includes(q);
       const matchesStatus = statusFilter === 'all' || o.order_status === statusFilter;
       const matchesPayment = paymentFilter === 'all' || o.payment_status === paymentFilter;
       return matchesSearch && matchesStatus && matchesPayment;
     });
-  }, [orders, search, statusFilter, paymentFilter]);
+
+    return [...list].sort((a, b) => {
+      if (dateSort === 'oldest') {
+        const timeA = new Date(a.created_at || a.date || 0).getTime();
+        const timeB = new Date(b.created_at || b.date || 0).getTime();
+        if (timeA !== timeB) return timeA - timeB;
+        return (Number(a.id) || 0) - (Number(b.id) || 0);
+      }
+      if (dateSort === 'amount_high') {
+        return (Number(b.total_amount) || 0) - (Number(a.total_amount) || 0);
+      }
+      if (dateSort === 'amount_low') {
+        return (Number(a.total_amount) || 0) - (Number(b.total_amount) || 0);
+      }
+      // Default: 'newest'
+      const timeA = new Date(a.created_at || a.date || 0).getTime();
+      const timeB = new Date(b.created_at || b.date || 0).getTime();
+      if (timeB !== timeA) return timeB - timeA;
+      return (Number(b.id) || 0) - (Number(a.id) || 0);
+    });
+  }, [orders, search, statusFilter, paymentFilter, dateSort]);
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -290,6 +468,16 @@ export default function OrdersPage() {
               {Object.entries(PAYMENT_STATUS).map(([k, v]) => (
                 <option key={k} value={k}>{v.label}</option>
               ))}
+            </select>
+            <select
+              value={dateSort}
+              onChange={(e) => setDateSort(e.target.value)}
+              className="px-3 py-2.5 rounded-xl border border-gray-200 text-xs bg-white font-semibold text-brand-700 focus:ring-2 focus:ring-brand-500 shadow-sm"
+            >
+              <option value="newest">🕒 Newest Orders First</option>
+              <option value="oldest">⏳ Oldest Orders First</option>
+              <option value="amount_high">💰 Highest Amount First</option>
+              <option value="amount_low">🏷️ Lowest Amount First</option>
             </select>
           </div>
 
@@ -401,6 +589,20 @@ export default function OrdersPage() {
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button
+                            onClick={(e) => { e.stopPropagation(); downloadInvoice(order); }}
+                            className="p-1.5 rounded-lg text-gray-600 hover:text-brand-600 hover:bg-pink-100 transition"
+                            title="Download Invoice"
+                          >
+                            <FileDown className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); sendInvoiceWhatsApp(order); }}
+                            className="p-1.5 rounded-lg text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 transition"
+                            title="Send Invoice on WhatsApp"
+                          >
+                            <Send className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={(e) => { e.stopPropagation(); openDetail(order); }}
                             className="p-1.5 rounded-lg text-gray-600 hover:text-brand-600 hover:bg-pink-100 transition"
                             title="View Order Detail"
@@ -452,6 +654,18 @@ export default function OrdersPage() {
                     >
                       <Mail className="w-3.5 h-3.5" /> Email Customer
                     </a>
+                    <button
+                      onClick={() => downloadInvoice(detailOrder)}
+                      className="text-[11px] font-semibold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5"
+                    >
+                      <FileDown className="w-3.5 h-3.5" /> Download Invoice
+                    </button>
+                    <button
+                      onClick={() => sendInvoiceWhatsApp(detailOrder)}
+                      className="text-[11px] font-semibold bg-emerald-500/90 hover:bg-emerald-500 px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5"
+                    >
+                      <Send className="w-3.5 h-3.5" /> WhatsApp Invoice
+                    </button>
                     {ORDER_STATUS[detailOrder.order_status] !== 'cancelled' && (
                       <button
                         onClick={() => handleStatusChange(detailOrder.id, { order_status: 'cancelled' })}

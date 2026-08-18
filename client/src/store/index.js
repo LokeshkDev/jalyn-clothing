@@ -10,13 +10,13 @@ export const useCartStore = create(
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
       toggleCart: () => set({ isOpen: !get().isOpen }),
-      addItem: (product, qty = 1) => {
+      addItem: (product, qty = 1, openDrawer = true) => {
         const title = product.name || product.title || 'Jalyn Essential Item'
         const image =
           product.image ||
           product.primary_image ||
           product.images?.primary ||
-          'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+          '/images/products/floral-midi-dress.webp'
         const normalizedItem = {
           ...product,
           name: title,
@@ -37,7 +37,7 @@ export const useCartStore = create(
         } else {
           items.push({ ...normalizedItem, qty })
         }
-        set({ items, isOpen: true })
+        set({ items, ...(openDrawer ? { isOpen: true } : {}) })
       },
       removeItem: (id) =>
         set({ items: get().items.filter((i) => i.id !== id) }),
@@ -149,12 +149,17 @@ export const useUserStore = create(
         set({ user: { ...get().user, ...updatedData } }),
 
       fetchAddresses: async () => {
+        if (!get().token) return
         try {
           const response = await api.get('/auth/addresses')
           if (response.data?.success) {
             set({ addresses: response.data.data })
           }
         } catch (error) {
+          if (error.response?.status === 401) {
+            get().logout()
+            return
+          }
           console.warn('Failed to fetch addresses from backend:', error.message)
         }
       },
@@ -228,6 +233,12 @@ export const useUserStore = create(
   ),
 )
 
+if (typeof window !== 'undefined') {
+  window.addEventListener('jalyn-session-expired', () => {
+    useUserStore.getState().logout()
+  })
+}
+
 export const useOrderStore = create(
   persist(
     (set, get) => ({
@@ -272,9 +283,19 @@ export const useOrderStore = create(
       getOrderById: (id) => get().orders.find((o) => o.id === id),
       clearOrders: () => set({ orders: [] }),
       fetchOrders: async (email) => {
+        const { token, user, logout } = useUserStore.getState()
+        const requestedEmail = email || user?.email
+        if (!token || !requestedEmail) {
+          set({ orders: [] })
+          return
+        }
         try {
-          const response = await api.get(`/orders?email=${email}`)
+          const response = await api.get(`/orders?email=${encodeURIComponent(requestedEmail)}`)
           if (response.data?.success) {
+            const toTitleStatus = (status) => {
+              const normalized = String(status || 'Processing').toLowerCase()
+              return normalized.charAt(0).toUpperCase() + normalized.slice(1)
+            }
             const mappedOrders = response.data.orders.map((o) => {
               const dateObj = new Date(o.created_at || Date.now());
               const dateStr = dateObj.toLocaleDateString('en-GB', {
@@ -289,13 +310,14 @@ export const useOrderStore = create(
                 qty: Number(it.quantity) || 1,
                 size: it.size || 'M',
                 color: it.color || 'Default',
-                image: it.image_url || 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80',
+                image: it.image_url || '/images/products/floral-midi-dress.webp',
               })) : [];
 
               return {
                 id: o.order_number || String(o.id),
+                user_id: o.user_id,
                 date: dateStr,
-                status: o.order_status || 'Confirmed',
+                status: toTitleStatus(o.order_status || o.status || 'Processing'),
                 paymentStatus: o.payment_status || 'pending',
                 paymentMethod: o.payment_method || 'Online Payment',
                 shippingMethod: o.shipping_method || 'Standard Delivery',
@@ -327,6 +349,11 @@ export const useOrderStore = create(
             set({ orders: mappedOrders });
           }
         } catch (error) {
+          if (error.response?.status === 401) {
+            logout()
+            set({ orders: [] })
+            return
+          }
           console.warn('Failed to fetch orders from backend:', error.message);
         }
       },
@@ -334,4 +361,3 @@ export const useOrderStore = create(
     { name: 'jalyn-orders' },
   ),
 )
-

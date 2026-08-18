@@ -71,17 +71,20 @@ export default function CartDrawer() {
                     item.image ||
                     item.primary_image ||
                     item.images?.primary ||
-                    'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+                    '/images/products/floral-midi-dress.webp'
 
                   return (
                     <li key={`${item.id}-${item.size}-${item.color}`} className="flex gap-4 p-3 bg-gray-50/70 rounded-xl border border-gray-100">
                       <img
                         src={img}
                         alt={title}
+                        loading="lazy"
+                        decoding="async"
+                        width="80"
+                        height="96"
                         className="h-24 w-20 rounded-lg object-cover bg-rose-light/20 shrink-0"
                         onError={(e) => {
-                          e.currentTarget.src =
-                            'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+                          e.currentTarget.src = '/images/products/floral-midi-dress.webp'
                         }}
                       />
                       <div className="flex flex-1 flex-col justify-between">

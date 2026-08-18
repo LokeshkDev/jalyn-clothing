@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Autoplay } from 'swiper/modules'
+import { useQuery } from '@tanstack/react-query'
 import api from '@/services/api'
 import ProductCard from '@/components/ui/ProductCard'
 import QuickViewModal from '@/components/shop/QuickViewModal'
@@ -13,26 +14,38 @@ import 'swiper/css'
 
 const ease = [0.22, 1, 0.36, 1]
 
-export function NewArrivalsCarousel() {
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [quickViewProduct, setQuickViewProduct] = useState(null)
-
-  useEffect(() => {
-    async function fetchProducts() {
-      try {
-        const res = await api.get('/products', { params: { new_arrivals: '1' } })
-        if (res.data?.success && Array.isArray(res.data.products)) {
-          setProducts(res.data.products.map(normalizeProduct))
-        }
-      } catch (err) {
-        console.error('Failed to load new arrivals:', err)
-      } finally {
-        setLoading(false)
-      }
+async function fetchNewArrivals() {
+  try {
+    const res = await api.get('/products', { params: { new_arrivals: '1' } })
+    if (res.data?.success && Array.isArray(res.data.products)) {
+      return res.data.products.map(normalizeProduct)
     }
-    fetchProducts()
-  }, [])
+  } catch (err) {
+    console.warn('Failed to load new arrivals:', err)
+  }
+  return []
+}
+
+async function fetchSaleProducts() {
+  try {
+    const res = await api.get('/products', { params: { on_sale: '1' } })
+    if (res.data?.success && Array.isArray(res.data.products)) {
+      return res.data.products.map(normalizeProduct)
+    }
+  } catch (err) {
+    console.warn('Failed to load sale products:', err)
+  }
+  return []
+}
+
+export function NewArrivalsCarousel() {
+  const [quickViewProduct, setQuickViewProduct] = useState(null)
+  const { data: products = [], isLoading: loading } = useQuery({
+    queryKey: ['products', 'new_arrivals'],
+    queryFn: fetchNewArrivals,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
 
   if (loading || products.length === 0) return null
 
@@ -87,25 +100,13 @@ export function NewArrivalsCarousel() {
 }
 
 export function SaleCarousel() {
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
   const [quickViewProduct, setQuickViewProduct] = useState(null)
-
-  useEffect(() => {
-    async function fetchProducts() {
-      try {
-        const res = await api.get('/products', { params: { on_sale: '1' } })
-        if (res.data?.success && Array.isArray(res.data.products)) {
-          setProducts(res.data.products.map(normalizeProduct))
-        }
-      } catch (err) {
-        console.error('Failed to load sale products:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchProducts()
-  }, [])
+  const { data: products = [], isLoading: loading } = useQuery({
+    queryKey: ['products', 'on_sale'],
+    queryFn: fetchSaleProducts,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
 
   if (loading || products.length === 0) return null
 

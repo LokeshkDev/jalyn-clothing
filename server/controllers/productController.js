@@ -9,6 +9,7 @@ export const SEED_PRODUCTS = [
     price: 1899, original_price: 2499, discount: 24, rating: 4.8, reviews_count: 124, stock: 18,
     is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Charming floral print midi dress crafted with soft, breathable crepe fabric and tiered ruffled hem.',
+    fabric: 'Cotton', sleeve: 'Short Sleeve', occasion: 'Casual', fit: 'Regular', pattern: 'Floral', season: 'Summer',
     sizes: ['XS', 'S', 'M', 'L', 'XL'], colors: ['rose', 'cream', 'black'],
     primary_image: 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=800&q=80',
@@ -18,6 +19,7 @@ export const SEED_PRODUCTS = [
     price: 1299, original_price: 1799, discount: 28, rating: 4.6, reviews_count: 86, stock: 25,
     is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Luxurious silk-satin blend wrap blouse featuring elegant bishop sleeves and side waist tie.',
+    fabric: 'Satin', sleeve: 'Full Sleeve', occasion: 'Work', fit: 'Slim', pattern: 'Solid', season: 'All Season',
     sizes: ['S', 'M', 'L', 'XL'], colors: ['mauve', 'cream'],
     primary_image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80',
@@ -27,6 +29,7 @@ export const SEED_PRODUCTS = [
     price: 2499, original_price: 3299, discount: 24, rating: 4.9, reviews_count: 142, stock: 12,
     is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Relaxed fit 100% pure linen top and high-waisted wide leg trousers set for effortless summer elegance.',
+    fabric: 'Linen', sleeve: 'Short Sleeve', occasion: 'Casual', fit: 'Relaxed', pattern: 'Solid', season: 'Summer',
     sizes: ['S', 'M', 'L', 'XXL'], colors: ['beige', 'sage'],
     primary_image: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=800&q=80',
@@ -36,6 +39,7 @@ export const SEED_PRODUCTS = [
     price: 3899, original_price: 4999, discount: 22, rating: 4.9, reviews_count: 98, stock: 15,
     is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Festive hand-embroidered Chanderi silk kurta with matching pants and organza sheer dupatta.',
+    fabric: 'Silk Blend', sleeve: 'Full Sleeve', occasion: 'Festive', fit: 'Regular', pattern: 'Embroidered', season: 'All Season',
     sizes: ['S', 'M', 'L', 'XL'], colors: ['wine', 'rose'],
     primary_image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
@@ -45,6 +49,7 @@ export const SEED_PRODUCTS = [
     price: 2199, original_price: 2899, discount: 24, rating: 4.7, reviews_count: 65, stock: 20,
     is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Flowy tiered maxi dress with adjustable tie shoulders and smocked back panel.',
+    fabric: 'Cotton', sleeve: 'Sleeveless', occasion: 'Casual', fit: 'Relaxed', pattern: 'Floral', season: 'Summer',
     sizes: ['XS', 'S', 'M', 'L'], colors: ['blush', 'cream'],
     primary_image: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=80',
@@ -54,6 +59,7 @@ export const SEED_PRODUCTS = [
     price: 4999, original_price: 6499, discount: 23, rating: 5.0, reviews_count: 210, stock: 6,
     is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Showstopper full-sequin evening gown with deep V neckline and dramatic train.',
+    fabric: 'Georgette', sleeve: 'Sleeveless', occasion: 'Party', fit: 'Slim', pattern: 'Solid', season: 'Winter',
     sizes: ['S', 'M', 'L'], colors: ['rose', 'black', 'wine'],
     primary_image: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=800&q=80',
@@ -63,6 +69,7 @@ export const SEED_PRODUCTS = [
     price: 899, original_price: 1299, discount: 30, rating: 4.5, reviews_count: 42, stock: 30,
     is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'On-trend smocked crop top with puff sleeves and elastic shirred bodice.',
+    fabric: 'Cotton', sleeve: 'Short Sleeve', occasion: 'Casual', fit: 'Regular', pattern: 'Solid', season: 'Summer',
     sizes: ['XS', 'S', 'M', 'L', 'XL'], colors: ['cream', 'sage', 'mauve'],
     primary_image: 'https://images.unsplash.com/photo-1564257631407-4deb1f99d992?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=800&q=80',
@@ -72,6 +79,7 @@ export const SEED_PRODUCTS = [
     price: 2299, original_price: 2999, discount: 23, rating: 4.8, reviews_count: 90, stock: 18,
     is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Abstract printed peplum top and palazzo pants set with matching belt.',
+    fabric: 'Rayon', sleeve: 'Short Sleeve', occasion: 'Work', fit: 'Regular', pattern: 'Printed', season: 'Monsoon',
     sizes: ['S', 'M', 'L', 'XL'], colors: ['beige', 'rose', 'black'],
     primary_image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?auto=format&fit=crop&w=800&q=80',
@@ -81,6 +89,7 @@ export const SEED_PRODUCTS = [
     price: 1799, original_price: 2199, discount: 18, rating: 4.7, reviews_count: 55, stock: 14,
     is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Buttery-soft stretch velvet lounge top and jogger set for cozy evenings.',
+    fabric: 'Velvet', sleeve: 'Full Sleeve', occasion: 'Lounge', fit: 'Relaxed', pattern: 'Solid', season: 'Winter',
     sizes: ['S', 'M', 'L', 'XL'], colors: ['mauve', 'sage', 'cream'],
     primary_image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=800&q=80',
@@ -90,6 +99,7 @@ export const SEED_PRODUCTS = [
     price: 3499, original_price: 4499, discount: 22, rating: 4.9, reviews_count: 130, stock: 10,
     is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Floor-length Anarkali kurta with heavy zari work and matching churidar pants.',
+    fabric: 'Silk Blend', sleeve: 'Full Sleeve', occasion: 'Festive', fit: 'Regular', pattern: 'Embroidered', season: 'All Season',
     sizes: ['S', 'M', 'L', 'XL'], colors: ['wine', 'black', 'rose'],
     primary_image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
@@ -99,6 +109,7 @@ export const SEED_PRODUCTS = [
     price: 2799, original_price: 3499, discount: 20, rating: 4.7, reviews_count: 45, stock: 12,
     is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Lightweight open-front linen blazer shrug tailored for modern workwear layering.',
+    fabric: 'Linen', sleeve: 'Full Sleeve', occasion: 'Work', fit: 'Slim', pattern: 'Solid', season: 'All Season',
     sizes: ['S', 'M', 'L'], colors: ['cream', 'beige', 'black'],
     primary_image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1551163943-3f6fa0d40dc1?auto=format&fit=crop&w=800&q=80',
@@ -108,6 +119,7 @@ export const SEED_PRODUCTS = [
     price: 2199, original_price: 2799, discount: 21, rating: 4.9, reviews_count: 112, stock: 22,
     is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Ultra-stretch seamless sports bra and high-rise workout leggings set.',
+    fabric: 'Rayon', sleeve: 'Sleeveless', occasion: 'Casual', fit: 'Slim', pattern: 'Solid', season: 'All Season',
     sizes: ['XS', 'S', 'M', 'L'], colors: ['mauve', 'sage', 'black'],
     primary_image: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1506152983158-b4a74a01c721?auto=format&fit=crop&w=800&q=80',
@@ -117,6 +129,7 @@ export const SEED_PRODUCTS = [
     price: 1899, original_price: 2299, discount: 17, rating: 4.8, reviews_count: 74, stock: 16,
     is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Traditional Punjabi juttis handcrafted with genuine leather and dabka embroidery.',
+    fabric: 'Rayon', sleeve: 'Sleeveless', occasion: 'Festive', fit: 'Regular', pattern: 'Embroidered', season: 'All Season',
     sizes: ['36', '37', '38', '39', '40'], colors: ['rose', 'cream', 'beige'],
     primary_image: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1560343090-f0409e92791a?auto=format&fit=crop&w=800&q=80',
@@ -126,6 +139,7 @@ export const SEED_PRODUCTS = [
     price: 2299, original_price: 2899, discount: 20, rating: 4.9, reviews_count: 88, stock: 10,
     is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Minimalist cowl-neck satin slip dress with adjustable straps and midi length.',
+    fabric: 'Satin', sleeve: 'Sleeveless', occasion: 'Party', fit: 'Slim', pattern: 'Solid', season: 'Summer',
     sizes: ['XS', 'S', 'M', 'L', 'XL'], colors: ['mauve', 'cream', 'black'],
     primary_image: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=80',
@@ -135,6 +149,7 @@ export const SEED_PRODUCTS = [
     price: 3699, original_price: 4499, discount: 17, rating: 4.9, reviews_count: 92, stock: 14,
     is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Handwoven Chanderi silk kurta with gota patti detailing and matching chiffon dupatta.',
+    fabric: 'Silk Blend', sleeve: 'Full Sleeve', occasion: 'Festive', fit: 'Regular', pattern: 'Embroidered', season: 'All Season',
     sizes: ['S', 'M', 'L', 'XL'], colors: ['cream', 'sage', 'rose'],
     primary_image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
@@ -144,6 +159,7 @@ export const SEED_PRODUCTS = [
     price: 2599, original_price: 3199, discount: 18, rating: 4.8, reviews_count: 78, stock: 16,
     is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Vibrant Bohemian motif crop top and flared palazzo pants co-ord set.',
+    fabric: 'Rayon', sleeve: 'Short Sleeve', occasion: 'Casual', fit: 'Regular', pattern: 'Printed', season: 'Monsoon',
     sizes: ['S', 'M', 'L'], colors: ['rose', 'mauve', 'beige'],
     primary_image: 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?auto=format&fit=crop&w=800&q=80',
@@ -153,6 +169,7 @@ export const SEED_PRODUCTS = [
     price: 5499, original_price: 6999, discount: 21, rating: 5.0, reviews_count: 140, stock: 8,
     is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Traditional pure silk Banarasi saree woven with gold zari kadwa motifs.',
+    fabric: 'Silk Blend', sleeve: 'Sleeveless', occasion: 'Festive', fit: 'Regular', pattern: 'Embroidered', season: 'All Season',
     sizes: ['Free Size'], colors: ['wine', 'rose', 'cream'],
     primary_image: 'https://images.unsplash.com/photo-1610030469668-98e550d6193c?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=800&q=80',
@@ -162,6 +179,7 @@ export const SEED_PRODUCTS = [
     price: 1799, original_price: 2299, discount: 21, rating: 4.8, reviews_count: 165, stock: 24,
     is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
     description: 'Authentic hand-embroidered Lucknowi Chikankari pure cotton straight kurti.',
+    fabric: 'Cotton', sleeve: 'Full Sleeve', occasion: 'Casual', fit: 'Regular', pattern: 'Embroidered', season: 'Summer',
     sizes: ['S', 'M', 'L', 'XL', 'XXL'], colors: ['cream', 'blush', 'sage'],
     primary_image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
     hover_image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
@@ -226,6 +244,12 @@ export const ensureProductsTable = async () => {
         variants JSON,
         color_images JSON,
         size_guide JSON,
+        fabric VARCHAR(100),
+        sleeve VARCHAR(100),
+        occasion VARCHAR(100),
+        fit VARCHAR(100),
+        pattern VARCHAR(100),
+        season VARCHAR(100),
         primary_image VARCHAR(500),
         hover_image VARCHAR(500),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -233,29 +257,41 @@ export const ensureProductsTable = async () => {
       )
     `);
 
-    // Add new columns to existing tables (safe - will not error if they exist)
-    const newColumns = [
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS product_code VARCHAR(100)",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS base_sku VARCHAR(100)",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS brand VARCHAR(100) DEFAULT 'JALYN'",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_new_arrival TINYINT DEFAULT 1",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS new_arrival_order INT DEFAULT 0",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS new_arrival_published TINYINT DEFAULT 1",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_sale TINYINT DEFAULT 0",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS sale_order INT DEFAULT 0",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS sale_published TINYINT DEFAULT 1",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_online TINYINT DEFAULT 1",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_offline TINYINT DEFAULT 1",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS low_stock_threshold INT DEFAULT 5",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS short_description TEXT",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS variants JSON",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS color_images JSON",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS size_guide JSON",
-      "ALTER TABLE products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
-    ];
-    for (const sql of newColumns) {
-      try { await pool.query(sql); } catch (_) { /* column may already exist */ }
-    }
+    // Add new columns to existing tables (MySQL-safe: check information_schema first)
+    const ensureColumn = async (columnName, columnSql) => {
+      const [cols] = await pool.query(
+        `SELECT COUNT(*) as count FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = ?`,
+        [columnName]
+      );
+      if (cols[0].count === 0) {
+        try { await pool.query(columnSql); } catch (_) { /* ignore race conditions */ }
+      }
+    };
+
+    await ensureColumn('product_code', 'ALTER TABLE products ADD COLUMN product_code VARCHAR(100)');
+    await ensureColumn('base_sku', 'ALTER TABLE products ADD COLUMN base_sku VARCHAR(100)');
+    await ensureColumn('brand', "ALTER TABLE products ADD COLUMN brand VARCHAR(100) DEFAULT 'JALYN'");
+    await ensureColumn('is_new_arrival', 'ALTER TABLE products ADD COLUMN is_new_arrival TINYINT DEFAULT 1');
+    await ensureColumn('new_arrival_order', 'ALTER TABLE products ADD COLUMN new_arrival_order INT DEFAULT 0');
+    await ensureColumn('new_arrival_published', 'ALTER TABLE products ADD COLUMN new_arrival_published TINYINT DEFAULT 1');
+    await ensureColumn('is_sale', 'ALTER TABLE products ADD COLUMN is_sale TINYINT DEFAULT 0');
+    await ensureColumn('sale_order', 'ALTER TABLE products ADD COLUMN sale_order INT DEFAULT 0');
+    await ensureColumn('sale_published', 'ALTER TABLE products ADD COLUMN sale_published TINYINT DEFAULT 1');
+    await ensureColumn('is_online', 'ALTER TABLE products ADD COLUMN is_online TINYINT DEFAULT 1');
+    await ensureColumn('is_offline', 'ALTER TABLE products ADD COLUMN is_offline TINYINT DEFAULT 1');
+    await ensureColumn('low_stock_threshold', 'ALTER TABLE products ADD COLUMN low_stock_threshold INT DEFAULT 5');
+    await ensureColumn('short_description', 'ALTER TABLE products ADD COLUMN short_description TEXT');
+    await ensureColumn('variants', 'ALTER TABLE products ADD COLUMN variants JSON');
+    await ensureColumn('color_images', 'ALTER TABLE products ADD COLUMN color_images JSON');
+    await ensureColumn('size_guide', 'ALTER TABLE products ADD COLUMN size_guide JSON');
+    await ensureColumn('fabric', 'ALTER TABLE products ADD COLUMN fabric VARCHAR(100)');
+    await ensureColumn('sleeve', 'ALTER TABLE products ADD COLUMN sleeve VARCHAR(100)');
+    await ensureColumn('occasion', 'ALTER TABLE products ADD COLUMN occasion VARCHAR(100)');
+    await ensureColumn('fit', 'ALTER TABLE products ADD COLUMN fit VARCHAR(100)');
+    await ensureColumn('pattern', 'ALTER TABLE products ADD COLUMN pattern VARCHAR(100)');
+    await ensureColumn('season', 'ALTER TABLE products ADD COLUMN season VARCHAR(100)');
+    await ensureColumn('updated_at', 'ALTER TABLE products ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 
     // Create inventory_transactions audit log table
     await pool.query(`
@@ -277,8 +313,8 @@ export const ensureProductsTable = async () => {
       for (const prod of SEED_PRODUCTS) {
         await pool.query(
           `INSERT INTO products 
-          (title, slug, category_slug, price, original_price, discount, rating, reviews_count, stock, is_featured, is_active, is_new_arrival, is_online, is_offline, brand, description, sizes, colors, primary_image, hover_image)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (title, slug, category_slug, price, original_price, discount, rating, reviews_count, stock, is_featured, is_active, is_new_arrival, is_online, is_offline, brand, description, sizes, colors, primary_image, hover_image, fabric, sleeve, occasion, fit, pattern, season)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             prod.title, prod.slug, prod.category_slug, prod.price,
             prod.original_price || prod.price, prod.discount || 0,
@@ -289,10 +325,47 @@ export const ensureProductsTable = async () => {
             JSON.stringify(prod.sizes || ['S', 'M', 'L']),
             JSON.stringify(prod.colors || ['rose', 'cream']),
             prod.primary_image, prod.hover_image || prod.primary_image,
+            prod.fabric || '', prod.sleeve || '', prod.occasion || '',
+            prod.fit || '', prod.pattern || '', prod.season || '',
           ]
         );
       }
       console.log('✅ MySQL products table seeded with 18 products!');
+    }
+
+    // Backfill filter attributes for existing products (idempotent - only fills empty values)
+    const [fabricCol] = await pool.query(
+      `SELECT COUNT(*) as count FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'fabric'`
+    );
+    if (fabricCol[0].count > 0) {
+      const attributeBackfill = [
+      ['floral-midi-dress', 'Cotton', 'Short Sleeve', 'Casual', 'Regular', 'Floral', 'Summer'],
+      ['satin-wrap-blouse', 'Satin', 'Full Sleeve', 'Work', 'Slim', 'Solid', 'All Season'],
+      ['linen-coord-set', 'Linen', 'Short Sleeve', 'Casual', 'Relaxed', 'Solid', 'Summer'],
+      ['embroidered-chanderi-kurta-set', 'Silk Blend', 'Full Sleeve', 'Festive', 'Regular', 'Embroidered', 'All Season'],
+      ['tiered-maxi-dress', 'Cotton', 'Sleeveless', 'Casual', 'Relaxed', 'Floral', 'Summer'],
+      ['sequin-evening-gown', 'Georgette', 'Sleeveless', 'Party', 'Slim', 'Solid', 'Winter'],
+      ['smocked-crop-top', 'Cotton', 'Short Sleeve', 'Casual', 'Regular', 'Solid', 'Summer'],
+      ['palazzo-coord-set', 'Rayon', 'Short Sleeve', 'Work', 'Regular', 'Printed', 'Monsoon'],
+      ['velvet-lounge-set', 'Velvet', 'Full Sleeve', 'Lounge', 'Relaxed', 'Solid', 'Winter'],
+      ['anarkali-festive-kurta', 'Silk Blend', 'Full Sleeve', 'Festive', 'Regular', 'Embroidered', 'All Season'],
+      ['tailored-linen-shrug', 'Linen', 'Full Sleeve', 'Work', 'Slim', 'Solid', 'All Season'],
+      ['sculpting-active-set', 'Rayon', 'Sleeveless', 'Casual', 'Slim', 'Solid', 'All Season'],
+      ['handcrafted-leather-jutti', 'Rayon', 'Sleeveless', 'Festive', 'Regular', 'Embroidered', 'All Season'],
+      ['satin-cowl-slip-dress', 'Satin', 'Sleeveless', 'Party', 'Slim', 'Solid', 'Summer'],
+      ['handloom-chanderi-suit', 'Silk Blend', 'Full Sleeve', 'Festive', 'Regular', 'Embroidered', 'All Season'],
+      ['boho-printed-coord-set', 'Rayon', 'Short Sleeve', 'Casual', 'Regular', 'Printed', 'Monsoon'],
+      ['banarasi-zari-saree', 'Silk Blend', 'Sleeveless', 'Festive', 'Regular', 'Embroidered', 'All Season'],
+      ['chikankari-straight-kurti', 'Cotton', 'Full Sleeve', 'Casual', 'Regular', 'Embroidered', 'Summer'],
+      ];
+      for (const [slug, fabric, sleeve, occasion, fit, pattern, season] of attributeBackfill) {
+        await pool.query(
+          `UPDATE products SET fabric = ?, sleeve = ?, occasion = ?, fit = ?, pattern = ?, season = ?
+           WHERE slug = ? AND (fabric IS NULL OR fabric = '')`,
+          [fabric, sleeve, occasion, fit, pattern, season, slug]
+        );
+      }
     }
   } catch (err) {
     console.log('ℹ️ MySQL database products table check:', err.message);
@@ -408,6 +481,7 @@ export const createProduct = async (req, res) => {
     sizes, colors, stock, brand, product_code, base_sku,
     is_featured, is_new_arrival, is_online, is_offline, low_stock_threshold,
     variants, color_images, size_guide,
+    fabric, sleeve, occasion, fit, pattern, season,
   } = req.body;
 
   let primary_image = req.body.primary_image;
@@ -465,6 +539,8 @@ export const createProduct = async (req, res) => {
     color_images: parsedColorImages,
     size_guide: parsedSizeGuide,
     primary_image: primaryImg, hover_image: hoverImg,
+    fabric: fabric || '', sleeve: sleeve || '', occasion: occasion || '',
+    fit: fit || '', pattern: pattern || '', season: season || '',
   };
 
   inMemoryProductsStore.unshift(newProd);
@@ -475,8 +551,8 @@ export const createProduct = async (req, res) => {
       (title, slug, category_slug, price, original_price, discount, description, short_description,
        sizes, colors, primary_image, hover_image, stock, brand, product_code, base_sku,
        is_featured, is_new_arrival, is_online, is_offline, low_stock_threshold,
-       variants, color_images, size_guide)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       variants, color_images, size_guide, fabric, sleeve, occasion, fit, pattern, season)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         title, productSlug, category_slug || 'dresses',
         price, original_price || price, disc,
@@ -491,6 +567,8 @@ export const createProduct = async (req, res) => {
         JSON.stringify(parsedVariants),
         JSON.stringify(parsedColorImages),
         parsedSizeGuide ? JSON.stringify(parsedSizeGuide) : null,
+        fabric || '', sleeve || '', occasion || '',
+        fit || '', pattern || '', season || '',
       ]
     );
 
@@ -576,6 +654,8 @@ export const updateProduct = async (req, res) => {
       is_online: 'is_online', is_offline: 'is_offline', is_active: 'is_active',
       low_stock_threshold: 'low_stock_threshold',
       primary_image: 'primary_image', hover_image: 'hover_image',
+      fabric: 'fabric', sleeve: 'sleeve', occasion: 'occasion',
+      fit: 'fit', pattern: 'pattern', season: 'season',
     };
 
     for (const [key, col] of Object.entries(fieldMap)) {

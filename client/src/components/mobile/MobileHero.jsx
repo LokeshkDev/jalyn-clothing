@@ -46,16 +46,28 @@ export default function MobileHero() {
               </div>
 
               <div className="absolute inset-y-0 right-0 w-[55%]">
-                <img
-                  src={slide.image}
-                  alt={slide.alt}
-                  className="h-full w-full object-cover object-top"
-                  fetchPriority={index === 0 ? 'high' : 'auto'}
-                  loading={index === 0 ? 'eager' : 'lazy'}
-                  decoding={index === 0 ? 'sync' : 'async'}
-                  width="600"
-                  height="400"
-                />
+                <picture className="h-full w-full">
+                  <source
+                    type="image/avif"
+                    srcSet={`/images/home/hero/hero-slide-${index + 1}-480.avif 480w, /images/home/hero/hero-slide-${index + 1}-768.avif 768w`}
+                    sizes="(max-width: 640px) 55vw, 400px"
+                  />
+                  <source
+                    type="image/webp"
+                    srcSet={`/images/home/hero/hero-slide-${index + 1}-480.webp 480w, /images/home/hero/hero-slide-${index + 1}-768.webp 768w`}
+                    sizes="(max-width: 640px) 55vw, 400px"
+                  />
+                  <img
+                    src={slide.image}
+                    alt={slide.alt}
+                    className="h-full w-full object-cover object-top"
+                    fetchPriority={index === 0 ? 'high' : 'auto'}
+                    loading={index === 0 ? 'eager' : 'lazy'}
+                    decoding={index === 0 ? 'sync' : 'async'}
+                    width="480"
+                    height="320"
+                  />
+                </picture>
                 <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#EFE6E0] to-transparent" />
               </div>
             </div>

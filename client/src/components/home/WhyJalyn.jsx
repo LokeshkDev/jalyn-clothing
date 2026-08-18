@@ -26,26 +26,26 @@ const VALUES = [
 export default function WhyJalyn() {
   return (
     <motion.section
-      className="bg-white pt-8 md:pt-16 mb-[15px] lg:mb-5"
+      className="bg-white py-8 md:py-12 mb-6"
       aria-labelledby="why-heading"
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="container-luxury max-w-7xl px-4 sm:px-6">
         <motion.h2
           id="why-heading"
-          className="mb-6 text-center font-display text-xl font-medium tracking-tight text-[#4A2F3C] sm:text-2xl md:mb-12 md:text-4xl"
+          className="mb-8 text-center font-display text-2xl font-medium tracking-tight text-[#4A2F3C] sm:text-3xl md:mb-10 md:text-4xl"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.55 }}
+          transition={{ duration: 0.5 }}
         >
           Fashion That Feels Like You
         </motion.h2>
 
-        <div className="grid grid-cols-4 gap-1.5 sm:gap-4 lg:gap-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 items-start text-center">
           {VALUES.map((item, i) => {
             const Icon = item.icon
             return (

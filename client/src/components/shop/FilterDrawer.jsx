@@ -75,8 +75,9 @@ export default function FilterDrawer({
 
             {/* Drawer Body - Guaranteed Direct Scroll Containment */}
             <div
+              data-lenis-prevent
               onWheel={(e) => e.stopPropagation()}
-              className="flex-1 overflow-y-auto p-6 theme-scrollbar min-h-0 overscroll-contain touch-pan-y pointer-events-auto"
+              className="flex-1 overflow-y-auto p-6 theme-scrollbar min-h-0 overscroll-contain touch-pan-y pointer-events-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
               <FilterSidebar
                 filters={filters}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Check } from 'lucide-react'
 import FilterSection from '@/components/shop/FilterSection'
 import PriceSlider from '@/components/shop/PriceSlider'
@@ -9,13 +9,14 @@ import {
   SHOP_FILTER_OPTIONS,
   PRICE_BOUNDS,
 } from '@/constants/shopProducts'
+import api from '@/services/api'
 import { cn } from '@/lib/utils'
 
 const DEFAULT_OPEN = {
-  categories: true,
-  price: true,
-  sizes: true,
-  colors: true,
+  categories: false,
+  price: false,
+  sizes: false,
+  colors: false,
   availability: false,
   discount: false,
   sleeve: false,
@@ -30,12 +31,28 @@ const DEFAULT_OPEN = {
 
 export default function FilterSidebar({ filters, onChange, onClear, className }) {
   const [open, setOpen] = useState(DEFAULT_OPEN)
+  const [customOptions, setCustomOptions] = useState({})
+
+  useEffect(() => {
+    api
+      .get('/filter-options')
+      .then((res) => setCustomOptions(res.data?.options || {}))
+      .catch(() => setCustomOptions({}))
+  }, [])
+
+  const mergedOptions = useMemo(() => {
+    const merged = {}
+    for (const [key, options] of Object.entries(SHOP_FILTER_OPTIONS)) {
+      merged[key] = [...new Set([...options, ...(customOptions[key] || [])])]
+    }
+    return merged
+  }, [customOptions])
 
   const toggleOpen = (key) =>
     setOpen((prev) => ({ ...prev, [key]: !prev[key] }))
 
   const toggleArray = (key, value) => {
-    const list = filters[key]
+    const list = filters[key] || []
     const next = list.includes(value)
       ? list.filter((v) => v !== value)
       : [...list, value]
@@ -44,8 +61,9 @@ export default function FilterSidebar({ filters, onChange, onClear, className })
 
   return (
     <div
+      data-lenis-prevent
       className={cn(
-        'rounded-2xl bg-white p-5 shadow-card ring-1 ring-primary/8',
+        'rounded-[6px] bg-white p-4 shadow-sm border border-primary/10 overflow-y-auto max-h-[calc(100vh-6.5rem)] pr-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         className,
       )}
       aria-label="Product filters"
@@ -141,7 +159,7 @@ export default function FilterSidebar({ filters, onChange, onClear, className })
         />
       </FilterSection>
 
-      {Object.entries(SHOP_FILTER_OPTIONS).map(([key, options]) => (
+      {Object.entries(mergedOptions).map(([key, options]) => (
         <FilterSection
           key={key}
           title={

@@ -238,6 +238,12 @@ input:-webkit-autofill:focus {
   }
 }
 
+@keyframes loader-progress {
+  0% { width: 0%; }
+  55% { width: 72%; }
+  100% { width: 100%; }
+}
+
 .swiper-pagination-bullet {
   width: 8px !important;
   height: 8px !important;

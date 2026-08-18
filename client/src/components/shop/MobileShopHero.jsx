@@ -5,45 +5,39 @@ import { motion } from 'framer-motion'
 export default memo(function MobileShopHero() {
   return (
     <motion.section
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="mx-4 my-4 relative overflow-hidden rounded-[18px] bg-gradient-to-r from-[#F7EDE8] via-[#F6E8EF] to-[#EFD7E3] p-5 sm:p-6"
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className="relative w-full bg-cover bg-center flex flex-col justify-center py-6 px-4 mb-4 overflow-hidden"
+      style={{ backgroundImage: `url('/images/home/hero/hero-slide-1.webp')` }}
       aria-labelledby="mobile-shop-heading"
     >
-      <div className="flex items-center justify-between gap-4">
-        {/* Left Text Box */}
-        <div className="z-10 max-w-[62%]">
-          <nav aria-label="Breadcrumb" className="mb-1.5 flex items-center gap-1.5 text-xs text-ink-muted">
-            <Link to="/" className="transition hover:text-primary">
-              Home
-            </Link>
-            <span aria-hidden className="text-primary/40 text-[10px]">
-              &gt;
-            </span>
-            <span className="font-semibold text-primary">Shop</span>
-          </nav>
+      {/* Dark linear gradient mask overlay for pristine legibility */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#2A1A22]/90 via-[#2A1A22]/65 to-transparent z-[1]" />
 
+      {/* Content Container */}
+      <div className="relative z-10 container-luxury max-w-7xl px-2 w-full space-y-2">
+        {/* Top Row: Breadcrumbs over image */}
+        <nav aria-label="Breadcrumb" className="text-xs font-semibold text-rose-blush/80 flex items-center gap-1.5">
+          <Link to="/" className="hover:text-white transition">Home</Link>
+          <span className="text-white/30">/</span>
+          <span className="text-white font-bold">Shop</span>
+        </nav>
+
+        {/* Middle Row: Content */}
+        <div className="max-w-2xl">
+          <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-rose-blush mb-1 block">
+            Luxury Collection
+          </span>
           <h1
             id="mobile-shop-heading"
-            className="font-display text-3xl font-medium tracking-tight text-ink sm:text-4xl"
+            className="font-heading text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight mb-1 drop-shadow-md"
           >
-            Shop
+            All Products
           </h1>
-
-          <p className="mt-1 text-xs text-ink-muted leading-relaxed sm:text-sm">
-            Discover styles that are made for you.
+          <p className="text-xs sm:text-sm text-rose-light/95 leading-relaxed drop-shadow-sm max-w-sm">
+            Discover timeless silhouettes and luxury styles thoughtfully crafted for you.
           </p>
-        </div>
-
-        {/* Right Fashion Image */}
-        <div className="relative aspect-[4/5] w-[34%] shrink-0 overflow-hidden rounded-xl">
-          <img
-            src="https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?auto=format&fit=crop&w=600&q=80"
-            alt="JALYN Fashion Collection"
-            loading="eager"
-            className="h-full w-full object-cover object-top"
-          />
         </div>
       </div>
     </motion.section>

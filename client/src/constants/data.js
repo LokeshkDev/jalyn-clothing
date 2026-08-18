@@ -133,7 +133,6 @@ export const NAV_LINKS = [
       { label: 'Nightwear Combo', href: '/shop?category=combo-nightwear' },
     ],
   },
-  { label: 'Track Your Order', href: '/track-order' },
   { label: 'About Us', href: '/about' },
 ]
 
@@ -168,8 +167,8 @@ export const HERO_SLIDES = [
     highlight: 'Comfort',
     subtitle:
       'Elevate your everyday wardrobe with our luxury silhouettes designed for breathability and grace.',
-    image:
-      'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1080&q=70&fm=webp',
+    image: '/images/home/hero/hero-slide-1.webp',
+    imageAvif: '/images/home/hero/hero-slide-1.avif',
     alt: 'Woman wearing pastel luxury dress',
     cta: 'Explore Collection',
     href: '/shop',
@@ -181,8 +180,8 @@ export const HERO_SLIDES = [
     highlight: 'Ethnic Wear',
     subtitle:
       'Artisanal ethnic wear featuring intricate embroidery, royal silk blends, and contemporary drapes.',
-    image:
-      'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=1080&q=70&fm=webp',
+    image: '/images/home/hero/hero-slide-2.webp',
+    imageAvif: '/images/home/hero/hero-slide-2.avif',
     alt: 'Ethnic wear showcase',
     cta: 'Shop Ethnic',
     href: '/shop?category=ethnic',
@@ -194,8 +193,8 @@ export const HERO_SLIDES = [
     highlight: 'Co-ords & Tops',
     subtitle:
       'Discover versatile two-piece co-ords and statement tops tailored for effortless daily elegance.',
-    image:
-      'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1080&q=70&fm=webp',
+    image: '/images/home/hero/hero-slide-3.webp',
+    imageAvif: '/images/home/hero/hero-slide-3.avif',
     alt: 'Model in stylish co-ord set',
     cta: 'View Co-ords',
     href: '/shop?category=coords',
@@ -207,48 +206,42 @@ export const COLLECTIONS = [
     id: 'dresses',
     title: 'Dresses & Gowns',
     subtitle: '28+ Items',
-    image:
-      'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80',
+    image: '/images/home/categories/dresses.webp',
     slug: 'dresses',
   },
   {
     id: 'ethnic',
     title: 'Ethnic Wear',
     subtitle: '22+ Items',
-    image:
-      'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
+    image: '/images/home/categories/ethnic.webp',
     slug: 'ethnic',
   },
   {
     id: 'coords',
     title: 'Co-ord Sets',
     subtitle: '18+ Items',
-    image:
-      'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80',
+    image: '/images/home/categories/coords.webp',
     slug: 'coords',
   },
   {
     id: 'tops',
     title: 'Tops & Blouses',
     subtitle: '20+ Items',
-    image:
-      'https://images.unsplash.com/photo-1564257631407-4deb1f99d992?auto=format&fit=crop&w=800&q=80',
+    image: '/images/home/categories/tops.webp',
     slug: 'tops',
   },
   {
     id: 'loungewear',
     title: 'Lounge & Sleepwear',
     subtitle: '10+ Items',
-    image:
-      'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=800&q=80',
+    image: '/images/home/categories/loungewear.webp',
     slug: 'loungewear',
   },
   {
     id: 'sarees',
     title: 'Designer Sarees',
     subtitle: '20+ Items',
-    image:
-      'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
+    image: '/images/home/categories/sarees.webp',
     slug: 'sarees',
   },
 ]
@@ -264,14 +257,12 @@ export const PRODUCTS = [
     reviews: 48,
     badges: ['best-seller', 'new'],
     category: 'dresses',
-    image:
-      'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80',
+    image: '/images/products/floral-midi-dress.webp',
     images: {
-      primary:
-        'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80',
+      primary: '/images/products/floral-midi-dress.webp',
       gallery: [
-        'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80',
+        '/images/products/floral-midi-dress.webp',
+        '/images/products/floral-midi-dress-hover.webp',
       ],
     },
     slug: 'rose-floral-silk-maxi-dress',
@@ -283,48 +274,42 @@ export const PRODUCTS = [
 export const INSTAGRAM_POSTS = [
   {
     id: 1,
-    image:
-      'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80',
+    image: '/images/home/instagram/instagram-1.webp',
     likes: '1.2k',
     comments: '42',
     link: 'https://www.instagram.com/jalyn.apparels/',
   },
   {
     id: 2,
-    image:
-      'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=600&q=80',
+    image: '/images/home/instagram/instagram-2.webp',
     likes: '2.4k',
     comments: '89',
     link: 'https://www.instagram.com/jalyn.apparels/',
   },
   {
     id: 3,
-    image:
-      'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=600&q=80',
+    image: '/images/home/instagram/instagram-3.webp',
     likes: '1.8k',
     comments: '63',
     link: 'https://www.instagram.com/jalyn.apparels/',
   },
   {
     id: 4,
-    image:
-      'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=600&q=80',
+    image: '/images/home/instagram/instagram-4.webp',
     likes: '3.1k',
     comments: '112',
     link: 'https://www.instagram.com/jalyn.apparels/',
   },
   {
     id: 5,
-    image:
-      'https://images.unsplash.com/photo-1564257631407-4deb1f99d992?auto=format&fit=crop&w=600&q=80',
+    image: '/images/home/instagram/instagram-5.webp',
     likes: '1.5k',
     comments: '37',
     link: 'https://www.instagram.com/jalyn.apparels/',
   },
   {
     id: 6,
-    image:
-      'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=600&q=80',
+    image: '/images/home/instagram/instagram-6.webp',
     likes: '2.9k',
     comments: '95',
     link: 'https://www.instagram.com/jalyn.apparels/',
@@ -336,15 +321,9 @@ export const FOOTER_LINKS = {
     { label: 'Contact Us', href: '/contact' },
     { label: 'Shipping & Delivery', href: '/shipping-delivery' },
     { label: 'Returns & Exchanges', href: '/returns-exchanges' },
-    { label: 'Track Order', href: '/track-order' },
-    { label: 'Size Guide', href: '/size-guide' },
   ],
   column2: [
     { label: 'Our Story', href: '/about' },
-    { label: 'Craftsmanship', href: '/craftsmanship' },
-    { label: 'Sustainability', href: '/sustainability' },
-    { label: 'Press & Media', href: '/press-media' },
-    { label: 'Careers', href: '/careers' },
   ],
   column3: [
     { label: 'Privacy Policy', href: '/privacy-policy' },

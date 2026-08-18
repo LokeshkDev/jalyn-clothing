@@ -1,12 +1,12 @@
 import { memo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, ShoppingBag, Star } from 'lucide-react'
+import { Eye, ShoppingBag, Star, Loader2, Check } from 'lucide-react'
 import { motion } from 'framer-motion'
 import ProductBadge from '@/components/shop/ProductBadge'
 import WishlistButton from '@/components/shop/WishlistButton'
 import { SHOP_COLORS } from '@/constants/shopProducts'
 import { cn, formatINR } from '@/lib/utils'
-import { useCartStore } from '@/store'
+import { useAddToBag } from '@/hooks/useAddToBag'
 
 function toCartProduct(product) {
   const primaryImg =
@@ -57,7 +57,7 @@ function getColorImage(product, colorId, idx) {
 function ShopProductCard({ product, listView = false, onQuickView }) {
   const [hovered, setHovered] = useState(false)
   const [selectedColor, setSelectedColor] = useState(null)
-  const addItem = useCartStore((s) => s.addItem)
+  const { adding, added, addToBag } = useAddToBag()
   const colorMap = Object.fromEntries(SHOP_COLORS.map((c) => [c.id, c]))
 
   if (!product) return null
@@ -93,20 +93,22 @@ function ShopProductCard({ product, listView = false, onQuickView }) {
         initial={{ opacity: 0, y: 16 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="flex gap-4 rounded-2xl bg-white p-3 shadow-soft ring-1 ring-primary/5 sm:gap-5 sm:p-4"
+        className="flex gap-4 rounded-[6px] bg-white p-3 shadow-soft ring-1 ring-primary/5 sm:gap-5 sm:p-4"
       >
         <Link
           to={`/products/${product.slug || product.id}`}
-          className="relative aspect-[4/5] w-28 shrink-0 overflow-hidden rounded-[18px] sm:w-36"
+          className="relative aspect-[4/5] w-28 shrink-0 overflow-hidden rounded-[6px] sm:w-36"
         >
           <img
             src={displayImg}
             alt={title}
             loading="lazy"
+            decoding="async"
+            width="144"
+            height="180"
             className="h-full w-full object-cover"
             onError={(e) => {
-              e.currentTarget.src =
-                'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+              e.currentTarget.src = '/images/products/floral-midi-dress.webp'
             }}
           />
         </Link>
@@ -118,41 +120,45 @@ function ShopProductCard({ product, listView = false, onQuickView }) {
               </p>
               <Link
                 to={`/products/${product.slug || product.id}`}
-                className="font-heading text-lg font-medium text-ink hover:text-primary"
+                className="font-display text-base font-medium text-ink transition hover:text-primary sm:text-lg line-clamp-1"
               >
                 {title}
               </Link>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="font-sans text-sm font-semibold text-primary sm:text-base">
+                  {formatINR(product.price)}
+                </span>
+                {originalPrice > product.price && (
+                  <span className="text-xs text-ink-muted line-through">
+                    {formatINR(originalPrice)}
+                  </span>
+                )}
+                {product.discount > 0 && (
+                  <span className="rounded bg-rose-light px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                    {product.discount}% OFF
+                  </span>
+                )}
+              </div>
             </div>
-            <WishlistButton id={product.id} />
+            <WishlistButton id={product.id} className="relative top-0 right-0 shrink-0" />
           </div>
 
-          <div className="mt-2 flex items-center gap-1.5 text-xs text-ink-muted">
-            <Star className="h-3.5 w-3.5 fill-primary text-primary" />
-            <span className="font-semibold text-ink">{rating}</span>
-            <span>({reviewsCount} reviews)</span>
-          </div>
-
-          <p className="mt-2 line-clamp-2 text-xs text-ink-muted">
-            {product.description}
+          <p className="mt-2 text-xs text-ink-muted line-clamp-2 sm:text-sm">
+            {product.description || 'Thoughtfully crafted with premium quality materials.'}
           </p>
 
-          <div className="mt-auto flex items-center justify-between pt-3">
-            <div className="flex items-baseline gap-2">
-              <span className="font-heading text-lg font-semibold text-primary">
-                {formatINR(product.price)}
-              </span>
-              {originalPrice > product.price && (
-                <span className="text-xs text-ink-muted line-through">
-                  {formatINR(originalPrice)}
-                </span>
-              )}
+          <div className="mt-auto flex items-center justify-between pt-3 border-t border-primary/5">
+            <div className="flex items-center gap-1 text-xs text-ink-muted">
+              <Star className="h-3.5 w-3.5 fill-primary text-primary" />
+              <span className="font-semibold text-ink">{rating}</span>
+              <span>({reviewsCount})</span>
             </div>
             <button
-              type="button"
-              onClick={() => addItem(toCartProduct(product))}
-              className="ml-auto rounded-lg bg-primary px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-white"
+              onClick={() => onQuickView?.(product)}
+              className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary hover:text-white cursor-pointer"
             >
-              Add to Bag
+              <Eye className="h-3.5 w-3.5" />
+              <span>Quick View</span>
             </button>
           </div>
         </div>
@@ -166,16 +172,18 @@ function ShopProductCard({ product, listView = false, onQuickView }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div className="relative aspect-[4/5] overflow-hidden rounded-[18px] bg-rose-light/30 shadow-soft ring-1 ring-primary/5 transition duration-300 group-hover:shadow-lift">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[6px] bg-rose-light/30 shadow-soft ring-1 ring-primary/5 transition duration-300 group-hover:shadow-lift">
         <Link to={`/products/${product.slug || product.id}`} className="block h-full w-full">
           <img
             src={displayImg}
             alt={title}
             loading="lazy"
+            decoding="async"
+            width="320"
+            height="400"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
             onError={(e) => {
-              e.currentTarget.src =
-                'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+              e.currentTarget.src = '/images/products/floral-midi-dress.webp'
             }}
           />
         </Link>
@@ -208,7 +216,7 @@ function ShopProductCard({ product, listView = false, onQuickView }) {
           <button
             type="button"
             onClick={() => onQuickView?.(product)}
-            className="group/qb flex flex-1 items-center justify-center gap-2 rounded-xl bg-white hover:bg-primary text-ink hover:text-white py-2.5 px-3 text-xs font-bold uppercase tracking-wider shadow-md backdrop-blur-sm transition-all duration-200 cursor-pointer"
+            className="group/qb flex flex-1 items-center justify-center gap-2 rounded-[6px] bg-white hover:bg-primary text-ink hover:text-white py-2.5 px-3 text-xs font-bold uppercase tracking-wider shadow-md backdrop-blur-sm transition-all duration-200 cursor-pointer"
             aria-label={`Quick view ${title}`}
           >
             <Eye className="h-4 w-4 text-primary group-hover/qb:text-white transition-colors" />
@@ -216,11 +224,21 @@ function ShopProductCard({ product, listView = false, onQuickView }) {
           </button>
           <button
             type="button"
-            onClick={() => addItem(toCartProduct(product))}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary hover:bg-primary-deep text-white shadow-md transition-all duration-200 active:scale-90 cursor-pointer"
+            onClick={() => addToBag(toCartProduct(product))}
+            disabled={adding}
+            className={cn(
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-[6px] text-white shadow-md transition-all duration-200 active:scale-90 cursor-pointer disabled:cursor-wait disabled:opacity-90',
+              added ? 'bg-emerald-600 hover:bg-emerald-600' : 'bg-primary hover:bg-primary-deep',
+            )}
             aria-label={`Add ${title} to bag`}
           >
-            <ShoppingBag className="h-4 w-4 text-white" strokeWidth={2} />
+            {adding ? (
+              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.5} />
+            ) : added ? (
+              <Check className="h-4 w-4" strokeWidth={2.5} />
+            ) : (
+              <ShoppingBag className="h-4 w-4 text-white" strokeWidth={2} />
+            )}
           </button>
         </div>
       </div>

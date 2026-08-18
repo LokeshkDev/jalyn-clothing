@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Heart, Eye, ShoppingBag, Star } from 'lucide-react'
+import { Heart, Eye, ShoppingBag, Star, Loader2, Check } from 'lucide-react'
 import { cn, formatINR } from '@/lib/utils'
-import { useCartStore, useWishlistStore } from '@/store'
+import { useWishlistStore } from '@/store'
+import { useAddToBag } from '@/hooks/useAddToBag'
 
 import WishlistButton from '@/components/shop/WishlistButton'
 
 export default function ProductCard({ product, onQuickView }) {
   const [hovered, setHovered] = useState(false)
-  const addItem = useCartStore((s) => s.addItem)
+  const { adding, added, addToBag } = useAddToBag()
 
   if (!product) return null
 
@@ -18,7 +19,7 @@ export default function ProductCard({ product, onQuickView }) {
     product.image ||
     product.primary_image ||
     product.images?.primary ||
-    'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+    '/images/products/floral-midi-dress.webp'
   const hoverImg =
     product.hoverImage ||
     product.hover_image ||
@@ -36,17 +37,18 @@ export default function ProductCard({ product, onQuickView }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-rose-light/40 ring-1 ring-primary/5">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[6px] bg-rose-light/40 ring-1 ring-primary/5">
         <Link to={href} className="block h-full w-full">
           <img
             src={hovered && hoverImg ? hoverImg : primaryImg}
             alt={title}
             loading="lazy"
             decoding="async"
+            width="320"
+            height="400"
             className="h-full w-full object-cover transition-transform duration-700 ease-luxury group-hover:scale-110"
             onError={(e) => {
-              e.currentTarget.src =
-                'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+              e.currentTarget.src = '/images/products/floral-midi-dress.webp'
             }}
           />
         </Link>
@@ -74,7 +76,7 @@ export default function ProductCard({ product, onQuickView }) {
               e.stopPropagation()
               if (onQuickView) onQuickView(product)
             }}
-            className="group/qb flex flex-1 items-center justify-center gap-2 rounded-xl bg-white hover:bg-primary text-ink hover:text-white py-2.5 px-3 text-xs font-bold uppercase tracking-wider shadow-md backdrop-blur-sm transition-all duration-200 cursor-pointer"
+            className="group/qb flex flex-1 items-center justify-center gap-2 rounded-[6px] bg-white hover:bg-primary text-ink hover:text-white py-2.5 px-3 text-xs font-bold uppercase tracking-wider shadow-md backdrop-blur-sm transition-all duration-200 cursor-pointer"
             aria-label={`Quick view ${title}`}
           >
             <Eye className="h-4 w-4 text-primary group-hover/qb:text-white transition-colors" />
@@ -85,7 +87,7 @@ export default function ProductCard({ product, onQuickView }) {
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-              addItem({
+              addToBag({
                 id: product.id,
                 name: title,
                 price: price,
@@ -93,10 +95,20 @@ export default function ProductCard({ product, onQuickView }) {
                 href: href,
               })
             }}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary hover:bg-primary-deep text-white shadow-md transition-all duration-200 active:scale-90 cursor-pointer"
+            disabled={adding}
+            className={cn(
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-[6px] text-white shadow-md transition-all duration-200 active:scale-90 cursor-pointer disabled:cursor-wait disabled:opacity-90',
+              added ? 'bg-emerald-600 hover:bg-emerald-600' : 'bg-primary hover:bg-primary-deep',
+            )}
             aria-label={`Add ${title} to bag`}
           >
-            <ShoppingBag className="h-4 w-4 text-white" strokeWidth={2} />
+            {adding ? (
+              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.5} />
+            ) : added ? (
+              <Check className="h-4 w-4" strokeWidth={2.5} />
+            ) : (
+              <ShoppingBag className="h-4 w-4 text-white" strokeWidth={2} />
+            )}
           </button>
         </div>
       </div>

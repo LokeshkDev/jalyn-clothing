@@ -3,8 +3,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import MainLayout from '@/components/layout/MainLayout'
 import HomePage from '@/pages/HomePage'
-import loaderGif from '@/assets/loader-logo.gif'
-
 // Lazy loaded secondary pages for minimum initial bundle size & green LCP
 const Shop = lazy(() => import('@/pages/Shop'))
 const ProductDetails = lazy(() => import('@/pages/ProductDetails'))
@@ -37,36 +35,45 @@ const Returns = lazy(() => import('@/pages/profile/Returns'))
 const HelpSupport = lazy(() => import('@/pages/profile/HelpSupport'))
 
 import { useSmoothScroll } from '@/hooks/useSmoothScroll'
+import loginLogo from '@/assets/jalyn-logo-login.png'
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 60_000, retry: 1 },
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
   },
 })
 
 function PageLoader() {
   return (
-    <div className="fixed inset-0 z-[9999] bg-[#FFF6F9] flex flex-col items-center justify-center">
-      <img src={loaderGif} alt="Loading Jalyn..." className="h-48 w-auto object-contain" />
+    <div className="fixed inset-0 z-[9999] bg-[#FFF6F9] flex flex-col items-center justify-center pointer-events-none">
+      <div className="flex flex-col items-center gap-7">
+        <img
+          src={loginLogo}
+          alt="JALYN — Style meets comfort"
+          className="w-52 object-contain animate-floatBloom sm:w-72"
+          width={288}
+          height={288}
+        />
+        <div className="w-52 sm:w-72">
+          <div className="h-1 overflow-hidden rounded-full bg-rose-light">
+            <div className="h-full rounded-full bg-gradient-to-r from-primary-soft via-primary to-primary-deep animate-[loader-progress_2.2s_ease-in-out_infinite]" />
+          </div>
+          <p className="mt-3 text-center font-label text-[10px] font-semibold uppercase tracking-[0.35em] text-primary/70">
+            Loading...
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
 
 function AppRoutes() {
   useSmoothScroll()
-
-  const [initialLoading, setInitialLoading] = useState(true)
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setInitialLoading(false)
-    }, 1500)
-    return () => clearTimeout(timer)
-  }, [])
-
-  if (initialLoading) {
-    return <PageLoader />
-  }
 
   return (
     <Suspense fallback={<PageLoader />}>
@@ -106,13 +113,6 @@ function AppRoutes() {
           <Route path="shipping-policy" element={<PolicyPage initialTab="shipping-delivery" />} />
           <Route path="returns-exchanges" element={<PolicyPage initialTab="returns-exchanges" />} />
           <Route path="return-policy" element={<PolicyPage initialTab="returns-exchanges" />} />
-          <Route path="track-order" element={<PolicyPage initialTab="track-order" />} />
-          <Route path="size-guide" element={<PolicyPage initialTab="size-guide" />} />
-          <Route path="craftsmanship" element={<PolicyPage initialTab="craftsmanship" />} />
-          <Route path="sustainability" element={<PolicyPage initialTab="sustainability" />} />
-          <Route path="press-media" element={<PolicyPage initialTab="press-media" />} />
-          <Route path="press" element={<PolicyPage initialTab="press-media" />} />
-          <Route path="careers" element={<PolicyPage initialTab="careers" />} />
           <Route path="privacy-policy" element={<PolicyPage initialTab="privacy-policy" />} />
           <Route path="terms-of-service" element={<PolicyPage initialTab="terms-of-service" />} />
           <Route path="terms-and-conditions" element={<PolicyPage initialTab="terms-of-service" />} />

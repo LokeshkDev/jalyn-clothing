@@ -136,8 +136,8 @@ export default function ProductDetails() {
     const list = [primaryImg]
     if (hoverImg && hoverImg !== primaryImg) list.push(hoverImg)
     list.push(
-      'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?auto=format&fit=crop&w=800&q=80',
+      '/images/products/blush-pink-coord.webp',
+      '/images/products/blush-pink-coord-hover.webp',
     )
     return list
   }, [product, selectedColor])

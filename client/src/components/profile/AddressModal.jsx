@@ -45,7 +45,12 @@ export default function AddressModal({ isOpen, onClose, onSave, addressToEdit })
   const validate = () => {
     const errs = {}
     if (!formData.name.trim()) errs.name = 'Full name is required'
-    if (!formData.phone.trim()) errs.phone = 'Mobile number is required'
+    const cleanPhone = (formData.phone || '').replace(/\D/g, '')
+    if (!cleanPhone) {
+      errs.phone = 'Mobile number is required'
+    } else if (cleanPhone.length < 10) {
+      errs.phone = 'Please enter a valid 10-digit mobile number'
+    }
     if (!formData.addressLine1.trim()) errs.addressLine1 = 'Address line 1 is required'
     if (!formData.city.trim()) errs.city = 'City is required'
     if (!formData.state.trim()) errs.state = 'State is required'

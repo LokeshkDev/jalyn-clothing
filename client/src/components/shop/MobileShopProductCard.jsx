@@ -44,7 +44,7 @@ function MobileShopProductCard({ product }) {
     product.images?.primary ||
     product.primary_image ||
     product.image ||
-    'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+    '/images/products/floral-midi-dress.webp'
 
   const colorsList = Array.isArray(product.colors) ? product.colors : []
   const activeColorIdx = colorsList.findIndex((c) => {
@@ -63,6 +63,9 @@ function MobileShopProductCard({ product }) {
             src={displayImg}
             alt={product.title}
             loading="lazy"
+            decoding="async"
+            width="240"
+            height="300"
             className="h-full w-full object-cover object-top"
           />
         </Link>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -28,6 +28,12 @@ export default function ProfileLayout() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login', { state: { from: location.pathname } })
+    }
+  }, [user, navigate, location.pathname])
 
   const [editForm, setEditForm] = useState({
     firstName: user?.firstName || (user?.name ? user.name.split(' ')[0] : ''),

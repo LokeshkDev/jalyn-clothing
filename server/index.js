@@ -17,6 +17,8 @@ import couponRoutes from './routes/couponRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import barcodeRoutes from './routes/barcodeRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import filterOptionRoutes from './routes/filterOptionRoutes.js';
+import newsletterRoutes from './routes/newsletterRoutes.js';
 
 dotenv.config();
 
@@ -84,6 +86,8 @@ app.use('/api/coupons', couponRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/barcodes', barcodeRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/filter-options', filterOptionRoutes);
+app.use('/api/newsletter', newsletterRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

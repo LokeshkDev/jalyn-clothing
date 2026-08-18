@@ -10,12 +10,17 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronUp,
+  Instagram,
+  Facebook,
+  Twitter,
+  Youtube,
+  Navigation,
 } from 'lucide-react'
 import { SiWhatsapp } from 'react-icons/si'
 import { useCmsData } from '@/hooks/useCmsData'
 
 export default function ContactPage() {
-  const { contactPage } = useCmsData()
+  const { contactPage, footerSettings } = useCmsData()
 
   const [formData, setFormData] = useState({
     name: '',
@@ -26,7 +31,6 @@ export default function ContactPage() {
   })
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const [activeFaq, setActiveFaq] = useState(null)
 
   const heroTitle = contactPage?.hero_title || 'We’d Love to Hear From You'
   const heroSubtitle =
@@ -34,11 +38,13 @@ export default function ContactPage() {
     'Have a question about your order, sizing, or styling advice? Our customer care team is here to assist you.'
   const heroImage =
     contactPage?.hero_image ||
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1920&q=80'
+    '/images/branding/auth-portrait.webp'
 
-  const email = contactPage?.email || 'support@jalyn.in'
-  const phone = contactPage?.phone || '+91 98765 43210'
-  const whatsapp = contactPage?.whatsapp || '+91 98765 43210'
+  const email = contactPage?.email || footerSettings?.email || 'support@jalyn.in'
+  const phone = contactPage?.phone || footerSettings?.phone || '+91 98765 43210'
+  const whatsapp = contactPage?.whatsapp || footerSettings?.whatsapp || '+91 98765 43210'
+  const cleanWhatsapp = whatsapp.replace(/\D/g, '')
+
   const address =
     contactPage?.address ||
     'Jalyn Fashion Studio, 42 Luxury Boulevard, Fashion District, Mumbai, MH 400001, India'
@@ -46,6 +52,14 @@ export default function ContactPage() {
   const mapUrl =
     contactPage?.google_maps_url ||
     'https://maps.google.com/maps?q=Mumbai,Maharashtra&t=&z=13&ie=UTF8&iwloc=&output=embed'
+
+  const socialLinks = [
+    { Icon: Instagram, label: 'Instagram', href: footerSettings?.instagram_link || 'https://www.instagram.com/jalyn.apparels/' },
+    { Icon: Facebook, label: 'Facebook', href: footerSettings?.facebook_link || 'https://facebook.com/jalyn.apparels' },
+    { Icon: SiWhatsapp, label: 'WhatsApp', href: `https://wa.me/${cleanWhatsapp}` },
+    { Icon: Twitter, label: 'Twitter', href: footerSettings?.twitter_link || '' },
+    { Icon: Youtube, label: 'YouTube', href: footerSettings?.youtube_link || '' },
+  ].filter((s) => s.href)
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -60,24 +74,27 @@ export default function ContactPage() {
     }, 1000)
   }
 
-  const faqs = [
-    {
-      q: 'How long will delivery take for my order?',
-      a: 'Standard shipping takes 3 to 5 business days across major metro cities in India, and 5 to 7 business days for other tier-2 & tier-3 locations.',
-    },
-    {
-      q: 'What is your returns and exchange policy?',
-      a: 'We offer a hassle-free 7-day return and exchange policy from the date of delivery. Items must be unworn, unwashed, and have original tags intact.',
-    },
-    {
-      q: 'How do I choose the correct size?',
-      a: 'Please refer to our Size Guide on product pages or footer for exact body measurements. If you are between sizes, we recommend opting for the larger size for a relaxed fit.',
-    },
-    {
-      q: 'Can I request custom alterations?',
-      a: 'Yes! For select ethnic collections and evening gowns, custom sizing & length adjustments can be requested by reaching out to our WhatsApp support team.',
-    },
-  ]
+  const faqs =
+    contactPage?.faqs?.length
+      ? contactPage.faqs
+      : [
+          {
+            q: 'How long will delivery take for my order?',
+            a: 'Standard shipping takes 3 to 5 business days across major metro cities in India, and 5 to 7 business days for other tier-2 & tier-3 locations.',
+          },
+          {
+            q: 'What is your returns and exchange policy?',
+            a: 'We offer a hassle-free 7-day return and exchange policy from the date of delivery. Items must be unworn, unwashed, and have original tags intact.',
+          },
+          {
+            q: 'How do I choose the correct size?',
+            a: 'Please refer to our Size Guide on product pages or footer for exact body measurements. If you are between sizes, we recommend opting for the larger size for a relaxed fit.',
+          },
+          {
+            q: 'Can I request custom alterations?',
+            a: 'Yes! For select ethnic collections and evening gowns, custom sizing & length adjustments can be requested by reaching out to our WhatsApp support team.',
+          },
+        ]
 
   return (
     <div className="bg-[#FAF7F5] min-h-screen text-[#2D2424] font-sans">
@@ -147,9 +164,28 @@ export default function ContactPage() {
                 </div>
               </div>
 
+              {/* WhatsApp Card */}
+              <div className="p-6 rounded-[6px] bg-emerald-50/50 border border-emerald-200 shadow-xs flex items-start gap-4">
+                <div className="p-3.5 rounded-[6px] bg-[#25D366]/20 text-[#25D366] shrink-0">
+                  <SiWhatsapp className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-800">WhatsApp Support</h4>
+                  <a
+                    href={`https://wa.me/${cleanWhatsapp}?text=Hi%20JALYN%2C%20I%20have%20an%20inquiry.`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-base font-semibold text-[#2C1C24] hover:text-[#25D366] transition mt-0.5 block"
+                  >
+                    {whatsapp}
+                  </a>
+                  <p className="text-xs text-emerald-700 mt-1">Instant stylist chat (10:00 AM - 7:00 PM IST)</p>
+                </div>
+              </div>
+
               {/* Address Card */}
-              <div className="p-6 rounded-2xl bg-white border border-[#EFE8E2] shadow-sm flex items-start gap-4">
-                <div className="p-3.5 rounded-xl bg-[#FAF0E6] text-[#C28E5C] shrink-0">
+              <div className="p-6 rounded-[6px] bg-white border border-[#EFE8E2] shadow-xs flex items-start gap-4">
+                <div className="p-3.5 rounded-[6px] bg-[#FAF0E6] text-[#C28E5C] shrink-0">
                   <MapPin className="w-5 h-5" />
                 </div>
                 <div>
@@ -161,28 +197,55 @@ export default function ContactPage() {
               </div>
             </div>
 
-            {/* WhatsApp Quick Action */}
-            <a
-              href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center justify-center gap-3 w-full bg-[#25D366] hover:bg-[#20bd5a] text-white p-4 rounded-2xl font-medium text-sm transition-all shadow-md hover:shadow-lg"
-            >
-              <SiWhatsapp className="w-5 h-5" />
-              Chat on WhatsApp Support
-            </a>
+            {/* Social Media Icons Bar */}
+            {socialLinks.length > 0 && (
+              <div className="p-5 rounded-[6px] bg-white border border-[#EFE8E2] shadow-xs space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                  Follow Us On Social Media
+                </h4>
+                <div className="flex items-center gap-3">
+                  {socialLinks.map(({ Icon, label, href }) => (
+                    <a
+                      key={label}
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={label}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FAF0E6] text-[#C28E5C] hover:bg-[#2C1C24] hover:text-white transition shadow-xs"
+                    >
+                      <Icon className="h-4.5 w-4.5" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
-            {/* Google Maps Preview */}
-            <div className="rounded-2xl overflow-hidden border border-[#EFE8E2] shadow-sm h-52 bg-white">
-              <iframe
-                title="JALYN Location Map"
-                src={mapUrl}
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen=""
-                loading="lazy"
-              />
+            {/* Google Maps Location Preview */}
+            <div className="rounded-[6px] overflow-hidden border border-[#EFE8E2] shadow-xs bg-white space-y-2 p-3">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#2C1C24] flex items-center gap-1.5">
+                  <Navigation className="w-3.5 h-3.5 text-[#C28E5C]" /> Store Location Map
+                </span>
+                <a
+                  href={`https://maps.google.com/?q=${encodeURIComponent(address)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-semibold text-[#C28E5C] hover:underline"
+                >
+                  Get Directions →
+                </a>
+              </div>
+              <div className="h-56 rounded-[4px] overflow-hidden border border-[#EFE8E2]">
+                <iframe
+                  title="JALYN Location Map"
+                  src={mapUrl}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen=""
+                  loading="lazy"
+                />
+              </div>
             </div>
           </div>
 

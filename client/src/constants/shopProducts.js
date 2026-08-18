@@ -50,14 +50,12 @@ export const SHOP_PRODUCTS = [
     name: 'Floral Midi Dress',
     category: 'dresses',
     images: {
-      primary:
-        'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80',
-      hover:
-        'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=800&q=80',
+      primary: '/images/products/floral-midi-dress.webp',
+      hover: '/images/products/floral-midi-dress-hover.webp',
     },
-    image: 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80',
-    primary_image: 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=800&q=80',
+    image: '/images/products/floral-midi-dress.webp',
+    primary_image: '/images/products/floral-midi-dress.webp',
+    hover_image: '/images/products/floral-midi-dress-hover.webp',
     price: 1899,
     originalPrice: 2499,
     discount: 24,
@@ -100,14 +98,12 @@ export const SHOP_PRODUCTS = [
     name: 'Blush Pink Co-ord Set',
     category: 'coords',
     images: {
-      primary:
-        'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=80',
-      hover:
-        'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?auto=format&fit=crop&w=800&q=80',
+      primary: '/images/products/blush-pink-coord.webp',
+      hover: '/images/products/blush-pink-coord-hover.webp',
     },
-    image: 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=80',
-    primary_image: 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?auto=format&fit=crop&w=800&q=80',
+    image: '/images/products/blush-pink-coord.webp',
+    primary_image: '/images/products/blush-pink-coord.webp',
+    hover_image: '/images/products/blush-pink-coord-hover.webp',
     price: 2999,
     originalPrice: 3499,
     discount: 14,
@@ -133,14 +129,12 @@ export const SHOP_PRODUCTS = [
     name: 'Linen Wrap Top',
     category: 'tops',
     images: {
-      primary:
-        'https://images.unsplash.com/photo-1551163943-3f6fa0d40dc1?auto=format&fit=crop&w=800&q=80',
-      hover:
-        'https://images.unsplash.com/photo-1564257631407-4deb1f99d992?auto=format&fit=crop&w=800&q=80',
+      primary: '/images/products/linen-wrap-top.webp',
+      hover: '/images/products/linen-wrap-top-hover.webp',
     },
-    image: 'https://images.unsplash.com/photo-1551163943-3f6fa0d40dc1?auto=format&fit=crop&w=800&q=80',
-    primary_image: 'https://images.unsplash.com/photo-1551163943-3f6fa0d40dc1?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1564257631407-4deb1f99d992?auto=format&fit=crop&w=800&q=80',
+    image: '/images/products/linen-wrap-top.webp',
+    primary_image: '/images/products/linen-wrap-top.webp',
+    hover_image: '/images/products/linen-wrap-top-hover.webp',
     price: 1299,
     originalPrice: 1699,
     discount: 23,
@@ -166,14 +160,12 @@ export const SHOP_PRODUCTS = [
     name: 'Pleated Mauve Dress',
     category: 'dresses',
     images: {
-      primary:
-        'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?auto=format&fit=crop&w=800&q=80',
-      hover:
-        'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=80',
+      primary: '/images/products/trench-jacket.webp',
+      hover: '/images/products/blush-pink-coord.webp',
     },
-    image: 'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?auto=format&fit=crop&w=800&q=80',
-    primary_image: 'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=80',
+    image: '/images/products/trench-jacket.webp',
+    primary_image: '/images/products/trench-jacket.webp',
+    hover_image: '/images/products/blush-pink-coord.webp',
     price: 2499,
     originalPrice: 2999,
     discount: 16,
@@ -199,14 +191,12 @@ export const SHOP_PRODUCTS = [
     name: 'Embroidered Kurta Set',
     category: 'ethnic',
     images: {
-      primary:
-        'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-      hover:
-        'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
+      primary: '/images/products/silk-saree.webp',
+      hover: '/images/products/embroidered-kurti.webp',
     },
-    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-    primary_image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
+    image: '/images/products/silk-saree.webp',
+    primary_image: '/images/products/silk-saree.webp',
+    hover_image: '/images/products/embroidered-kurti.webp',
     price: 3499,
     originalPrice: 4299,
     discount: 18,
@@ -232,14 +222,12 @@ export const SHOP_PRODUCTS = [
     name: 'Velvet Embroidered Anarkali Set',
     category: 'kurtis',
     images: {
-      primary:
-        'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=800&q=80',
-      hover:
-        'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
+      primary: '/images/products/embroidered-kurti-hover.webp',
+      hover: '/images/products/silk-saree.webp',
     },
-    image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=800&q=80',
-    primary_image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
+    image: '/images/products/embroidered-kurti-hover.webp',
+    primary_image: '/images/products/embroidered-kurti-hover.webp',
+    hover_image: '/images/products/silk-saree.webp',
     price: 4999,
     originalPrice: 6499,
     discount: 23,
@@ -265,14 +253,12 @@ export const SHOP_PRODUCTS = [
     name: 'Organza Silk Floral Saree',
     category: 'sarees',
     images: {
-      primary:
-        'https://images.unsplash.com/photo-1610030469668-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-      hover:
-        'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
+      primary: '/images/products/silk-saree-hover.webp',
+      hover: '/images/products/embroidered-kurti.webp',
     },
-    image: 'https://images.unsplash.com/photo-1610030469668-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-    primary_image: 'https://images.unsplash.com/photo-1610030469668-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
+    image: '/images/products/silk-saree-hover.webp',
+    primary_image: '/images/products/silk-saree-hover.webp',
+    hover_image: '/images/products/embroidered-kurti.webp',
     price: 3999,
     originalPrice: 4999,
     discount: 20,
@@ -298,14 +284,12 @@ export const SHOP_PRODUCTS = [
     name: 'Tailored Linen Blazer Shrug',
     category: 'outerwear',
     images: {
-      primary:
-        'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=800&q=80',
-      hover:
-        'https://images.unsplash.com/photo-1551163943-3f6fa0d40dc1?auto=format&fit=crop&w=800&q=80',
+      primary: '/images/products/classic-trench.webp',
+      hover: '/images/products/linen-wrap-top.webp',
     },
-    image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=800&q=80',
-    primary_image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1551163943-3f6fa0d40dc1?auto=format&fit=crop&w=800&q=80',
+    image: '/images/products/classic-trench.webp',
+    primary_image: '/images/products/classic-trench.webp',
+    hover_image: '/images/products/linen-wrap-top.webp',
     price: 2799,
     originalPrice: 3499,
     discount: 20,
@@ -331,14 +315,12 @@ export const SHOP_PRODUCTS = [
     name: 'Sculpting Seamless Active Set',
     category: 'activewear',
     images: {
-      primary:
-        'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=800&q=80',
-      hover:
-        'https://images.unsplash.com/photo-1506152983158-b4a74a01c721?auto=format&fit=crop&w=800&q=80',
+      primary: '/images/products/activewear.webp',
+      hover: '/images/products/activewear-hover.webp',
     },
-    image: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=800&q=80',
-    primary_image: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1506152983158-b4a74a01c721?auto=format&fit=crop&w=800&q=80',
+    image: '/images/products/activewear.webp',
+    primary_image: '/images/products/activewear.webp',
+    hover_image: '/images/products/activewear-hover.webp',
     price: 2199,
     originalPrice: 2799,
     discount: 21,
@@ -364,14 +346,12 @@ export const SHOP_PRODUCTS = [
     name: 'Handcrafted Leather Juttis',
     category: 'footwear',
     images: {
-      primary:
-        'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=800&q=80',
-      hover:
-        'https://images.unsplash.com/photo-1560343090-f0409e92791a?auto=format&fit=crop&w=800&q=80',
+      primary: '/images/products/artisanal-mules.webp',
+      hover: '/images/products/artisanal-mules-hover.webp',
     },
-    image: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=800&q=80',
-    primary_image: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1560343090-f0409e92791a?auto=format&fit=crop&w=800&q=80',
+    image: '/images/products/artisanal-mules.webp',
+    primary_image: '/images/products/artisanal-mules.webp',
+    hover_image: '/images/products/artisanal-mules-hover.webp',
     price: 1899,
     originalPrice: 2299,
     discount: 17,
@@ -397,14 +377,12 @@ export const SHOP_PRODUCTS = [
     name: 'Satin Bias Cut Slip Dress',
     category: 'dresses',
     images: {
-      primary:
-        'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=800&q=80',
-      hover:
-        'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80',
+      primary: '/images/products/floral-midi-dress-hover.webp',
+      hover: '/images/products/floral-midi-dress.webp',
     },
-    image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=800&q=80',
-    primary_image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80',
+    image: '/images/products/floral-midi-dress-hover.webp',
+    primary_image: '/images/products/floral-midi-dress-hover.webp',
+    hover_image: '/images/products/floral-midi-dress.webp',
     price: 2299,
     originalPrice: 2899,
     discount: 20,
@@ -430,14 +408,12 @@ export const SHOP_PRODUCTS = [
     name: 'Handloom Chanderi Kurta Set',
     category: 'ethnic',
     images: {
-      primary:
-        'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
-      hover:
-        'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
+      primary: '/images/products/embroidered-kurti.webp',
+      hover: '/images/products/silk-saree.webp',
     },
-    image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
-    primary_image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
+    image: '/images/products/embroidered-kurti.webp',
+    primary_image: '/images/products/embroidered-kurti.webp',
+    hover_image: '/images/products/silk-saree.webp',
     price: 3699,
     originalPrice: 4499,
     discount: 17,

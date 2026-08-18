@@ -88,15 +88,15 @@ export default function WishlistPage() {
       </div>
 
       {/* Main Body */}
-      <div className="container-luxury max-w-7xl px-4 sm:px-6 pt-8">
+      <div className="container-luxury w-full max-w-7xl px-3 sm:px-6 pt-4 sm:pt-8">
         {wishlistedProducts.length === 0 ? (
-          /* LUXURY EMPTY STATE */
-          <div className="max-w-xl mx-auto my-8 p-8 sm:p-12 text-center rounded-3xl border border-[#EFD7E3] bg-white shadow-soft space-y-4">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#FFF6F9] border border-primary/20 shadow-inner">
-              <Heart className="h-10 w-10 text-primary animate-pulse" strokeWidth={1.5} />
+          /* LUXURY EMPTY STATE (Full-width mobile friendly) */
+          <div className="w-full my-4 p-6 sm:p-12 text-center rounded-[6px] border border-[#EFD7E3] bg-white shadow-xs space-y-4">
+            <div className="mx-auto flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-[#FFF6F9] border border-primary/20 shadow-inner">
+              <Heart className="h-8 w-8 sm:h-10 sm:w-10 text-primary animate-pulse" strokeWidth={1.5} />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 max-w-md mx-auto">
               <h3 className="font-display text-xl sm:text-2xl font-bold text-ink">
                 Your wishlist is empty
               </h3>
@@ -108,7 +108,7 @@ export default function WishlistPage() {
             <div className="pt-2">
               <Link
                 to="/shop"
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3 text-xs font-bold uppercase tracking-[0.14em] text-white shadow-lift hover:bg-primary-deep transition cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-[6px] bg-primary px-7 py-3 text-xs font-bold uppercase tracking-[0.14em] text-white shadow-lift hover:bg-primary-deep transition cursor-pointer"
               >
                 <span>EXPLORE COLLECTION</span>
                 <ArrowRight className="h-4 w-4" />
@@ -117,21 +117,21 @@ export default function WishlistPage() {
 
             {/* Recommended Products grid if wishlist empty */}
             {recommendations.length > 0 && (
-              <div className="pt-8 border-t border-primary/10 space-y-4 text-left">
-                <h4 className="font-display text-sm font-bold text-ink uppercase tracking-wider flex items-center gap-1.5">
+              <div className="pt-6 border-t border-primary/10 space-y-4 text-left">
+                <h4 className="font-display text-xs sm:text-sm font-bold text-ink uppercase tracking-wider flex items-center gap-1.5">
                   Trending Recommendations
                 </h4>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {recommendations.map((p) => (
                     <Link
                       key={p.id}
                       to={`/products/${p.slug}`}
-                      className="group flex items-center gap-3 p-2 rounded-xl border border-primary/10 bg-[#FFF6F9]/50 hover:bg-white hover:border-primary transition"
+                      className="group flex items-center gap-3 p-2.5 rounded-[6px] border border-primary/10 bg-[#FFF6F9]/50 hover:bg-white hover:border-primary transition"
                     >
                       <img
                         src={p.primary_image || p.image}
                         alt={p.title}
-                        className="h-14 w-11 rounded-lg object-cover border border-black/5"
+                        className="h-14 w-11 rounded-[4px] object-cover border border-black/5"
                       />
                       <div className="min-w-0 flex-1 text-xs">
                         <p className="font-semibold text-ink truncate group-hover:text-primary transition">
@@ -147,7 +147,7 @@ export default function WishlistPage() {
           </div>
         ) : (
           /* WISHLIST PRODUCT GRID (Mobile 2-cols, Desktop 4-cols) */
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
             <AnimatePresence>
               {wishlistedProducts.map((product) => (
                 <motion.div
@@ -156,7 +156,7 @@ export default function WishlistPage() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  className="group relative flex flex-col rounded-2xl border border-[#EFD7E3] bg-white overflow-hidden shadow-sm hover:shadow-md transition duration-300"
+                  className="group relative flex flex-col rounded-[6px] border border-[#EFD7E3] bg-white overflow-hidden shadow-xs hover:shadow-md transition duration-300"
                 >
                   {/* Top Product Image Container */}
                   <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#F7F1F2]">

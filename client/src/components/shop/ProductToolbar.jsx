@@ -28,25 +28,25 @@ export default function ProductToolbar({
   activeFilterCount = 0,
 }) {
   return (
-    <div className="z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 shadow-soft ring-1 ring-primary/8">
-      {/* Left Group: Filter Button + Products Count */}
-      <div className="flex items-center gap-4">
-        {/* Filter Popover Button with Icon */}
+    <div className="z-10 flex flex-wrap items-center justify-between gap-3 rounded-[6px] bg-white px-4 py-3 shadow-sm border border-primary/10">
+      {/* Left Group: Filter Button (Mobile Only) + Products Count */}
+      <div className="flex items-center gap-3">
+        {/* Filter Popover Button with Icon - Hidden on desktop lg:hidden */}
         <button
           type="button"
           onClick={onOpenFilter}
-          className="flex items-center gap-2 rounded-lg bg-primary/10 hover:bg-primary/20 px-3.5 py-2 text-xs font-semibold uppercase tracking-wider text-primary transition shadow-xs"
+          className="flex lg:hidden items-center gap-2 rounded-[6px] bg-primary/10 hover:bg-primary/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary transition shadow-xs cursor-pointer"
         >
           <SlidersHorizontal className="h-4 w-4" />
           <span>Filters</span>
           {activeFilterCount > 0 && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
               {activeFilterCount}
             </span>
           )}
         </button>
 
-        <p className="hidden font-label text-sm text-ink-muted sm:block">
+        <p className="font-label text-xs sm:text-sm text-ink-muted">
           Showing{' '}
           <span className="font-semibold text-ink">
             {total === 0 ? 0 : from}–{to}
@@ -56,13 +56,13 @@ export default function ProductToolbar({
       </div>
 
       {/* Right Group: Sort Dropdown + Grid View Switcher */}
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 font-label text-sm text-ink-muted">
-          Sort:
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <label className="flex items-center gap-2 font-label text-xs sm:text-sm text-ink-muted">
+          <span>Sort:</span>
           <select
             value={sort}
             onChange={(e) => onSortChange(e.target.value)}
-            className="rounded-lg border border-primary/15 bg-white px-3 py-2 text-sm font-medium text-ink outline-none transition focus:border-primary"
+            className="rounded-[6px] border border-primary/15 bg-white px-2.5 py-1.5 text-xs sm:text-sm font-medium text-ink outline-none transition focus:border-primary cursor-pointer"
           >
             {SORT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -73,7 +73,7 @@ export default function ProductToolbar({
         </label>
 
         <div
-          className="hidden items-center gap-1 rounded-lg border border-primary/10 p-1 sm:flex"
+          className="hidden items-center gap-1 rounded-[6px] border border-primary/10 p-1 sm:flex"
           role="group"
           aria-label="Grid layout"
         >
@@ -85,13 +85,13 @@ export default function ProductToolbar({
               aria-pressed={view === id}
               onClick={() => onViewChange(id)}
               className={cn(
-                'flex h-8 w-8 items-center justify-center rounded-md transition',
+                'flex h-7 w-7 items-center justify-center rounded-[4px] transition cursor-pointer',
                 view === id
                   ? 'bg-primary text-white'
                   : 'text-ink-muted hover:bg-rose-light/60 hover:text-primary',
               )}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-3.5 w-3.5" />
             </button>
           ))}
         </div>

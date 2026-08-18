@@ -12,7 +12,7 @@ export default function Lookbook() {
   const subtitle = promoBanner?.subtitle || 'Explore our seasonal lookbook — quiet luxury silhouettes styled for mornings, evenings, and everything in between.'
   const ctaText = promoBanner?.cta_text || 'Explore Lookbook'
   const ctaLink = promoBanner?.cta_link || '/lookbook'
-  const bgImage = promoBanner?.bg_image || 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1600&q=80'
+  const bgImage = promoBanner?.bg_image || '/images/home/banners/lookbook-promo.webp'
 
   const ref = useRef(null)
   const { scrollYProgress } = useScroll({

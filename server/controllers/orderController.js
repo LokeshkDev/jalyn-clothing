@@ -10,7 +10,7 @@ const normalizeRow = (row) => ({
 
 const readOrdersWithItems = async () => {
   try {
-    const [rows] = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
+    const [rows] = await pool.query('SELECT * FROM orders ORDER BY COALESCE(created_at, "1970-01-01") DESC, id DESC');
     const orders = rows.map(normalizeRow);
     if (orders.length === 0) return orders;
 
@@ -41,10 +41,12 @@ const createOrderNumber = (id) => {
 
 export const getOrders = async (req, res) => {
   let { email } = req.query;
+  let userId = null;
 
   // Security: non-admins can only see their own orders
-  if (req.user && req.user.role !== 'admin') {
+  if (req.user && !['superadmin', 'admin'].includes(req.user.role)) {
     email = req.user.email;
+    userId = req.user.id;
   }
 
   try {
@@ -53,14 +55,33 @@ export const getOrders = async (req, res) => {
       orders = mockOrders;
     }
     if (email) {
-      orders = orders.filter((o) => o.customer_email?.toLowerCase() === email.toLowerCase());
+      orders = orders.filter((o) =>
+        (userId && String(o.user_id) === String(userId)) ||
+        o.customer_email?.toLowerCase() === email.toLowerCase()
+      );
     }
+    // Always sort newest orders first
+    orders.sort((a, b) => {
+      const timeA = new Date(a.created_at || a.date || 0).getTime();
+      const timeB = new Date(b.created_at || b.date || 0).getTime();
+      if (timeB !== timeA) return timeB - timeA;
+      return (Number(b.id) || 0) - (Number(a.id) || 0);
+    });
     return res.json({ success: true, orders });
   } catch (error) {
-    let orders = mockOrders;
+    let orders = [...mockOrders];
     if (email) {
-      orders = orders.filter((o) => o.customer_email?.toLowerCase() === email.toLowerCase());
+      orders = orders.filter((o) =>
+        (userId && String(o.user_id) === String(userId)) ||
+        o.customer_email?.toLowerCase() === email.toLowerCase()
+      );
     }
+    orders.sort((a, b) => {
+      const timeA = new Date(a.created_at || a.date || 0).getTime();
+      const timeB = new Date(b.created_at || b.date || 0).getTime();
+      if (timeB !== timeA) return timeB - timeA;
+      return (Number(b.id) || 0) - (Number(a.id) || 0);
+    });
     return res.json({ success: true, orders, isFallback: true });
   }
 };
@@ -76,7 +97,12 @@ export const getOrderById = async (req, res) => {
 
     if (found) {
       // Security check: Customer can only view their own order
-      if (req.user && req.user.role !== 'admin' && found.customer_email?.toLowerCase() !== req.user.email?.toLowerCase()) {
+      if (
+        req.user &&
+        !['superadmin', 'admin'].includes(req.user.role) &&
+        String(found.user_id || '') !== String(req.user.id) &&
+        found.customer_email?.toLowerCase() !== req.user.email?.toLowerCase()
+      ) {
         return res.status(403).json({ success: false, message: 'Access denied.' });
       }
       const [items] = await pool.query('SELECT * FROM order_items WHERE order_id = ?', [found.id]);
@@ -86,7 +112,12 @@ export const getOrderById = async (req, res) => {
     const mockOrder = mockOrders.find((o) => String(o.id) === String(id) || o.order_number === id);
     if (mockOrder) {
       // Security check: Customer can only view their own order
-      if (req.user && req.user.role !== 'admin' && mockOrder.customer_email?.toLowerCase() !== req.user.email?.toLowerCase()) {
+      if (
+        req.user &&
+        !['superadmin', 'admin'].includes(req.user.role) &&
+        String(mockOrder.user_id || '') !== String(req.user.id) &&
+        mockOrder.customer_email?.toLowerCase() !== req.user.email?.toLowerCase()
+      ) {
         return res.status(403).json({ success: false, message: 'Access denied.' });
       }
       return res.json({ success: true, order: mockOrder, isFallback: true });
@@ -96,7 +127,12 @@ export const getOrderById = async (req, res) => {
     const mockOrder = mockOrders.find((o) => String(o.id) === String(id) || o.order_number === id);
     if (mockOrder) {
       // Security check: Customer can only view their own order
-      if (req.user && req.user.role !== 'admin' && mockOrder.customer_email?.toLowerCase() !== req.user.email?.toLowerCase()) {
+      if (
+        req.user &&
+        !['superadmin', 'admin'].includes(req.user.role) &&
+        String(mockOrder.user_id || '') !== String(req.user.id) &&
+        mockOrder.customer_email?.toLowerCase() !== req.user.email?.toLowerCase()
+      ) {
         return res.status(403).json({ success: false, message: 'Access denied.' });
       }
       return res.json({ success: true, order: mockOrder, isFallback: true });
@@ -118,7 +154,11 @@ export const createOrder = async (req, res) => {
     items = [],
   } = req.body;
 
-  if (!customer_name || !customer_email || !shipping_address) {
+  const isAdminUser = ['superadmin', 'admin'].includes(req.user?.role);
+  const orderUserId = isAdminUser ? (req.body.user_id || null) : (req.user?.id || null);
+  const orderCustomerEmail = isAdminUser ? customer_email : (req.user?.email || customer_email);
+
+  if (!customer_name || !orderCustomerEmail || !shipping_address) {
     return res.status(400).json({ success: false, message: 'Customer name, email and shipping address are required.' });
   }
 
@@ -128,8 +168,9 @@ export const createOrder = async (req, res) => {
   const createdOrderObject = {
     id: Date.now(),
     order_number: generatedOrderNum,
+    user_id: orderUserId,
     customer_name,
-    customer_email,
+    customer_email: orderCustomerEmail,
     customer_phone: customer_phone || null,
     shipping_address,
     total_amount: total_amount || 0,
@@ -150,15 +191,17 @@ export const createOrder = async (req, res) => {
   try {
     const [result] = await pool.query(
       `INSERT INTO orders
-       (order_number, customer_name, customer_email, customer_phone, shipping_address, total_amount, payment_status, order_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       (order_number, user_id, customer_name, customer_email, customer_phone, shipping_address, total_amount, payment_method, payment_status, order_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         generatedOrderNum,
+        orderUserId,
         customer_name,
-        customer_email,
+        orderCustomerEmail,
         customer_phone || null,
         shipping_address,
         total_amount || 0,
+        payment_method || null,
         payment_status,
         order_status,
       ]

@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Sparkles, Heart, ShieldCheck, Leaf, ArrowRight, Award, Scissors, Users } from 'lucide-react'
+import { Sparkles, Heart, ShieldCheck, Leaf, ArrowRight, Scissors } from 'lucide-react'
 import { useCmsData } from '@/hooks/useCmsData'
 
 export default function AboutPage() {
@@ -10,23 +10,15 @@ export default function AboutPage() {
   const heroTitle = aboutPage?.hero_title || 'Crafting Elegance, Celebrating You'
   const heroSubtitle =
     aboutPage?.hero_subtitle ||
-    'Discover the story behind JALYN Apparels — where traditional craftsmanship meets contemporary silhouette design.'
+    'Discover the story behind JALYN Apparels — where traditional artistry meets contemporary silhouette design.'
   const heroImage =
     aboutPage?.hero_image ||
-    'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1920&q=80'
+    '/images/home/hero/hero-slide-1.webp'
 
   const storyHeading = aboutPage?.story_heading || 'Our Story & Heritage'
   const storyContent =
     aboutPage?.story_content ||
     "Founded with a passion for effortless style and everyday comfort, JALYN creates premium women's fashion that celebrates individuality and grace. Each collection is meticulously designed with breathable luxury fabrics, hand-embroidered details, and tailored fits that feel like a second skin."
-
-  const craftsmanshipTitle = aboutPage?.craftsmanship_title || 'Artisanal Craftsmanship'
-  const craftsmanshipContent =
-    aboutPage?.craftsmanship_content ||
-    'Every dress, kurti, and co-ord set is brought to life by master artisans who preserve centuries-old embroidery techniques. We take pride in small-batch production that prioritizes quality over quantity.'
-  const craftsmanshipImage =
-    aboutPage?.craftsmanship_image ||
-    'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=1000'
 
   const sustainabilityTitle = aboutPage?.sustainability_title || 'Conscious & Sustainable'
   const sustainabilityContent =
@@ -34,7 +26,7 @@ export default function AboutPage() {
     'We use eco-friendly dyes, organic cotton blends, and zero-waste fabric cutting practices to minimize environmental impact while keeping fashion luxurious and long-lasting.'
   const sustainabilityImage =
     aboutPage?.sustainability_image ||
-    'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=1000'
+    '/images/products/blush-pink-coord.webp'
 
   const stats = aboutPage?.stats || [
     { number: '50,000+', label: 'Happy Women Worldwide' },
@@ -132,8 +124,12 @@ export default function AboutPage() {
             <div className="relative">
               <div className="aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
                 <img
-                  src="https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=1000&q=80"
+                  src="/images/products/floral-midi-dress.webp"
                   alt="JALYN Brand Heritage Showcase"
+                  loading="lazy"
+                  decoding="async"
+                  width="400"
+                  height="500"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -180,32 +176,7 @@ export default function AboutPage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-10">
-          {/* Craftsmanship Card */}
-          <div className="bg-white rounded-3xl overflow-hidden border border-[#EFE8E2] shadow-sm hover:shadow-md transition-shadow group flex flex-col">
-            <div className="aspect-[16/10] overflow-hidden">
-              <img
-                src={craftsmanshipImage}
-                alt="Artisanal Craftsmanship"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-              />
-            </div>
-            <div className="p-8 md:p-10 flex-1 flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#C28E5C]">
-                  <Award className="w-4 h-4" /> Master Guild Craft
-                </div>
-                <h3 className="text-2xl font-serif text-[#2C1C24]">{craftsmanshipTitle}</h3>
-                <p className="text-gray-600 text-sm leading-relaxed font-light">
-                  {craftsmanshipContent}
-                </p>
-              </div>
-              <div className="pt-4 border-t border-gray-100 flex items-center gap-2 text-xs text-gray-500">
-                <Users className="w-4 h-4 text-[#C28E5C]" /> Supporting local artisan families across India.
-              </div>
-            </div>
-          </div>
-
+        <div className="grid gap-10 md:max-w-3xl mx-auto">
           {/* Sustainability Card */}
           <div className="bg-white rounded-3xl overflow-hidden border border-[#EFE8E2] shadow-sm hover:shadow-md transition-shadow group flex flex-col">
             <div className="aspect-[16/10] overflow-hidden">

@@ -13,6 +13,26 @@ import {
 
 const SIZE_PRESETS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
+// Filter attribute options - must match client FilterSidebar SHOP_FILTER_OPTIONS
+const FILTER_ATTRIBUTES = {
+  fabric: ['Cotton', 'Linen', 'Satin', 'Georgette', 'Rayon', 'Silk Blend', 'Organza', 'Velvet'],
+  sleeve: ['Sleeveless', 'Short Sleeve', '3/4 Sleeve', 'Full Sleeve'],
+  occasion: ['Casual', 'Work', 'Party', 'Festive', 'Lounge'],
+  fit: ['Regular', 'Relaxed', 'Slim', 'Oversized'],
+  pattern: ['Solid', 'Floral', 'Printed', 'Embroidered', 'Striped'],
+  season: ['Summer', 'Monsoon', 'Winter', 'All Season'],
+};
+
+const ATTR_LABELS = {
+  fabric: 'Fabric',
+  sleeve: 'Sleeve',
+  occasion: 'Occasion',
+  fit: 'Fit',
+  pattern: 'Pattern',
+  season: 'Season',
+  brand: 'Brand',
+};
+
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -43,6 +63,11 @@ export default function ProductsPage() {
   const [barcodesLoading, setBarcodesLoading] = useState(false);
   const [barcodePrintModal, setBarcodePrintModal] = useState({ open: false, barcodes: [] });
   const [barcodePreview, setBarcodePreview] = useState(null);
+
+  // Custom Filter Options (stored in DB, shared with website filters)
+  const [customOptions, setCustomOptions] = useState({});
+  const [addingAttr, setAddingAttr] = useState(null);
+  const [customValue, setCustomValue] = useState('');
 
   // Form State for Product Add/Edit
   const [formData, setFormData] = useState({
@@ -83,17 +108,25 @@ export default function ProductsPage() {
         { size: 'L', Bust: '38', Waist: '32', Hips: '42', Length: '45.5' },
       ],
     },
+    fabric: '',
+    sleeve: '',
+    occasion: '',
+    fit: '',
+    pattern: '',
+    season: '',
   });
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [pRes, cRes] = await Promise.all([
+      const [pRes, cRes, fRes] = await Promise.all([
         api.get('/products', { params: { include_offline: '1' } }),
         api.get('/categories').catch(() => ({ data: { categories: [] } })),
+        api.get('/filter-options').catch(() => ({ data: { options: {} } })),
       ]);
       setProducts(pRes.data.products || []);
       setCategories(cRes.data.categories || []);
+      setCustomOptions(fRes.data.options || {});
     } catch (err) {
       showToast('Failed to load products', 'error');
     } finally {
@@ -147,6 +180,12 @@ export default function ProductsPage() {
           { size: 'L', Bust: '38', Waist: '32', Hips: '42', Length: '45.5' },
         ],
       },
+      fabric: '',
+      sleeve: '',
+      occasion: '',
+      fit: '',
+      pattern: '',
+      season: '',
     });
     setIsModalOpen(true);
   };
@@ -189,6 +228,12 @@ export default function ProductsPage() {
         columns: ['Bust', 'Waist', 'Hips', 'Length'],
         rows: [],
       },
+      fabric: p.fabric || '',
+      sleeve: p.sleeve || '',
+      occasion: p.occasion || '',
+      fit: p.fit || '',
+      pattern: p.pattern || '',
+      season: p.season || '',
     });
     setIsModalOpen(true);
 
@@ -199,6 +244,57 @@ export default function ProductsPage() {
       .then(res => setProductBarcodes(res.data.data || []))
       .catch(() => setProductBarcodes([]))
       .finally(() => setBarcodesLoading(false));
+  };
+
+  // Custom Filter Option Helpers
+  const getAttributeOptions = (attr) => {
+    const defaults = FILTER_ATTRIBUTES[attr] || [];
+    const customs = customOptions[attr] || [];
+    return [...new Set([...defaults, ...customs])];
+  };
+
+  const getBrandOptions = () => {
+    const fromProducts = [...new Set((products || []).map((p) => p.brand).filter(Boolean))];
+    return [...new Set(['JALYN', ...fromProducts, ...(customOptions.brand || [])])];
+  };
+
+  const handleAttributeSelect = (attr, value) => {
+    if (value === '__custom__') {
+      setAddingAttr(attr);
+      setCustomValue('');
+      return;
+    }
+    setAddingAttr(null);
+    setCustomValue('');
+    setFormData({ ...formData, [attr]: value });
+  };
+
+  const handleAddCustomOption = async () => {
+    const val = customValue.trim();
+    if (!val) return;
+    try {
+      await api.post('/filter-options', { attribute: addingAttr, value: val });
+      const fRes = await api.get('/filter-options');
+      setCustomOptions(fRes.data.options || {});
+      setFormData({ ...formData, [addingAttr]: val });
+      setAddingAttr(null);
+      setCustomValue('');
+      showToast(`Added "${val}" to ${ATTR_LABELS[addingAttr] || addingAttr} options`);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to add option', 'error');
+    }
+  };
+
+  const handleDeleteCustomOption = async (attr, value) => {
+    if (!window.confirm(`Remove "${value}" from ${ATTR_LABELS[attr] || attr} options?`)) return;
+    try {
+      await api.delete('/filter-options/0', { params: { attribute: attr, value } });
+      const fRes = await api.get('/filter-options');
+      setCustomOptions(fRes.data.options || {});
+      showToast('Option removed.');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to remove option', 'error');
+    }
   };
 
   // Automated Variant Matrix Generation
@@ -740,13 +836,17 @@ export default function ProductsPage() {
 
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1">Brand</label>
-                      <input
-                        type="text"
+                      <select
                         value={formData.brand}
-                        onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                        placeholder="JALYN"
-                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
-                      />
+                        onChange={(e) => handleAttributeSelect('brand', e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500 bg-white"
+                      >
+                        <option value="">Select Brand</option>
+                        {getBrandOptions().map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                        <option value="__custom__">＋ Add Custom Brand…</option>
+                      </select>
                     </div>
                   </div>
 
@@ -774,73 +874,157 @@ export default function ProductsPage() {
                     </div>
 
                     <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Fabric Composition</label>
-                      <input
-                        type="text"
+                      <label className="block font-semibold text-gray-700 mb-1">Fabric</label>
+                      <select
                         value={formData.fabric}
-                        onChange={(e) => setFormData({ ...formData, fabric: e.target.value })}
-                        placeholder="e.g. 100% Pure Mulberry Silk"
-                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
-                      />
+                        onChange={(e) => handleAttributeSelect('fabric', e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500 bg-white"
+                      >
+                        <option value="">Select Fabric</option>
+                        {getAttributeOptions('fabric').map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                        <option value="__custom__">＋ Add Custom Fabric…</option>
+                      </select>
                     </div>
 
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1">Fit / Silhouette</label>
-                      <input
-                        type="text"
+                      <select
                         value={formData.fit}
-                        onChange={(e) => setFormData({ ...formData, fit: e.target.value })}
-                        placeholder="e.g. Bias Cut A-Line"
-                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
-                      />
+                        onChange={(e) => handleAttributeSelect('fit', e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500 bg-white"
+                      >
+                        <option value="">Select Fit</option>
+                        {getAttributeOptions('fit').map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                        <option value="__custom__">＋ Add Custom Fit…</option>
+                      </select>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1">Sleeve Type</label>
-                      <input
-                        type="text"
+                      <select
                         value={formData.sleeve}
-                        onChange={(e) => setFormData({ ...formData, sleeve: e.target.value })}
-                        placeholder="e.g. Bishop Sleeves"
-                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
-                      />
+                        onChange={(e) => handleAttributeSelect('sleeve', e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500 bg-white"
+                      >
+                        <option value="">Select Sleeve</option>
+                        {getAttributeOptions('sleeve').map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                        <option value="__custom__">＋ Add Custom Sleeve…</option>
+                      </select>
                     </div>
 
                     <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Occasion / Theme</label>
-                      <input
-                        type="text"
+                      <label className="block font-semibold text-gray-700 mb-1">Occasion</label>
+                      <select
                         value={formData.occasion}
-                        onChange={(e) => setFormData({ ...formData, occasion: e.target.value })}
-                        placeholder="e.g. Festive / Evening"
-                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
-                      />
+                        onChange={(e) => handleAttributeSelect('occasion', e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500 bg-white"
+                      >
+                        <option value="">Select Occasion</option>
+                        {getAttributeOptions('occasion').map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                        <option value="__custom__">＋ Add Custom Occasion…</option>
+                      </select>
                     </div>
 
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1">Pattern</label>
-                      <input
-                        type="text"
+                      <select
                         value={formData.pattern}
-                        onChange={(e) => setFormData({ ...formData, pattern: e.target.value })}
-                        placeholder="e.g. Floral Print"
-                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
-                      />
+                        onChange={(e) => handleAttributeSelect('pattern', e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500 bg-white"
+                      >
+                        <option value="">Select Pattern</option>
+                        {getAttributeOptions('pattern').map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                        <option value="__custom__">＋ Add Custom Pattern…</option>
+                      </select>
                     </div>
 
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1">Season</label>
-                      <input
-                        type="text"
+                      <select
                         value={formData.season}
-                        onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                        placeholder="e.g. Autumn/Winter 26"
-                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
-                      />
+                        onChange={(e) => handleAttributeSelect('season', e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500 bg-white"
+                      >
+                        <option value="">Select Season</option>
+                        {getAttributeOptions('season').map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                        <option value="__custom__">＋ Add Custom Season…</option>
+                      </select>
                     </div>
                   </div>
+
+                  {addingAttr && (
+                    <div className="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 p-3">
+                      <span className="shrink-0 text-xs font-bold text-brand-700">
+                        New {ATTR_LABELS[addingAttr] || addingAttr} option:
+                      </span>
+                      <input
+                        autoFocus
+                        value={customValue}
+                        onChange={(e) => setCustomValue(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomOption(); } }}
+                        placeholder="Type option value…"
+                        className="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium focus:ring-2 focus:ring-brand-500 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddCustomOption}
+                        disabled={!customValue.trim()}
+                        className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer"
+                      >
+                        Add
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAddingAttr(null)}
+                        className="text-gray-500 hover:text-gray-700 text-xs font-semibold px-2 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+
+                  {Object.keys(customOptions).filter((attr) => (customOptions[attr] || []).length > 0).length > 0 && (
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1.5">
+                        Custom Options (shared with website filters)
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(customOptions).map(([attr, vals]) =>
+                          (vals || []).map((val) => (
+                            <span
+                              key={`${attr}-${val}`}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700"
+                            >
+                              <span className="uppercase text-[9px] text-brand-400">{attr}</span>
+                              {val}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCustomOption(attr, val)}
+                                title={`Remove ${val}`}
+                                className="text-brand-400 hover:text-red-500 cursor-pointer"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block font-semibold text-gray-700 mb-1">Product Description</label>

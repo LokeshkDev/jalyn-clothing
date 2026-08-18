@@ -187,7 +187,7 @@ export default function AuthPage({ initialMode = 'login' }) {
       const response = await api.post('/auth/google', {
         email: 'user.google@example.com',
         name: 'Google Customer',
-        picture: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        picture: '/images/branding/auth-portrait.webp',
         sub: `google_${Date.now()}`,
       })
 
@@ -202,18 +202,8 @@ export default function AuthPage({ initialMode = 'login' }) {
         throw new Error(response.data?.message || 'Google authentication failed')
       }
     } catch (err) {
-      console.warn('Google sign in fallback active:', err.message)
-      const googleUser = {
-        id: `g-${Date.now()}`,
-        name: 'Google Customer',
-        email: 'user.google@example.com',
-        role: 'customer',
-      }
-      loginStore(googleUser, 'google_demo_jwt_token')
-      setSuccessMessage('Google Sign-In successful! Redirecting...')
-      setTimeout(() => {
-        navigate(fromPath, { replace: true })
-      }, 1000)
+      console.warn('Google sign in error:', err.message)
+      setErrorMessage(err.response?.data?.message || 'Google Sign-In failed. Please try again or use email login.')
     } finally {
       setIsSubmitting(false)
     }
@@ -237,8 +227,12 @@ export default function AuthPage({ initialMode = 'login' }) {
         {/* Ambient Editorial Image */}
         <div className="absolute inset-0 z-0 opacity-40">
           <img
-            src={authPage?.image || "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=1400&q=80"}
+            src={authPage?.image || "/images/home/hero/hero-slide-2.webp"}
             alt="Jalyn Luxury Editorial"
+            loading="lazy"
+            decoding="async"
+            width="700"
+            height="900"
             className="h-full w-full object-cover object-center scale-105 transition-transform duration-10000 ease-out hover:scale-100"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#1C1217] via-[#1C1217]/50 to-transparent" />

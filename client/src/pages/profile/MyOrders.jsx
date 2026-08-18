@@ -15,9 +15,11 @@ export default function MyOrders() {
     }
   }, [user?.email, fetchOrders])
 
-  const orders = allOrders.filter(
-    (o) => o.customer_email === user?.email || o.address?.email === user?.email
-  )
+  const userEmail = user?.email?.toLowerCase()
+  const orders = allOrders.filter((o) => {
+    const orderEmail = (o.customer_email || o.address?.email || '').toLowerCase()
+    return (user?.id && String(o.user_id) === String(user.id)) || orderEmail === userEmail
+  })
   const addItem = useCartStore((s) => s.addItem)
   const openCart = useCartStore((s) => s.openCart)
 
@@ -79,8 +81,8 @@ export default function MyOrders() {
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex border-b border-primary/10 overflow-x-auto gap-2 scrollbar-none pb-1">
+      {/* Filter Tabs (Swipeable, scrollbar hidden) */}
+      <div className="flex items-center gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-2.5 touch-pan-x border-b border-primary/10">
         {tabs.map((tab) => {
           const isSelected = activeTab === tab
           return (

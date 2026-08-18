@@ -11,7 +11,7 @@ import 'swiper/css/pagination'
 export default function Hero() {
   return (
     <motion.section
-      className="relative overflow-hidden bg-white mb-[15px] lg:mb-5"
+      className="relative overflow-hidden bg-[#EFE6E0]"
       aria-label="Hero"
       initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -32,27 +32,53 @@ export default function Hero() {
             <div className="relative min-h-[min(88vh,820px)] w-full overflow-hidden bg-[#EFE6E0]">
               {/* Full-bleed background image */}
               {index === 0 ? (
-                <img
-                  src={slide.image}
-                  alt={slide.alt}
-                  className="absolute inset-0 h-full w-full object-cover object-center"
-                  fetchPriority="high"
-                  loading="eager"
-                  decoding="sync"
-                  width="1080"
-                  height="720"
-                />
+                <picture className="absolute inset-0 h-full w-full">
+                  <source
+                    type="image/avif"
+                    srcSet="/images/home/hero/hero-slide-1-480.avif 480w, /images/home/hero/hero-slide-1-768.avif 768w, /images/home/hero/hero-slide-1-1080.avif 1080w, /images/home/hero/hero-slide-1-1440.avif 1440w"
+                    sizes="100vw"
+                  />
+                  <source
+                    type="image/webp"
+                    srcSet="/images/home/hero/hero-slide-1-480.webp 480w, /images/home/hero/hero-slide-1-768.webp 768w, /images/home/hero/hero-slide-1-1080.webp 1080w, /images/home/hero/hero-slide-1-1440.webp 1440w"
+                    sizes="100vw"
+                  />
+                  <img
+                    src="/images/home/hero/hero-slide-1-1080.webp"
+                    alt={slide.alt}
+                    className="h-full w-full object-cover object-center"
+                    fetchPriority="high"
+                    loading="eager"
+                    decoding="sync"
+                    width="1080"
+                    height="720"
+                  />
+                </picture>
               ) : (
-                <motion.img
-                  src={slide.image}
-                  alt={slide.alt}
-                  className="absolute inset-0 h-full w-full scale-105 object-cover object-center"
-                  loading="lazy"
-                  decoding="async"
-                  initial={{ scale: 1.12 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 6.5, ease: [0.22, 1, 0.36, 1] }}
-                />
+                <picture className="absolute inset-0 h-full w-full">
+                  <source
+                    type="image/avif"
+                    srcSet={`/images/home/hero/hero-slide-${index + 1}-480.avif 480w, /images/home/hero/hero-slide-${index + 1}-768.avif 768w, /images/home/hero/hero-slide-${index + 1}-1080.avif 1080w`}
+                    sizes="100vw"
+                  />
+                  <source
+                    type="image/webp"
+                    srcSet={`/images/home/hero/hero-slide-${index + 1}-480.webp 480w, /images/home/hero/hero-slide-${index + 1}-768.webp 768w, /images/home/hero/hero-slide-${index + 1}-1080.webp 1080w`}
+                    sizes="100vw"
+                  />
+                  <motion.img
+                    src={slide.image}
+                    alt={slide.alt}
+                    className="h-full w-full scale-105 object-cover object-center"
+                    loading="lazy"
+                    decoding="async"
+                    width="1080"
+                    height="720"
+                    initial={{ scale: 1.12 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 6.5, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                </picture>
               )}
 
               {/* Light gradient overlay matching mobile hero palette */}

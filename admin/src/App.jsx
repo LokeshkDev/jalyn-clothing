@@ -14,6 +14,7 @@ import LoginPage from './pages/LoginPage';
 import ScannerPage from './pages/ScannerPage';
 import BarcodesPage from './pages/BarcodesPage';
 import StockHistoryPage from './pages/StockHistoryPage';
+import NewsletterPage from './pages/NewsletterPage';
 import api from './services/api';
 import { ShieldAlert, ArrowLeft, Loader2 } from 'lucide-react';
 
@@ -98,6 +99,14 @@ function ProtectedLayout({ user, onLogout }) {
             element={
               <RoleGuard user={user} allowedRoles={['superadmin', 'admin']}>
                 <CouponsPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="/newsletter"
+            element={
+              <RoleGuard user={user} allowedRoles={['superadmin', 'admin']}>
+                <NewsletterPage />
               </RoleGuard>
             }
           />

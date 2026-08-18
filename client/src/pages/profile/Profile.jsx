@@ -15,9 +15,11 @@ export default function Profile() {
     }
   }, [user?.email, fetchOrders])
 
-  const orders = allOrders.filter(
-    (o) => o.customer_email === user?.email || o.address?.email === user?.email
-  )
+  const userEmail = user?.email?.toLowerCase()
+  const orders = allOrders.filter((o) => {
+    const orderEmail = (o.customer_email || o.address?.email || '').toLowerCase()
+    return (user?.id && String(o.user_id) === String(user.id)) || orderEmail === userEmail
+  })
 
   const getStatusBadge = (status) => {
     switch (status) {

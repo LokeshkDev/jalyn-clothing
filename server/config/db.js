@@ -75,6 +75,12 @@ export const testConnection = async () => {
 
     // Ensure tracking columns exist on orders table
     try {
+      await connection.query("ALTER TABLE orders ADD COLUMN user_id INT NULL");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE orders ADD COLUMN payment_method VARCHAR(50) NULL");
+    } catch (e) {}
+    try {
       await connection.query("ALTER TABLE orders ADD COLUMN courier VARCHAR(100) DEFAULT 'BlueDart Express'");
     } catch (e) {}
     try {
@@ -82,6 +88,14 @@ export const testConnection = async () => {
     } catch (e) {}
     try {
       await connection.query("ALTER TABLE orders ADD COLUMN expected_delivery VARCHAR(100) DEFAULT '3 to 5 business days'");
+    } catch (e) {}
+    try {
+      await connection.query(`
+        UPDATE orders o
+        JOIN users u ON LOWER(o.customer_email) = LOWER(u.email)
+        SET o.user_id = u.id
+        WHERE o.user_id IS NULL
+      `);
     } catch (e) {}
 
     // Ensure new arrival columns exist on products table
@@ -176,4 +190,3 @@ export const testConnection = async () => {
 };
 
 export default pool;
-

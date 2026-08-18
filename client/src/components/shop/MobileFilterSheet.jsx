@@ -68,7 +68,7 @@ export default function MobileFilterSheet({
             </div>
 
             {/* Scrollable Filter Content */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div data-lenis-prevent className="flex-1 overflow-y-auto p-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <FilterSidebar
                 filters={filters}
                 onChange={onChange}

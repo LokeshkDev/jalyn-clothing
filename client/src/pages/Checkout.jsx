@@ -41,6 +41,7 @@ export default function Checkout() {
   const clearCart = useCartStore((s) => s.clearCart)
 
   const user = useUserStore((s) => s.user)
+  const userToken = useUserStore((s) => s.token)
   const addresses = useUserStore((s) => s.addresses)
   const fetchAddresses = useUserStore((s) => s.fetchAddresses)
   const addAddress = useUserStore((s) => s.addAddress)
@@ -50,12 +51,12 @@ export default function Checkout() {
   const { coupons: availableCoupons } = useCoupons()
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !userToken) {
       navigate('/login', { state: { from: '/checkout' } })
     } else {
       fetchAddresses()
     }
-  }, [user, navigate, fetchAddresses])
+  }, [user, userToken, navigate, fetchAddresses])
 
   const [selectedAddrId, setSelectedAddrId] = useState(
     addresses.find((a) => a.isDefault)?.id || addresses[0]?.id || '',
@@ -91,7 +92,7 @@ export default function Checkout() {
       return
     }
     const updatedUser = { ...user, phone: userPhoneInput }
-    updateUserStore(updatedUser, localStorage.getItem('token') || 'demo_token')
+    updateUserStore(updatedUser, userToken)
     setIsEditingUserPhone(false)
     setToastMessage('Phone number saved successfully!')
   }
@@ -151,6 +152,24 @@ export default function Checkout() {
     return addresses.find((a) => a.id === selectedAddrId) || addresses[0]
   }, [addresses, selectedAddrId])
 
+  const effectivePhone = useMemo(() => {
+    return (
+      user?.phone ||
+      selectedAddressObj?.phone ||
+      selectedAddressObj?.mobile ||
+      selectedAddressObj?.mobile_number ||
+      ''
+    )
+  }, [user?.phone, selectedAddressObj])
+
+  // Automatically synchronize phone to user profile if user.phone was missing
+  useEffect(() => {
+    if (user && !user.phone && effectivePhone && effectivePhone.replace(/\D/g, '').length >= 10) {
+      const updatedUser = { ...user, phone: effectivePhone }
+      updateUserStore(updatedUser, userToken)
+    }
+  }, [user, effectivePhone, updateUserStore, userToken])
+
   const handleApplyCoupon = (codeToApply) => {
     const code = (typeof codeToApply === 'string' ? codeToApply : couponCode).trim().toUpperCase()
     setCouponError('')
@@ -198,6 +217,14 @@ export default function Checkout() {
       return
     }
 
+    const cleanPhone = (effectivePhone || '').replace(/\D/g, '')
+    if (!cleanPhone || cleanPhone.length < 10) {
+      setIsEditingUserPhone(true)
+      setToastMessage('Please enter a valid 10-digit mobile number for order delivery & OTP updates.')
+      setTimeout(() => setToastMessage(null), 3500)
+      return
+    }
+
     if (paymentMethod === 'cod' && !isCodEnabled) {
       setToastMessage('Cash on Delivery is currently disabled by store admin. Please pay online via Cashfree.')
       setPaymentMethod('online')
@@ -217,43 +244,32 @@ export default function Checkout() {
           customer_details: {
             customer_name: selectedAddressObj.name || user?.firstName || 'Valued Customer',
             customer_email: user?.email || 'customer@jalyn.in',
-            customer_phone: selectedAddressObj.phone || user?.phone || '9999999999',
+            customer_phone: cleanPhone,
           },
         })
 
-        if (res.data?.success) {
-          const sessionId = res.data.payment_session_id
-          console.log('✅ Cashfree session created:', { sessionId, isSimulated: res.data.isSimulated })
-
-          // Try to open Cashfree modal for real sessions, skip for simulated mode
-          if (!res.data.isSimulated && sessionId && !sessionId.includes('simulated')) {
-            try {
-              console.log('🔄 Loading Cashfree SDK...')
-              const CashfreeSDK = await loadCashfreeSdk()
-              if (CashfreeSDK) {
-                const mode = res.data.environment === 'PRODUCTION' ? 'production' : 'sandbox'
-                console.log('✅ Cashfree SDK loaded, opening modal in', mode, 'mode')
-                const cashfree = CashfreeSDK({ mode })
-                await cashfree.checkout({
-                  paymentSessionId: sessionId,
-                  redirectTarget: '_modal',
-                })
-              }
-            } catch (sdkErr) {
-              console.warn('⚠️ Cashfree SDK modal error (proceeding with verification):', sdkErr.message)
-              // Continue with verification even if SDK fails
-            }
-          } else {
-            console.log('ℹ️ Skipping Cashfree SDK modal (simulated mode or invalid session)')
+        if (res.data?.payment_session_id) {
+          const cashfree = await loadCashfreeSdk()
+          const checkoutOptions = {
+            paymentSessionId: res.data.payment_session_id,
+            redirectTarget: '_modal',
           }
 
-          // Verify payment status
-          console.log('🔍 Verifying payment for order:', orderId)
-          const verifyRes = await api.post('/payment/cashfree/verify', { order_id: orderId })
+          const result = await cashfree.checkout(checkoutOptions)
+
+          if (result.error) {
+            console.error('Cashfree Modal Payment error:', result.error)
+            setToastMessage(result.error.message || 'Payment cancelled or failed. Please try again.')
+            setIsSubmitting(false)
+            return
+          }
+
+          // Verify order status on backend
+          const verifyRes = await api.get(`/payment/cashfree/verify-order/${orderId}`)
 
           const newOrder = addOrder({
             customer_email: user?.email,
-            address: selectedAddressObj,
+            address: { ...selectedAddressObj, phone: cleanPhone },
             shippingMethod,
             shippingCost,
             paymentMethod: 'Online Payment (Cashfree)',
@@ -270,7 +286,7 @@ export default function Checkout() {
             order_number: newOrder.id,
             customer_name: selectedAddressObj.name || user?.firstName || 'Valued Customer',
             customer_email: user?.email || 'customer@jalyn.in',
-            customer_phone: selectedAddressObj.phone || user?.phone || '',
+            customer_phone: cleanPhone,
             shipping_address: `${selectedAddressObj.addressLine1 || ''}, ${selectedAddressObj.city || ''}, ${selectedAddressObj.state || ''} ${selectedAddressObj.pincode || ''}`,
             total_amount: grandTotal,
             payment_status: verifyRes.data?.payment_status === 'SUCCESS' ? 'paid' : 'pending',
@@ -307,7 +323,7 @@ export default function Checkout() {
       // Option 2: Cash on Delivery (COD)
       const newOrder = addOrder({
         customer_email: user?.email,
-        address: selectedAddressObj,
+        address: { ...selectedAddressObj, phone: cleanPhone },
         shippingMethod,
         shippingCost,
         paymentMethod: 'Cash on Delivery (COD)',
@@ -324,7 +340,7 @@ export default function Checkout() {
         order_number: newOrder.id,
         customer_name: selectedAddressObj.name || user?.firstName || 'Valued Customer',
         customer_email: user?.email || 'customer@jalyn.in',
-        customer_phone: selectedAddressObj.phone || user?.phone || '',
+        customer_phone: cleanPhone,
         shipping_address: `${selectedAddressObj.addressLine1 || ''}, ${selectedAddressObj.city || ''}, ${selectedAddressObj.state || ''} ${selectedAddressObj.pincode || ''}`,
         total_amount: grandTotal,
         payment_status: 'pending',
@@ -421,8 +437,8 @@ export default function Checkout() {
             {user ? (
               <div className="p-2.5 bg-rose-light/20 rounded-xl text-xs flex justify-between items-center text-ink border border-primary/10">
                 <div>
-                  <p className="font-bold">{user.firstName || user.name || 'Valued Customer'} {user.lastName || ''}</p>
-                  <p className="text-[11px] text-ink-muted">{user.email} {user.phone ? `· ${user.phone}` : ''}</p>
+                  <p className="font-bold">{user.firstName || user.name || selectedAddressObj?.name || 'Valued Customer'} {user.lastName || ''}</p>
+                  <p className="text-[11px] text-ink-muted">{user.email} {effectivePhone ? `· 📞 ${effectivePhone}` : ''}</p>
                 </div>
               </div>
             ) : (
@@ -490,39 +506,73 @@ export default function Checkout() {
             )}
           </div>
 
-          {/* 2. Delivery Options */}
-          <div className="rounded-2xl border border-primary/10 bg-white p-4 shadow-sm space-y-2.5">
-            <h3 className="text-[13px] font-bold text-[#222222]">2. Delivery Method</h3>
+          {/* 2. Shipping Method (Standard & Express, same as desktop) */}
+          {(isStandardShippingEnabled || isExpressShippingEnabled) && (
+            <div className="rounded-2xl border border-primary/10 bg-white p-4 shadow-sm space-y-2.5">
+              <h3 className="text-[13px] font-bold text-[#222222] flex items-center gap-1.5">
+                <Truck className="h-4 w-4 text-primary" />
+                <span>2. Shipping Method</span>
+              </h3>
 
-            <div className="grid grid-cols-1 gap-2.5">
-              <div
-                onClick={() => setShippingMethod('standard')}
-                className={cn(
-                  'flex items-center gap-3 rounded-xl p-3 border transition-all text-[12px]',
-                  shippingMethod === 'standard'
-                    ? 'border-primary bg-[#EFD7E3]/20 shadow-xs'
-                    : 'border-[#E5D8DE] bg-white',
-                )}
-              >
-                <input
-                  type="radio"
-                  name="mobileShipping"
-                  checked={shippingMethod === 'standard'}
-                  onChange={() => setShippingMethod('standard')}
-                  className="h-4 w-4 text-primary"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-[#222222]">Standard Delivery</span>
-                    <span className="font-bold text-emerald-700">
-                      {subtotal >= 1999 ? 'FREE' : '₹99'}
-                    </span>
+              <div className="grid grid-cols-1 gap-2.5">
+                {isStandardShippingEnabled && (
+                  <div
+                    onClick={() => setShippingMethod('standard')}
+                    className={cn(
+                      'flex items-start gap-3 rounded-xl p-3 border transition-all text-[12px] cursor-pointer',
+                      shippingMethod === 'standard'
+                        ? 'border-primary bg-[#EFD7E3]/20 shadow-xs'
+                        : 'border-[#E5D8DE] bg-white',
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="mobileShipping"
+                      checked={shippingMethod === 'standard'}
+                      onChange={() => setShippingMethod('standard')}
+                      className="mt-0.5 h-4 w-4 text-primary"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-[#222222]">{standardTitle}</span>
+                        <span className="font-bold text-emerald-700">
+                          {subtotal >= standardFreeThreshold ? 'FREE' : formatINR(standardRate)}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#666666]">{standardSubtitle}</p>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-[#666666]">Delivery in 3–5 business days</p>
-                </div>
+                )}
+
+                {isExpressShippingEnabled && (
+                  <div
+                    onClick={() => setShippingMethod('express')}
+                    className={cn(
+                      'flex items-start gap-3 rounded-xl p-3 border transition-all text-[12px] cursor-pointer',
+                      shippingMethod === 'express'
+                        ? 'border-primary bg-[#EFD7E3]/20 shadow-xs'
+                        : 'border-[#E5D8DE] bg-white',
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="mobileShipping"
+                      checked={shippingMethod === 'express'}
+                      onChange={() => setShippingMethod('express')}
+                      className="mt-0.5 h-4 w-4 text-primary"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-[#222222]">{expressTitle}</span>
+                        <span className="font-bold text-primary">{formatINR(expressRate)}</span>
+                      </div>
+                      <p className="text-[11px] text-[#666666]">{expressSubtitle}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          )}
 
           {/* 3. Mobile Payment Method (2 Options Only: Cashfree & COD) */}
           <div className="rounded-2xl border border-primary/10 bg-white p-4 shadow-sm space-y-2.5">
@@ -780,7 +830,7 @@ export default function Checkout() {
                     <div className="grid grid-cols-3 gap-3 text-xs bg-rose-light/20 p-3 rounded-xl border border-primary/10">
                       <div>
                         <span className="text-ink-muted text-[11px] block">Name</span>
-                        <span className="font-bold text-ink">{user.name || 'Valued Customer'}</span>
+                        <span className="font-bold text-ink">{user.name || selectedAddressObj?.name || 'Valued Customer'}</span>
                       </div>
                       <div>
                         <span className="text-ink-muted text-[11px] block">Email</span>
@@ -788,11 +838,17 @@ export default function Checkout() {
                       </div>
                       <div>
                         <span className="text-ink-muted text-[11px] block">Phone</span>
-                        <span className="font-bold text-ink">{user.phone || '⚠️ Phone Missing'}</span>
+                        <span className="font-bold text-ink">
+                          {effectivePhone ? (
+                            <span className="text-emerald-700 font-bold">📞 {effectivePhone}</span>
+                          ) : (
+                            <span className="text-amber-600 font-bold">⚠️ Phone Missing</span>
+                          )}
+                        </span>
                       </div>
                     </div>
 
-                    {(!user.phone || isEditingUserPhone) && (
+                    {(!effectivePhone || isEditingUserPhone) && (
                       <div className="p-3 bg-amber-50 rounded-xl text-xs space-y-2 border border-amber-200">
                         <div className="flex items-center justify-between">
                           <p className="font-bold text-amber-900 flex items-center gap-1.5">
@@ -912,6 +968,11 @@ export default function Checkout() {
                             <p>
                               {addr.city}, {addr.state} — <strong>{addr.pincode}</strong>
                             </p>
+                            {(addr.phone || addr.mobile || addr.mobile_number) && (
+                              <p className="text-[11px] font-medium text-emerald-800 pt-0.5">
+                                📞 Phone: {addr.phone || addr.mobile || addr.mobile_number}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1108,17 +1169,20 @@ export default function Checkout() {
                       item.image ||
                       item.primary_image ||
                       item.images?.primary ||
-                      'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+                      '/images/products/floral-midi-dress.webp'
 
                     return (
                       <div key={idx} className="flex items-center gap-3 p-2 bg-gray-50/60 rounded-xl border border-gray-100">
                         <img
                           src={img}
                           alt={title}
+                          loading="lazy"
+                          decoding="async"
+                          width="56"
+                          height="64"
                           className="h-16 w-14 rounded-lg object-cover object-top border border-primary/10 shrink-0 bg-rose-light/20"
                           onError={(e) => {
-                            e.currentTarget.src =
-                              'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+                            e.currentTarget.src = '/images/products/floral-midi-dress.webp'
                           }}
                         />
                         <div className="flex-1 min-w-0 text-xs">

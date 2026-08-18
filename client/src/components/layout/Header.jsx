@@ -1,11 +1,12 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Search, User, Heart, ShoppingBag, ChevronDown, Menu, X, ChevronRight } from 'lucide-react'
+import { Search, User, ShoppingBag, ChevronDown, Menu, X, ChevronRight, MapPin } from 'lucide-react'
 import logo from '@/assets/jalyn-logo.png'
 import { NAV_LINKS } from '@/constants/data'
 import { cn } from '@/lib/utils'
-import { useCartStore, useUIStore, useWishlistStore } from '@/store'
+import { useCartStore, useUIStore } from '@/store'
 import { useCmsData } from '@/hooks/useCmsData'
+import LocationModal, { getSavedLocation, saveLocation } from '@/components/location/LocationModal'
 
 function IconBtn({ children, label, onClick, as = 'button', to, badge }) {
   const Comp = as
@@ -34,13 +35,56 @@ export default function Header() {
   const [activeDropdown, setActiveDropdown] = useState(null)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const [expandedMobileMenu, setExpandedMobileMenu] = useState(null)
+  const [locationModalOpen, setLocationModalOpen] = useState(false)
+  const [currentLocation, setCurrentLocation] = useState(getSavedLocation)
 
   const cartCount = useCartStore((s) => s.getCount())
   const openCart = useCartStore((s) => s.openCart)
-  const wishCount = useWishlistStore((s) => s.ids.length)
   const setSearchOpen = useUIStore((s) => s.setSearchOpen)
 
-  const { menuLinks, cmsData } = useCmsData()
+  const { menuLinks, cmsData, loading } = useCmsData()
+
+  // Location Auto-Detection on initial site access
+  useEffect(() => {
+    const saved = getSavedLocation()
+    if (saved?.pincode) {
+      setCurrentLocation(saved)
+    } else {
+      // Try browser geolocation or trigger modal
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            try {
+              const res = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&zoom=18&addressdetails=1`
+              )
+              const data = await res.json()
+              const pin = data.address?.postcode?.replace(/\D/g, '')?.slice(0, 6)
+              const city = data.address?.city || data.address?.town || data.address?.state_district || 'India'
+              if (pin && pin.length === 6) {
+                saveLocation(pin, city)
+                setCurrentLocation({ pincode: pin, city })
+                return
+              }
+            } catch (e) {}
+            setLocationModalOpen(true)
+          },
+          () => {
+            setLocationModalOpen(true)
+          },
+          { timeout: 5000 }
+        )
+      } else {
+        setLocationModalOpen(true)
+      }
+    }
+
+    const handleLocationUpdate = (e) => {
+      if (e.detail) setCurrentLocation(e.detail)
+    }
+    window.addEventListener('jalyn_location_updated', handleLocationUpdate)
+    return () => window.removeEventListener('jalyn_location_updated', handleLocationUpdate)
+  }, [])
   
   const navLinks = useMemo(() => {
     const baseLinks = menuLinks?.length ? [...menuLinks] : [...NAV_LINKS]
@@ -66,21 +110,21 @@ export default function Header() {
     women: {
       heading: 'Featured Edit',
       title: 'Aesthetic Co-ord Sets',
-      image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=400&q=80',
+      image: '/images/home/mega-menu/women-edit.webp',
       cta_text: 'Shop Collection',
       cta_link: '/shop',
     },
     kids: {
       heading: 'Featured Edit',
       title: 'Playful Toddler Wear',
-      image: 'https://images.unsplash.com/photo-1519457431-44ccd64a579b?auto=format&fit=crop&w=400&q=80',
+      image: '/images/home/mega-menu/kids-edit.webp',
       cta_text: 'Shop Collection',
       cta_link: '/shop',
     }
   }
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24)
+    const onScroll = () => setScrolled(window.scrollY > 60)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
@@ -101,11 +145,12 @@ export default function Header() {
     <>
       <header
         className={cn(
-          'sticky top-0 z-50 transition-all duration-300 bg-[#FFF6F9] border-b border-[#EFD7E3] shadow-sm',
+          'transition-all duration-300 bg-[#FFF6F9] border-b border-[#EFD7E3]',
+          scrolled ? 'shadow-md' : 'shadow-sm',
           isPdpPage && 'hidden lg:block',
         )}
       >
-        <div className="container-luxury max-w-7xl flex h-16 items-center justify-between gap-4 lg:h-20 px-4 sm:px-6">
+        <div className={cn('container-luxury max-w-7xl flex items-center justify-between gap-4 px-4 sm:px-6 transition-all duration-300', scrolled ? 'h-14 lg:h-14' : 'h-16 lg:h-20')}>
           {/* Left: Mobile Hamburger + Logo */}
           <div className="flex items-center gap-2">
             <button
@@ -125,7 +170,7 @@ export default function Header() {
               <img
                 src={logo}
                 alt="JALYN — Style meets comfort"
-                className="h-8 object-contain sm:h-10 lg:h-20"
+                className={cn('object-contain transition-all duration-300', scrolled ? 'h-7 sm:h-8 lg:h-10' : 'h-8 sm:h-10 lg:h-20')}
                 width={180}
                 height={44}
               />
@@ -137,7 +182,17 @@ export default function Header() {
             className="hidden lg:flex items-center gap-6 xl:gap-8"
             aria-label="Primary"
           >
-            {navLinks.map((link) => {
+            {loading ? (
+              <div className="flex items-center gap-6 xl:gap-8" aria-hidden="true">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-3 w-16 rounded bg-rose-light/80 animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : (
+            navLinks.map((link) => {
               const isActive = checkIsActive(link)
               const hasGroups = Boolean(link.groups && link.groups.length > 0)
               const hasChildren = Boolean(link.children && link.children.length > 0)
@@ -223,10 +278,14 @@ export default function Header() {
                               src={
                                 featuredEdits[link.label.toLowerCase()]?.image ||
                                 (link.label.toLowerCase() === 'women'
-                                  ? 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=400&q=80'
-                                  : 'https://images.unsplash.com/photo-1519457431-44ccd64a579b?auto=format&fit=crop&w=400&q=80')
+                                  ? '/images/home/mega-menu/women-edit.webp'
+                                  : '/images/home/mega-menu/kids-edit.webp')
                               }
                               alt="Featured collection"
+                              loading="lazy"
+                              decoding="async"
+                              width="320"
+                              height="426"
                               className="h-full w-full object-cover transition-transform duration-700 group-hover/promo:scale-105"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-[#2A1A22]/80 via-[#2A1A22]/20 to-transparent flex flex-col justify-end p-4">
@@ -322,11 +381,24 @@ export default function Header() {
                   {link.label}
                 </Link>
               )
-            })}
+            }))}
           </nav>
 
-          {/* Right: Utility Icons */}
-          <div className="relative z-10 flex items-center gap-1 sm:gap-1.5">
+          {/* Right: Utility Icons & Location */}
+          <div className="relative z-10 flex items-center gap-1 sm:gap-2">
+            {/* Locator Button */}
+            <button
+              type="button"
+              onClick={() => setLocationModalOpen(true)}
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-[#FFF0F5] border border-primary/15 text-[11px] sm:text-xs font-semibold text-[#4A2F3C] hover:bg-rose-light hover:text-primary transition active:scale-95 cursor-pointer max-w-[130px] sm:max-w-[180px]"
+              title="Click to change delivery location / pincode"
+            >
+              <MapPin className="h-3.5 w-3.5 text-primary shrink-0 animate-pulse" />
+              <span className="truncate">
+                {currentLocation?.pincode ? `Deliver to ${currentLocation.pincode}` : 'Select Pincode'}
+              </span>
+            </button>
+
             <IconBtn label="Search" onClick={() => setSearchOpen(true)}>
               <Search className="h-[19px] w-[19px]" />
             </IconBtn>
@@ -336,10 +408,6 @@ export default function Header() {
                 <User className="h-[19px] w-[19px]" />
               </IconBtn>
             </span>
-
-            <IconBtn label="Wishlist" as={Link} to="/wishlist" badge={wishCount}>
-              <Heart className="h-[19px] w-[19px]" />
-            </IconBtn>
 
             <IconBtn label="Cart" onClick={openCart} badge={cartCount}>
               <ShoppingBag className="h-[19px] w-[19px]" />
@@ -443,6 +511,13 @@ export default function Header() {
           </div>
         </div>
       )}
+
+      {/* Delivery Location & Pincode Modal */}
+      <LocationModal
+        isOpen={locationModalOpen}
+        onClose={() => setLocationModalOpen(false)}
+        onLocationSelect={(loc) => setCurrentLocation(loc)}
+      />
     </>
   )
 }

@@ -19,14 +19,16 @@ export default defineConfig({
     minify: 'esbuild',
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            return 'vendor';
-          }
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'query-vendor': ['@tanstack/react-query'],
+          'animation-vendor': ['framer-motion'],
+          'swiper-vendor': ['swiper'],
+          'icons-vendor': ['lucide-react'],
         },
       },
     },
-    chunkSizeWarningLimit: 800,
+    chunkSizeWarningLimit: 600,
   },
   esbuild: {
     drop: ['console', 'debugger'],

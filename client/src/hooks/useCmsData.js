@@ -1,30 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import { HERO_SLIDES, COLLECTIONS, NAV_LINKS, FOOTER_LINKS, SERVICES, INSTAGRAM_POSTS } from '../constants/data';
 
-export function useCmsData() {
-  const [cmsData, setCmsData] = useState(null);
-  const [loading, setLoading] = useState(true);
+async function fetchCmsHomepage() {
+  try {
+    const response = await api.get('/cms/homepage');
+    return response.data?.data || null;
+  } catch (err) {
+    console.warn('Failed to load live CMS data, using static presets:', err);
+    return null;
+  }
+}
 
-  useEffect(() => {
-    let isMounted = true;
-    async function fetchCms() {
-      try {
-        const response = await api.get('/cms/homepage');
-        if (response.data?.data && isMounted) {
-          setCmsData(response.data.data);
-        }
-      } catch (err) {
-        console.warn('Failed to load live CMS data, using static presets:', err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-    fetchCms();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+export function useCmsData() {
+  const { data: cmsData = null, isLoading: loading } = useQuery({
+    queryKey: ['cms', 'homepage'],
+    queryFn: fetchCmsHomepage,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
   // --- Hero Slides ---
   const heroSlides = cmsData?.hero_banner?.slides?.length
@@ -86,17 +80,16 @@ export function useCmsData() {
   ];
 
   const footerSettings = cmsData?.footer_settings || {
-    about_text: "Effortless style. Everyday comfort. Premium women's fashion designed to feel as good as it looks.",
     instagram_link: 'https://www.instagram.com/jalyn.apparels/',
     facebook_link: '',
-    twitter_link: '',
-    youtube_link: '',
     columns: defaultFooterColumns,
   };
 
   const aboutPage = cmsData?.about_page || null;
   const contactPage = cmsData?.contact_page || null;
+  const helpSupportPage = cmsData?.help_support_page || null;
   const authPage = cmsData?.auth_page || null;
+  const policyPages = cmsData?.policy_pages || null;
   const codSettings = cmsData?.cod_settings || {
     enabled: true,
     min_order_amount: 0,
@@ -141,7 +134,9 @@ export function useCmsData() {
     footerSettings,
     aboutPage,
     contactPage,
+    helpSupportPage,
     authPage,
+    policyPages,
     codSettings,
     deliverySettings,
     taxSettings,

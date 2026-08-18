@@ -8,7 +8,7 @@ export default function MobilePromo() {
   const subtitle = promoBanner?.subtitle || 'On Selected Styles'
   const ctaText = promoBanner?.cta_text || 'Shop Now'
   const ctaLink = promoBanner?.cta_link || '/collections/sale'
-  const bgImage = promoBanner?.bg_image || 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=80'
+  const bgImage = promoBanner?.bg_image || '/images/home/banners/lookbook-promo.webp'
 
   return (
     <motion.section

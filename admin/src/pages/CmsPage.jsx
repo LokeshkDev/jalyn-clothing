@@ -34,10 +34,73 @@ import {
   Star,
   Monitor,
   Smartphone,
+  FileText,
+  HelpCircle,
 } from 'lucide-react';
 import Header from '../components/Header';
 import ImageUploader from '../components/ImageUploader';
+import RichTextEditor from '../components/RichTextEditor';
 import api from '../services/api';
+
+const FaqEditor = ({ faqs = [], onChange, title }) => {
+  const updateFaq = (idx, field, value) => {
+    const next = [...(faqs || [])];
+    next[idx] = { ...(next[idx] || {}), [field]: value };
+    onChange(next);
+  };
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="block font-semibold text-gray-700">{title}</label>
+        <button
+          type="button"
+          onClick={() => onChange([...(faqs || []), { q: '', a: '' }])}
+          className="flex items-center gap-1.5 text-[11px] font-bold bg-pink-50 text-brand-600 hover:bg-pink-100 border border-pink-200 px-3 py-1.5 rounded-xl cursor-pointer"
+        >
+          <Plus className="w-3.5 h-3.5" /> Add FAQ
+        </button>
+      </div>
+      {(faqs || []).map((faq, idx) => (
+        <div key={idx} className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3 relative">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">FAQ #{idx + 1}</span>
+            <button
+              type="button"
+              onClick={() => onChange((faqs || []).filter((_, i) => i !== idx))}
+              className="text-gray-400 hover:text-red-600 cursor-pointer"
+              title="Remove FAQ"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-gray-600 mb-1">Question</label>
+            <input
+              type="text"
+              value={faq.q || ''}
+              onChange={(e) => updateFaq(idx, 'q', e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs font-medium"
+              placeholder="Enter FAQ question"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-gray-600 mb-1">Answer</label>
+            <textarea
+              rows={2}
+              value={faq.a || ''}
+              onChange={(e) => updateFaq(idx, 'a', e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs font-medium"
+              placeholder="Enter FAQ answer"
+            />
+          </div>
+        </div>
+      ))}
+      {!(faqs || []).length && (
+        <p className="text-xs text-gray-400 italic">No FAQs yet. Click "Add FAQ" to create one.</p>
+      )}
+    </div>
+  );
+};
 
 export default function CmsPage() {
   const [loading, setLoading] = useState(true);
@@ -124,10 +187,15 @@ export default function CmsPage() {
     },
     footer_settings: {
       about_text: 'Effortless style. Everyday comfort. Premium women’s fashion designed to feel as good as it looks.',
+      logo_url: '',
+      phone: '+91 98765 43210',
+      email: 'care@jalyn.in',
+      whatsapp: '+91 98765 43210',
       instagram_link: 'https://www.instagram.com/jalyn.apparels/',
-      facebook_link: 'https://www.instagram.com/jalyn.apparels/',
-      twitter_link: 'https://www.instagram.com/jalyn.apparels/',
-      youtube_link: 'https://www.instagram.com/jalyn.apparels/',
+      facebook_link: 'https://facebook.com/jalyn.apparels',
+      twitter_link: '',
+      youtube_link: '',
+      copyright_text: '© 2026 JALYN Apparels. All rights reserved.',
       columns: [
         {
           title: 'Customer Care',
@@ -135,18 +203,12 @@ export default function CmsPage() {
             { label: 'Contact Us', href: '/contact' },
             { label: 'Shipping & Delivery', href: '/shipping-delivery' },
             { label: 'Returns & Exchanges', href: '/returns-exchanges' },
-            { label: 'Track Order', href: '/track-order' },
-            { label: 'Size Guide', href: '/size-guide' },
           ],
         },
         {
           title: 'About Jalyn',
           links: [
             { label: 'Our Story', href: '/about' },
-            { label: 'Craftsmanship', href: '/craftsmanship' },
-            { label: 'Sustainability', href: '/sustainability' },
-            { label: 'Press & Media', href: '/press-media' },
-            { label: 'Careers', href: '/careers' },
           ],
         },
         {
@@ -157,6 +219,16 @@ export default function CmsPage() {
             { label: 'Refund Policy', href: '/refund-policy' },
           ],
         },
+        {
+          title: 'My Account',
+          links: [
+            { label: 'My Orders', href: '/profile/orders' },
+            { label: 'My Wishlist', href: '/profile/wishlist' },
+            { label: 'Addresses', href: '/profile/addresses' },
+            { label: 'Returns', href: '/profile/returns' },
+            { label: 'Help & Support', href: '/profile/help' },
+          ],
+        },
       ],
     },
     about_page: {
@@ -165,9 +237,6 @@ export default function CmsPage() {
       hero_image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1920&q=80',
       story_heading: 'Our Story & Heritage',
       story_content: "Founded with a passion for effortless style and everyday comfort, JALYN creates premium women's fashion that celebrates individuality and grace. Each collection is meticulously designed with breathable luxury fabrics, hand-embroidered details, and tailored fits that feel like a second skin.",
-      craftsmanship_title: 'Artisanal Craftsmanship',
-      craftsmanship_content: 'Every dress, kurti, and co-ord set is brought to life by master artisans who preserve centuries-old embroidery techniques. We take pride in small-batch production that prioritizes quality over quantity.',
-      craftsmanship_image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=1000',
       sustainability_title: 'Conscious & Sustainable',
       sustainability_content: 'We use eco-friendly dyes, organic cotton blends, and zero-waste fabric cutting practices to minimize environmental impact while keeping fashion luxurious.',
       sustainability_image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=1000',
@@ -188,6 +257,54 @@ export default function CmsPage() {
       address: 'Jalyn Fashion Studio, 42 Luxury Boulevard, Fashion District, Mumbai, MH 400001, India',
       working_hours: 'Monday - Saturday: 10:00 AM - 7:00 PM IST',
       google_maps_url: 'https://maps.google.com/maps?q=Mumbai,Maharashtra&t=&z=13&ie=UTF8&iwloc=&output=embed',
+      faqs: [
+        { q: 'How long will delivery take for my order?', a: 'Standard shipping takes 3 to 5 business days across major metro cities in India, and 5 to 7 business days for other tier-2 & tier-3 locations.' },
+        { q: 'What is your returns and exchange policy?', a: 'We offer a hassle-free 7-day return and exchange policy from the date of delivery. Items must be unworn, unwashed, and have original tags intact.' },
+        { q: 'How do I choose the correct size?', a: 'Please refer to our Size Guide on product pages or footer for exact body measurements. If you are between sizes, we recommend opting for the larger size for a relaxed fit.' },
+        { q: 'Can I request custom alterations?', a: 'Yes! For select ethnic collections and evening gowns, custom sizing & length adjustments can be requested by reaching out to our WhatsApp support team.' },
+      ],
+    },
+    help_support_page: {
+      title: 'Help & Support',
+      subtitle: 'We are here to assist you with any questions or order concerns',
+      faqs: [
+        { q: 'How do I track my order?', a: 'You can track your order by navigating to My Orders -> View Details. We also send live WhatsApp and email updates once your order is dispatched.' },
+        { q: 'What is the return policy for JALYN items?', a: 'We offer a 7-day hassle-free return and exchange policy from the date of delivery. Items must be unworn with original tags attached.' },
+        { q: 'Are custom size alterations available?', a: 'Yes! Please check our Size Guide or reach out to our WhatsApp support team with your custom measurements before placing your order.' },
+        { q: 'What payment methods do you accept?', a: 'We accept Online Payments (UPI, Credit/Debit Cards, Net Banking, Wallets) as well as Cash on Delivery (COD) across India.' },
+      ],
+    },
+    policy_pages: {
+      shipping_delivery: {
+        title: 'Shipping & Delivery Policy',
+        content_html:
+          '<p>At JALYN, every order is treated with utmost care. Our garments are inspected and dispatched directly from our Mumbai studio in sustainable luxury packaging.</p>' +
+          '<div class="grid sm:grid-cols-2 gap-4 my-6"><div class="p-5 rounded-2xl bg-[#FAF7F5] border border-[#EFE8E2]"><h4 class="font-semibold text-sm text-[#2C1C24]">Standard Domestic Shipping</h4><p class="text-xs text-gray-500 mt-1">3 – 5 Business Days</p><p class="text-xs text-[#C28E5C] font-semibold mt-2">FREE on orders above ₹1,999</p></div><div class="p-5 rounded-2xl bg-[#FAF7F5] border border-[#EFE8E2]"><h4 class="font-semibold text-sm text-[#2C1C24]">Express Shipping</h4><p class="text-xs text-gray-500 mt-1">1 – 2 Business Days (Metro Cities)</p><p class="text-xs text-gray-600 mt-2">Nominal fee of ₹150</p></div></div>' +
+          '<h3 class="text-lg font-serif text-[#2C1C24] pt-4 border-t border-gray-100">Tracking Your Package</h3>' +
+          '<p>Once dispatched, you will receive an SMS and email containing your AWB tracking number and live order link. For any tracking assistance, please email <a href="mailto:support@jalyn.in" class="text-[#C28E5C] font-medium underline">support@jalyn.in</a> with your Order ID.</p>',
+      },
+      returns_exchanges: {
+        title: 'Returns & Exchanges Policy',
+        content_html:
+          '<p>We want you to love your JALYN purchase. If the fit or style isn’t perfect, we offer a hassle-free 7-day return &amp; exchange window.</p>' +
+          '<div class="p-6 rounded-2xl bg-[#FFF6F9] border border-rose-100 space-y-3"><h4 class="font-semibold text-sm text-[#4A2F3C] flex items-center gap-2">7-Day Easy Return Guarantee</h4><ul class="text-xs text-gray-600 space-y-2 list-disc list-inside font-light"><li>Items must be unworn, unwashed, and in original condition with tags attached.</li><li>Reverse doorstep pickup will be arranged by our logistics partners.</li><li>Exchanges for a different size are complimentary with zero extra delivery fee.</li></ul></div>' +
+          '<div class="pt-4 border-t border-gray-100"><h3 class="text-lg font-serif text-[#2C1C24]">How to Request a Return</h3><p class="text-sm text-gray-600 font-light mt-2">Go to <a href="/profile/orders" class="text-[#C28E5C] font-medium underline">My Orders</a> section in your profile or email <a href="mailto:support@jalyn.in" class="text-[#C28E5C] underline">support@jalyn.in</a> with your Order ID.</p></div>',
+      },
+      privacy_policy: {
+        title: 'Privacy Policy',
+        content_html:
+          '<p>Your privacy is paramount to us. JALYN Apparels collects only necessary information required to process your orders, process payments securely, and deliver exceptional service. We never sell or share your personal data with third-party advertisers.</p>',
+      },
+      terms_of_service: {
+        title: 'Terms of Service',
+        content_html:
+          '<p>By visiting our website and placing an order, you agree to be bound by our standard terms and conditions. All prices displayed are inclusive of GST. Product colors may slightly vary due to studio lighting and monitor settings.</p>',
+      },
+      refund_policy: {
+        title: 'Refund Policy',
+        content_html:
+          '<p>Once your returned product passes quality inspection at our warehouse, your refund will be credited back to your original payment method (Credit Card, Debit Card, UPI, Netbanking) within 5 – 7 business days.</p>',
+      },
     },
     recently_viewed: {
       title: 'Recently Viewed',
@@ -417,7 +534,7 @@ export default function CmsPage() {
       const sectionPayload = cmsData[sectionKey];
       await api.put(`/cms/homepage/${sectionKey}`, sectionPayload);
 
-      setMessage({ type: 'success', text: `Section '${sectionKey}' saved to DB & live client successfully!` });
+      setMessage({ type: 'success', text: `Section '${sectionKey}' saved to live client successfully!` });
       setTimeout(() => setMessage({ type: '', text: '' }), 4000);
     } catch (err) {
       console.error('Failed to save section:', err);
@@ -436,6 +553,27 @@ export default function CmsPage() {
       [sectionKey]: {
         ...prev[sectionKey],
         [field]: value,
+      },
+    }));
+  };
+
+  const POLICY_EDITOR_PAGES = [
+    { key: 'shipping_delivery', label: 'Shipping & Delivery' },
+    { key: 'returns_exchanges', label: 'Returns & Exchanges' },
+    { key: 'privacy_policy', label: 'Privacy Policy' },
+    { key: 'terms_of_service', label: 'Terms of Service' },
+    { key: 'refund_policy', label: 'Refund Policy' },
+  ];
+
+  const updatePolicyField = (pageKey, field, value) => {
+    setCmsData((prev) => ({
+      ...prev,
+      policy_pages: {
+        ...(prev.policy_pages || {}),
+        [pageKey]: {
+          ...(prev.policy_pages?.[pageKey] || {}),
+          [field]: value,
+        },
       },
     }));
   };
@@ -1481,6 +1619,8 @@ export default function CmsPage() {
     { id: 'homepage', label: 'Homepage CMS', icon: Sliders },
     { id: 'about_page', label: 'About Page', icon: Sparkles },
     { id: 'contact_page', label: 'Contact Page', icon: Phone },
+    { id: 'help_support_page', label: 'Help & Support', icon: HelpCircle },
+    { id: 'policy_pages', label: 'Support & Policies', icon: FileText },
     { id: 'menu_arrangement', label: 'Header Menu', icon: Navigation },
     { id: 'footer_settings', label: 'Footer Columns', icon: Columns },
     { id: 'cod_settings', label: 'Payment & COD', icon: Banknote },
@@ -1705,7 +1845,7 @@ export default function CmsPage() {
                 <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-brand-600" /> About Page Content Management
                 </h3>
-                <p className="text-xs text-gray-500">Manage hero banner, brand story, craftsmanship, sustainability, and statistics displayed on /about.</p>
+                <p className="text-xs text-gray-500">Manage hero banner, brand story, sustainability, and statistics displayed on /about.</p>
               </div>
               <button
                 onClick={() => handleSaveSection('about_page')}
@@ -1774,40 +1914,9 @@ export default function CmsPage() {
                 </div>
               </div>
 
-              {/* Craftsmanship & Sustainability */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
-                  <h4 className="font-bold text-sm text-gray-900">Craftsmanship Section</h4>
-                  <div>
-                    <label className="block font-semibold text-gray-700 mb-1">Title</label>
-                    <input
-                      type="text"
-                      value={cmsData.about_page?.craftsmanship_title || ''}
-                      onChange={(e) => updateSectionField('about_page', 'craftsmanship_title', e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-gray-700 mb-1">Content</label>
-                    <textarea
-                      rows={3}
-                      value={cmsData.about_page?.craftsmanship_content || ''}
-                      onChange={(e) => updateSectionField('about_page', 'craftsmanship_content', e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
-                    />
-                  </div>
-                  <ImageUploader
-                    label="Craftsmanship Image"
-                    value={cmsData.about_page?.craftsmanship_image || ''}
-                    onChange={(url) => updateSectionField('about_page', 'craftsmanship_image', url)}
-                    aspectRatio="aspect-[4/5]"
-                    recommendedSize="800 × 1000 px (Portrait Artistry)"
-                    placeholderText="Upload Craftsmanship Portrait (800 x 1000 px)"
-                  />
-                </div>
-
-                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
-                  <h4 className="font-bold text-sm text-gray-900">Sustainability Section</h4>
+              {/* Sustainability */}
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
+                <h4 className="font-bold text-sm text-gray-900">Sustainability Section</h4>
                   <div>
                     <label className="block font-semibold text-gray-700 mb-1">Title</label>
                     <input
@@ -1835,7 +1944,6 @@ export default function CmsPage() {
                     placeholderText="Upload Sustainability Portrait (800 x 1000 px)"
                   />
                 </div>
-              </div>
             </div>
           </div>
         )}
@@ -1951,6 +2059,124 @@ export default function CmsPage() {
                   />
                 </div>
               </div>
+
+              <div className="border-t border-gray-100 pt-5">
+                <FaqEditor
+                  title="Contact Page FAQs (shown at the bottom of /contact)"
+                  faqs={cmsData.contact_page?.faqs || []}
+                  onChange={(faqs) => updateSectionField('contact_page', 'faqs', faqs)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Help & Support Page CMS Tab */}
+        {activeTab === 'help_support_page' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6 shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div>
+                <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5 text-brand-600" /> Help &amp; Support Page Content
+                </h3>
+                <p className="text-xs text-gray-500">Manage the FAQ accordion shown on the Help &amp; Support page (My Account → Help &amp; Support). Changes appear live on the website.</p>
+              </div>
+              <button
+                onClick={() => handleSaveSection('help_support_page')}
+                disabled={savingSection === 'help_support_page'}
+                className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+              >
+                {savingSection === 'help_support_page' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>Save Help &amp; Support</span>
+              </button>
+            </div>
+
+            <div className="space-y-6 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Page Title</label>
+                  <input
+                    type="text"
+                    value={cmsData.help_support_page?.title || ''}
+                    onChange={(e) => updateSectionField('help_support_page', 'title', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Page Subtitle</label>
+                  <input
+                    type="text"
+                    value={cmsData.help_support_page?.subtitle || ''}
+                    onChange={(e) => updateSectionField('help_support_page', 'subtitle', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                  />
+                </div>
+              </div>
+
+              <FaqEditor
+                title="Help &amp; Support FAQs (accordion on the page)"
+                faqs={cmsData.help_support_page?.faqs || []}
+                onChange={(faqs) => updateSectionField('help_support_page', 'faqs', faqs)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Customer Support & Policies CMS Tab */}
+        {activeTab === 'policy_pages' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6 shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div>
+                <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-brand-600" /> Customer Support &amp; Policies Page Content
+                </h3>
+                <p className="text-xs text-gray-500">Edit every policy page section with a Word-style rich text editor. Changes appear live on the /shipping-delivery, /returns-exchanges, /privacy-policy, /terms-of-service and /refund-policy pages.</p>
+              </div>
+              <button
+                onClick={() => handleSaveSection('policy_pages')}
+                disabled={savingSection === 'policy_pages'}
+                className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+              >
+                {savingSection === 'policy_pages' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>Save All Policies</span>
+              </button>
+            </div>
+
+            <div className="space-y-6 text-xs">
+              {POLICY_EDITOR_PAGES.map((pg) => {
+                const page = cmsData.policy_pages?.[pg.key] || {};
+                return (
+                  <div key={pg.key} className="p-5 bg-gray-50 rounded-2xl border border-gray-200 space-y-4">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                      <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-brand-600" /> {pg.label} Page
+                      </h4>
+                      <span className="text-[10px] text-gray-400 font-mono">/{pg.key.replace(/_/g, '-')}</span>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1">Page Heading / Title</label>
+                      <input
+                        type="text"
+                        value={page.title || ''}
+                        onChange={(e) => updatePolicyField(pg.key, 'title', e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-bold text-gray-900 bg-white"
+                        placeholder="e.g. Shipping & Delivery Policy"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1.5">
+                        Page Body Content (Word-Style Editor)
+                      </label>
+                      <RichTextEditor
+                        value={page.content_html || ''}
+                        onChange={(html) => updatePolicyField(pg.key, 'content_html', html)}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -2416,42 +2642,145 @@ export default function CmsPage() {
             </div>
 
             <div className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">About Brand Snippet</label>
-                <textarea
-                  rows={2}
-                  value={cmsData.footer_settings.about_text}
-                  onChange={(e) => updateSectionField('footer_settings', 'about_text', e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">About Brand Snippet (1st Column)</label>
+                  <textarea
+                    rows={3}
+                    value={cmsData.footer_settings.about_text || ''}
+                    onChange={(e) => updateSectionField('footer_settings', 'about_text', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    placeholder="Short description under the logo..."
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Bottom Bar Copyright Text</label>
+                  <input
+                    type="text"
+                    value={cmsData.footer_settings.copyright_text || ''}
+                    onChange={(e) => updateSectionField('footer_settings', 'copyright_text', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium mb-3"
+                    placeholder="© 2026 JALYN Apparels. All rights reserved."
+                  />
+                  <label className="block font-semibold text-gray-700 mb-1">Brand Logo Image URL (Optional override)</label>
+                  <input
+                    type="text"
+                    value={cmsData.footer_settings.logo_url || ''}
+                    onChange={(e) => updateSectionField('footer_settings', 'logo_url', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    placeholder="/images/branding/jalyn-logo.png"
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* 1st Section Contact Information */}
+              <div className="p-4 bg-pink-50/50 rounded-2xl border border-pink-200/60 space-y-3">
+                <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wider text-brand-700 flex items-center gap-1.5">
+                  <Phone className="w-4 h-4" /> 1st Column Direct Contact &amp; Support Info
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Phone Number</label>
+                    <input
+                      type="text"
+                      value={cmsData.footer_settings.phone || ''}
+                      onChange={(e) => updateSectionField('footer_settings', 'phone', e.target.value)}
+                      placeholder="+91 98765 43210"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Support Email</label>
+                    <input
+                      type="email"
+                      value={cmsData.footer_settings.email || ''}
+                      onChange={(e) => updateSectionField('footer_settings', 'email', e.target.value)}
+                      placeholder="care@jalyn.in"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">WhatsApp Business Number</label>
+                    <input
+                      type="text"
+                      value={cmsData.footer_settings.whatsapp || ''}
+                      onChange={(e) => updateSectionField('footer_settings', 'whatsapp', e.target.value)}
+                      placeholder="+91 98765 43210"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Social Media Links */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                   <label className="block font-semibold text-gray-700 mb-1">Instagram Link</label>
                   <input
                     type="text"
-                    value={cmsData.footer_settings.instagram_link}
+                    value={cmsData.footer_settings.instagram_link || ''}
                     onChange={(e) => updateSectionField('footer_settings', 'instagram_link', e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    placeholder="https://instagram.com/..."
                   />
                 </div>
                 <div>
                   <label className="block font-semibold text-gray-700 mb-1">Facebook Link</label>
                   <input
                     type="text"
-                    value={cmsData.footer_settings.facebook_link}
+                    value={cmsData.footer_settings.facebook_link || ''}
                     onChange={(e) => updateSectionField('footer_settings', 'facebook_link', e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    placeholder="https://facebook.com/..."
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Twitter / X Link</label>
+                  <input
+                    type="text"
+                    value={cmsData.footer_settings.twitter_link || ''}
+                    onChange={(e) => updateSectionField('footer_settings', 'twitter_link', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    placeholder="https://twitter.com/..."
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">YouTube Link</label>
+                  <input
+                    type="text"
+                    value={cmsData.footer_settings.youtube_link || ''}
+                    onChange={(e) => updateSectionField('footer_settings', 'youtube_link', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium"
+                    placeholder="https://youtube.com/..."
                   />
                 </div>
               </div>
 
-              {/* Editable Footer Columns */}
+              {/* Editable Footer Columns & Extra Sections */}
               <div className="pt-3 border-t border-gray-100 space-y-4">
-                <h4 className="font-bold text-gray-900 text-sm">
-                  Footer Link Columns ({cmsData.footer_settings?.columns?.length || 0})
-                </h4>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm">
+                      Footer Link Columns &amp; Extra Sections ({cmsData.footer_settings?.columns?.length || 0})
+                    </h4>
+                    <p className="text-[11px] text-gray-500">
+                      Website row displays 4 columns maximum per row on desktop (Column 1 is Contact/Brand, followed by link columns).
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextCols = [
+                        ...(cmsData.footer_settings?.columns || []),
+                        { title: 'New Section', links: [{ label: 'Sample Link', href: '/shop' }] },
+                      ];
+                      updateSectionField('footer_settings', 'columns', nextCols);
+                    }}
+                    className="px-3 py-1.5 rounded-xl border border-brand-200 bg-brand-50 text-brand-700 text-xs font-bold hover:bg-brand-100 transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Extra Section
+                  </button>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {cmsData.footer_settings?.columns?.map((col, colIdx) => (

@@ -83,7 +83,7 @@ export default function QuickViewModal({ product, open, onClose }) {
     product.image ||
     product.primary_image ||
     product.images?.primary ||
-    'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+    '/images/products/floral-midi-dress.webp'
   
   const activeColorImg = getColorImage(product, selectedColor)
   const displayImg = activeColorImg || primaryImg
@@ -130,7 +130,7 @@ export default function QuickViewModal({ product, open, onClose }) {
               className="h-full w-full object-cover object-top transition-all duration-300"
               onError={(e) => {
                 e.currentTarget.src =
-                  'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+                  '/images/products/floral-midi-dress.webp'
               }}
             />
 

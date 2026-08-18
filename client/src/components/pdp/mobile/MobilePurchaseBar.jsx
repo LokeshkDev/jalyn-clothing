@@ -42,7 +42,7 @@ export default function MobilePurchaseBar({ product, selectedSize, selectedColor
       product.image ||
       product.primary_image ||
       product.images?.primary ||
-      'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+      '/images/products/floral-midi-dress.webp'
 
     addItem({
       id: product.id,

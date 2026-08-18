@@ -14,7 +14,7 @@ export default function Collections() {
 
   return (
     <motion.section
-      className="relative overflow-hidden bg-[#FAF6F8]/60 pt-16 md:pt-20 mb-[15px] lg:mb-5"
+      className="relative overflow-hidden bg-[#FAF6F8]/60 pt-8 md:pt-12 mb-[15px] lg:mb-5"
       aria-labelledby="collections-heading"
       initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -58,10 +58,12 @@ export default function Collections() {
                         src={collection.image || collection.image_url}
                         alt={collection.title || collection.name}
                         loading="lazy"
+                        decoding="async"
+                        width="320"
+                        height="426"
                         className="img-zoom h-full w-full object-cover duration-700 group-hover:scale-110"
                         onError={(e) => {
-                          e.currentTarget.src =
-                            'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+                          e.currentTarget.src = '/images/home/categories/dresses.webp'
                         }}
                       />
                     </div>

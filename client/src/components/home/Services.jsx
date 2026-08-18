@@ -12,14 +12,14 @@ const icons = {
 export default function Services() {
   return (
     <motion.section
-      className="relative overflow-hidden border-y border-primary/5 bg-gradient-to-b from-rose-light/50 to-surface-muted pt-10 md:pt-14 mb-[15px] lg:mb-5"
+      className="relative overflow-hidden border-y border-primary/5 bg-gradient-to-b from-rose-light/50 to-surface-muted py-8 md:py-10 mb-6"
       aria-label="Our services"
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="container-luxury relative z-[1] grid grid-cols-4 gap-2 sm:gap-4 md:gap-8">
+      <div className="container-luxury max-w-7xl px-4 sm:px-6 relative z-[1] grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-8 items-center text-center">
         {SERVICES.map((service, i) => {
           const Icon = icons[service.icon] || Sparkles
           return (

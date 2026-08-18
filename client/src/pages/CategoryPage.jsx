@@ -9,6 +9,7 @@ import EmptyState from '@/components/shop/EmptyState'
 import QuickViewModal from '@/components/shop/QuickViewModal'
 import ShopProductCard from '@/components/shop/ShopProductCard'
 import FilterDrawer from '@/components/shop/FilterDrawer'
+import FilterSidebar from '@/components/shop/FilterSidebar'
 import Services from '@/components/home/Services'
 
 // Mobile specific components
@@ -54,7 +55,7 @@ export default function CategoryPage() {
   const [sort, setSort] = useState('newest')
   const [view, setView] = useState(4)
   const [page, setPage] = useState(1)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
   const [sortSheetOpen, setSortSheetOpen] = useState(false)
   const [quickView, setQuickView] = useState(null)
@@ -70,12 +71,6 @@ export default function CategoryPage() {
       })
       .catch(() => {})
   }, [])
-
-  useEffect(() => {
-    setLoading(true)
-    const t = setTimeout(() => setLoading(false), 500)
-    return () => clearTimeout(t)
-  }, [slug])
 
   useEffect(() => {
     setPage(1)
@@ -108,7 +103,7 @@ export default function CategoryPage() {
 
   const categoryBanner = useMemo(() => {
     if (currentCategory?.image_url) return currentCategory.image_url
-    return 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1920&q=80'
+    return '/images/home/hero/hero-slide-1.webp'
   }, [currentCategory])
 
   // Update document title for SEO
@@ -350,7 +345,7 @@ export default function CategoryPage() {
           style={{ backgroundImage: `url(${categoryBanner})` }}
         >
           <div className="absolute inset-0 bg-gradient-to-r from-[#2A1A22]/90 via-[#2A1A22]/65 to-transparent z-[1]" />
-          <div className="relative z-10 container-luxury max-w-7xl px-4 sm:px-6 w-full space-y-2.5">
+          <div className="relative z-10 container-luxury max-w-7xl px-0 sm:px-6 w-full space-y-2.5">
             {/* Minimal Breadcrumb */}
             <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-rose-blush/80 font-semibold">
               <Link to="/" className="transition hover:text-white">Home</Link>
@@ -374,44 +369,61 @@ export default function CategoryPage() {
           </div>
         </section>
 
-        <div className="container-luxury py-8 max-w-7xl">
-          {/* Top Non-Sticky Toolbar with Filter Popover Button */}
-          <ProductToolbar
-            from={from}
-            to={to}
-            total={filtered.length}
-            sort={sort}
-            onSortChange={setSort}
-            view={view}
-            onViewChange={setView}
-            onOpenFilter={() => setFilterDrawerOpen(true)}
-            activeFilterCount={activeFilterCount}
-          />
-
-          {/* Full-width Product Grid */}
-          <div className="mt-6">
-            {!loading && filtered.length === 0 ? (
-              <EmptyState onReset={clearFilters} />
-            ) : (
-              <ProductGrid
-                products={pageItems}
-                view={view}
-                loading={loading}
-                onQuickView={setQuickView}
+        <div className="container-luxury py-6 max-w-7xl px-0 sm:px-6">
+          {/* Main 2-Column Grid: Col-3 Fixed Sticky Filter Sidebar + Col-9 Product Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {/* Left Sticky Fixed Filter Sidebar (Col-3) */}
+            <aside className="lg:col-span-3 sticky top-24">
+              <FilterSidebar
+                filters={filters}
+                onChange={setFilters}
+                onClear={clearFilters}
               />
-            )}
-          </div>
+            </aside>
 
-          {totalPages > 1 && (
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              onChange={(p) => {
-                setPage(p)
-                window.scrollTo({ top: 200, behavior: 'smooth' })
-              }}
-            />
-          )}
+            {/* Right Product Grid & Controls (Col-9) */}
+            <main className="lg:col-span-9 space-y-5">
+              {/* Top Toolbar */}
+              <ProductToolbar
+                from={from}
+                to={to}
+                total={filtered.length}
+                sort={sort}
+                onSortChange={setSort}
+                view={view}
+                onViewChange={setView}
+                onOpenFilter={() => setFilterDrawerOpen(true)}
+                activeFilterCount={activeFilterCount}
+              />
+
+              {/* Product Grid */}
+              <div>
+                {!loading && filtered.length === 0 ? (
+                  <EmptyState onReset={clearFilters} />
+                ) : (
+                  <ProductGrid
+                    products={pageItems}
+                    view={view}
+                    loading={loading}
+                    onQuickView={setQuickView}
+                  />
+                )}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <Pagination
+                  page={page}
+                  totalPages={totalPages}
+                  onChange={(p) => {
+                    setPage(p)
+                    window.scrollTo({ top: 200, behavior: 'smooth' })
+                  }}
+                />
+              )}
+            </main>
+          </div>
 
           {/* Desktop Recently Viewed Swiper */}
           <section className="mt-16" aria-labelledby="recently-viewed-desktop">

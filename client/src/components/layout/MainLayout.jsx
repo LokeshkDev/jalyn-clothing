@@ -17,7 +17,7 @@ export default function MainLayout() {
       <AnnouncementBar />
       
       {/* Desktop chrome */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block sticky top-0 z-50">
         <Header />
       </div>
 
@@ -29,16 +29,7 @@ export default function MainLayout() {
         <Outlet />
       </main>
 
-      <div className="hidden lg:block">
-        <Footer />
-      </div>
-      {/* Compact mobile footer strip */}
-      <footer className="border-t border-primary/10 bg-white px-4 py-5 text-center lg:hidden">
-        <p className="font-label text-xs text-[#9A7A88]">
-          © {new Date().getFullYear()} Jalyn. Style meets comfort.
-        </p>
-      </footer>
-
+      <Footer />
       <CartDrawer />
       <SearchModal />
       <MobileNav />

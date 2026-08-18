@@ -58,7 +58,7 @@ function MobileProductCard({ product }) {
     product.image ||
     product.primary_image ||
     product.images?.primary ||
-    'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+    '/images/products/floral-midi-dress.webp'
 
   return (
     <article className="w-[158px] shrink-0 sm:w-[176px] lg:w-full">
@@ -69,9 +69,11 @@ function MobileProductCard({ product }) {
             alt={title}
             className="h-full w-full object-cover"
             loading="lazy"
+            decoding="async"
+            width="240"
+            height="320"
             onError={(e) => {
-              e.currentTarget.src =
-                'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'
+              e.currentTarget.src = '/images/products/floral-midi-dress.webp'
             }}
           />
         </Link>
