@@ -189,15 +189,17 @@ export default function OrdersPage() {
 
   // Tab count badges
   const tabCounts = useMemo(() => {
-    const online = orders.filter((o) => !isWalkinOrder(o)).length;
-    const pos = orders.filter((o) => isWalkinOrder(o)).length;
-    return { all: orders.length, online, pos };
+    const online = orders.filter((o) => !isWalkinOrder(o) && o.order_status !== 'cancelled' && o.payment_status !== 'failed').length;
+    const pos = orders.filter((o) => isWalkinOrder(o) && o.order_status !== 'cancelled' && o.payment_status !== 'failed').length;
+    const failed = orders.filter((o) => o.order_status === 'cancelled' || o.payment_status === 'failed').length;
+    return { all: orders.length, online, pos, failed };
   }, [orders]);
 
   const kpis = useMemo(() => {
     const currentTabOrders = orders.filter((o) => {
-      if (activeTab === 'online') return !isWalkinOrder(o);
-      if (activeTab === 'pos') return isWalkinOrder(o);
+      if (activeTab === 'online') return !isWalkinOrder(o) && o.order_status !== 'cancelled' && o.payment_status !== 'failed';
+      if (activeTab === 'pos') return isWalkinOrder(o) && o.order_status !== 'cancelled' && o.payment_status !== 'failed';
+      if (activeTab === 'failed') return o.order_status === 'cancelled' || o.payment_status === 'failed';
       return true;
     });
 
@@ -215,9 +217,16 @@ export default function OrdersPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = orders.filter((o) => {
-      // Tab filter: Online vs Walkin/POS
-      if (activeTab === 'online' && isWalkinOrder(o)) return false;
-      if (activeTab === 'pos' && !isWalkinOrder(o)) return false;
+      // Tab filter: Online vs Walkin/POS vs Failed/Cancelled
+      if (activeTab === 'online') {
+        if (isWalkinOrder(o) || o.order_status === 'cancelled' || o.payment_status === 'failed') return false;
+      }
+      if (activeTab === 'pos') {
+        if (!isWalkinOrder(o) || o.order_status === 'cancelled' || o.payment_status === 'failed') return false;
+      }
+      if (activeTab === 'failed') {
+        if (o.order_status !== 'cancelled' && o.payment_status !== 'failed') return false;
+      }
 
       const matchesSearch =
         !q ||
@@ -348,6 +357,21 @@ export default function OrdersPage() {
             <Store className="w-4 h-4" /> 🏪 Walk-in / POS Billing
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${activeTab === 'pos' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-800'}`}>
               {tabCounts.pos}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('failed')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
+              activeTab === 'failed'
+                ? 'bg-red-700 text-white shadow-sm'
+                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+            }`}
+          >
+            <XCircle className="w-4 h-4 text-red-500" /> ⚠️ Failed / Cancelled
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${activeTab === 'failed' ? 'bg-white/20 text-white' : 'bg-red-50 text-red-700'}`}>
+              {tabCounts.failed}
             </span>
           </button>
         </div>

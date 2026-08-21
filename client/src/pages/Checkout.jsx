@@ -318,13 +318,92 @@ export default function Checkout() {
 
           if (result.error) {
             console.error('Cashfree Modal Payment error:', result.error)
-            setToastMessage(result.error.message || 'Payment cancelled or failed. Please try again.')
+            const failedOrderNum = `ORD-FAIL-${Date.now().toString().slice(-6)}`
+            const failedPayload = {
+              order_number: failedOrderNum,
+              customer_name: selectedAddressObj.name || user?.firstName || 'Valued Customer',
+              customer_email: user?.email || 'customer@jalyn.in',
+              customer_phone: cleanPhone,
+              shipping_address: `${selectedAddressObj.addressLine1 || ''}, ${selectedAddressObj.city || ''}, ${selectedAddressObj.state || ''} ${selectedAddressObj.pincode || ''}`,
+              total_amount: grandTotal,
+              discount_amount: discountAmount,
+              shipping_amount: shippingCost,
+              order_type: 'online',
+              payment_status: 'failed',
+              order_status: 'cancelled',
+              payment_method: 'Online Payment (Cashfree Cancelled)',
+              items: cartItems.map((i) => ({
+                product_name: i.name || i.title || 'Jalyn Product',
+                price: i.price,
+                quantity: i.qty || 1,
+                size: i.size || 'M',
+                color: i.color || 'Default',
+                image_url: i.image || i.primary_image || '',
+              })),
+            }
+
+            try {
+              await api.post('/orders', failedPayload)
+            } catch (dbErr) {
+              console.warn('Failed order DB sync:', dbErr)
+            }
+
             setIsSubmitting(false)
+            navigate('/payment-failure', {
+              state: {
+                orderNumber: failedOrderNum,
+                amount: grandTotal,
+                reason: result.error.message || 'Payment was cancelled in gateway or authorization was declined.',
+              },
+            })
             return
           }
 
           // Verify order status on backend
           const verifyRes = await api.post('/payment/cashfree/verify', { order_id: orderId })
+          const isSuccess = verifyRes.data?.payment_status === 'SUCCESS'
+
+          if (!isSuccess) {
+            const failedOrderNum = `ORD-FAIL-${Date.now().toString().slice(-6)}`
+            const failedPayload = {
+              order_number: failedOrderNum,
+              customer_name: selectedAddressObj.name || user?.firstName || 'Valued Customer',
+              customer_email: user?.email || 'customer@jalyn.in',
+              customer_phone: cleanPhone,
+              shipping_address: `${selectedAddressObj.addressLine1 || ''}, ${selectedAddressObj.city || ''}, ${selectedAddressObj.state || ''} ${selectedAddressObj.pincode || ''}`,
+              total_amount: grandTotal,
+              discount_amount: discountAmount,
+              shipping_amount: shippingCost,
+              order_type: 'online',
+              payment_status: 'failed',
+              order_status: 'cancelled',
+              payment_method: 'Online Payment (Bank Declined)',
+              items: cartItems.map((i) => ({
+                product_name: i.name || i.title || 'Jalyn Product',
+                price: i.price,
+                quantity: i.qty || 1,
+                size: i.size || 'M',
+                color: i.color || 'Default',
+                image_url: i.image || i.primary_image || '',
+              })),
+            }
+
+            try {
+              await api.post('/orders', failedPayload)
+            } catch (dbErr) {
+              console.warn('Failed order DB sync:', dbErr)
+            }
+
+            setIsSubmitting(false)
+            navigate('/payment-failure', {
+              state: {
+                orderNumber: failedOrderNum,
+                amount: grandTotal,
+                reason: verifyRes.data?.payment_message || 'Payment was declined by the bank.',
+              },
+            })
+            return
+          }
 
           const newOrder = addOrder({
             customer_email: user?.email,
@@ -332,7 +411,7 @@ export default function Checkout() {
             shippingMethod,
             shippingCost,
             paymentMethod: 'Online Payment (Cashfree)',
-            paymentStatus: verifyRes.data?.payment_status === 'SUCCESS' ? 'paid' : 'pending',
+            paymentStatus: 'paid',
             orderNotes,
             items: cartItems,
             subtotal,
@@ -348,8 +427,11 @@ export default function Checkout() {
             customer_phone: cleanPhone,
             shipping_address: `${selectedAddressObj.addressLine1 || ''}, ${selectedAddressObj.city || ''}, ${selectedAddressObj.state || ''} ${selectedAddressObj.pincode || ''}`,
             total_amount: grandTotal,
-            payment_status: verifyRes.data?.payment_status === 'SUCCESS' ? 'paid' : 'pending',
-            order_status: 'Processing',
+            discount_amount: discountAmount,
+            shipping_amount: shippingCost,
+            order_type: 'online',
+            payment_status: 'paid',
+            order_status: 'processing',
             payment_method: 'Online Payment (Cashfree)',
             items: cartItems.map((i) => ({
               product_name: i.name || i.title || 'Jalyn Product',
@@ -375,8 +457,42 @@ export default function Checkout() {
         }
       } catch (err) {
         console.error('Cashfree Checkout Error:', err)
-        setToastMessage(err.response?.data?.message || err.message || 'Cashfree online payment failed. Please try again.')
+        const failedOrderNum = `ORD-FAIL-${Date.now().toString().slice(-6)}`
+        const failedPayload = {
+          order_number: failedOrderNum,
+          customer_name: selectedAddressObj?.name || user?.firstName || 'Valued Customer',
+          customer_email: user?.email || 'customer@jalyn.in',
+          customer_phone: cleanPhone,
+          shipping_address: selectedAddressObj ? `${selectedAddressObj.addressLine1 || ''}, ${selectedAddressObj.city || ''}, ${selectedAddressObj.state || ''} ${selectedAddressObj.pincode || ''}` : 'Online Checkout',
+          total_amount: grandTotal,
+          discount_amount: discountAmount,
+          shipping_amount: shippingCost,
+          order_type: 'online',
+          payment_status: 'failed',
+          order_status: 'cancelled',
+          payment_method: 'Online Payment (Error)',
+          items: cartItems.map((i) => ({
+            product_name: i.name || i.title || 'Jalyn Product',
+            price: i.price,
+            quantity: i.qty || 1,
+            size: i.size || 'M',
+            color: i.color || 'Default',
+            image_url: i.image || i.primary_image || '',
+          })),
+        }
+
+        try {
+          await api.post('/orders', failedPayload)
+        } catch (dbErr) {}
+
         setIsSubmitting(false)
+        navigate('/payment-failure', {
+          state: {
+            orderNumber: failedOrderNum,
+            amount: grandTotal,
+            reason: err.response?.data?.message || err.message || 'Payment gateway connection interrupted or cancelled.',
+          },
+        })
       }
     } else {
       // Option 2: Cash on Delivery (COD)
