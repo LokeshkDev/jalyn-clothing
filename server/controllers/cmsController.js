@@ -5,7 +5,7 @@ import { processAndStoreImage } from '../services/imageService.js';
 const DEFAULT_CMS_DATA = {
   announcement_bar: {
     enabled: true,
-    text: '✨ FREE SHIPPING ON ORDERS OVER ₹1999 | USE CODE JALYN10 FOR 10% OFF ✨',
+    text: 'FREE SHIPPING ON ORDERS OVER ₹1999 | USE CODE JALYN10 FOR 10% OFF ✨',
     link: '/shop',
     bg_color: '#FFF6F9',
     text_color: '#4A2F3C',

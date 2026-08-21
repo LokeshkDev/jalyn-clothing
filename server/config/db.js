@@ -90,6 +90,18 @@ export const testConnection = async () => {
       await connection.query("ALTER TABLE orders ADD COLUMN expected_delivery VARCHAR(100) DEFAULT '3 to 5 business days'");
     } catch (e) {}
     try {
+      await connection.query("ALTER TABLE orders ADD COLUMN discount_amount DECIMAL(10,2) DEFAULT 0");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE orders ADD COLUMN shipping_amount DECIMAL(10,2) DEFAULT 0");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE orders ADD COLUMN order_type VARCHAR(50) DEFAULT 'online'");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE order_items ADD COLUMN sku VARCHAR(100) NULL");
+    } catch (e) {}
+    try {
       await connection.query(`
         UPDATE orders o
         JOIN users u ON LOWER(o.customer_email) = LOWER(u.email)
@@ -159,6 +171,115 @@ export const testConnection = async () => {
     try {
       await connection.query("ALTER TABLE inventory_transactions ADD COLUMN source VARCHAR(50) NULL");
     } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE inventory_transactions ADD COLUMN godown_id INT NULL");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE inventory_transactions ADD COLUMN reference_id VARCHAR(100) NULL");
+    } catch (e) {}
+
+    // Ensure vendor / rack / godown tables exist
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS vendors (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(150) NOT NULL,
+          company_name VARCHAR(200) NULL,
+          phone VARCHAR(20) NULL,
+          email VARCHAR(150) NULL,
+          address TEXT NULL,
+          city VARCHAR(100) NULL,
+          state VARCHAR(100) NULL,
+          pincode VARCHAR(10) NULL,
+          gst_number VARCHAR(20) NULL,
+          notes TEXT NULL,
+          status ENUM('active', 'inactive') DEFAULT 'active',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+    } catch (e) {
+      console.warn('⚠️ Warning creating vendors table: ' + e.message);
+    }
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS racks (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(150) NOT NULL,
+          code VARCHAR(50) NULL,
+          description TEXT NULL,
+          status ENUM('active', 'inactive') DEFAULT 'active',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+    } catch (e) {
+      console.warn('⚠️ Warning creating racks table: ' + e.message);
+    }
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS godowns (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(150) NOT NULL,
+          code VARCHAR(50) NULL UNIQUE,
+          address TEXT NULL,
+          city VARCHAR(100) NULL,
+          contact_person VARCHAR(100) NULL,
+          phone VARCHAR(20) NULL,
+          notes TEXT NULL,
+          is_default TINYINT(1) DEFAULT 0,
+          status ENUM('active', 'inactive') DEFAULT 'active',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+    } catch (e) {
+      console.warn('⚠️ Warning creating godowns table: ' + e.message);
+    }
+
+    // Seed two default godowns/branches (idempotent)
+    try {
+      await connection.query(`
+        INSERT INTO godowns (name, code, is_default, status) VALUES
+        ('Godown 1', 'GDN-1', 1, 'active'),
+        ('Godown 2', 'GDN-2', 0, 'active')
+        ON DUPLICATE KEY UPDATE code = VALUES(code)
+      `);
+    } catch (e) {
+      console.warn('⚠️ Warning seeding godowns: ' + e.message);
+    }
+
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS product_godown_stock (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          product_id INT NOT NULL,
+          godown_id INT NOT NULL,
+          stock INT NOT NULL DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          UNIQUE KEY uq_product_godown (product_id, godown_id),
+          FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+          FOREIGN KEY (godown_id) REFERENCES godowns(id) ON DELETE CASCADE
+        )
+      `);
+    } catch (e) {
+      console.warn('⚠️ Warning creating product_godown_stock table: ' + e.message);
+    }
+
+    // Ensure products.vendor_id / rack_id columns exist
+    try {
+      await connection.query("ALTER TABLE products ADD COLUMN vendor_id INT NULL");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE products ADD COLUMN rack_id INT NULL");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE products ADD CONSTRAINT fk_products_vendor FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE products ADD CONSTRAINT fk_products_rack FOREIGN KEY (rack_id) REFERENCES racks(id) ON DELETE SET NULL");
+    } catch (e) {}
 
     // Ensure users table supports all system roles
     try {
@@ -174,6 +295,19 @@ export const testConnection = async () => {
         `INSERT INTO users (name, email, password, role) 
          VALUES ('Super Admin', 'admin@jalyn.com', '$2a$10$VjcdeZGOavcnOmZNxCRVu.0iTnc7GXUl2qiiT0ROvObI3pWYI3pRy', 'superadmin')
          ON DUPLICATE KEY UPDATE role = 'superadmin'`
+      );
+    } catch (e) {}
+
+    // Reconcile product stock from godown rows.
+    // Heals products whose stock was zeroed by an older buggy save: godown rows are
+    // authoritative whenever they exist, so products.stock is set back to the sum.
+    try {
+      await connection.query(
+        `UPDATE products p
+         JOIN (SELECT product_id, SUM(stock) as total FROM product_godown_stock GROUP BY product_id) gs
+           ON gs.product_id = p.id
+         SET p.stock = gs.total
+         WHERE gs.total > 0 AND p.stock <> gs.total`
       );
     } catch (e) {}
 

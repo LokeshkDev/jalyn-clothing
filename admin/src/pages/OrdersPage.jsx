@@ -1,12 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Header from '../components/Header';
+import PosBillingModal from '../components/PosBillingModal';
 import api from '../services/api';
 import {
   ShoppingBasket, Search, RefreshCw, Plus, Loader2, Eye, Trash2, X,
   Clock, Package, PackageCheck, Truck, CheckCircle2, XCircle,
   Check, AlertCircle, Pencil, MapPin, Phone, Mail, User,
-  CreditCard, IndianRupee, ChevronRight, Save, Ban, Undo2, FileDown, Send,
+  CreditCard, IndianRupee, ChevronRight, Save, Ban, Undo2, Send, ReceiptText, Printer,
+  Store, Globe, Tag
 } from 'lucide-react';
+import jalynLogoUrl from '../assets/jalyn-logo-login.png';
+import {
+  buildInvoiceHtml,
+  buildThermalHtml,
+  printThermalReceipt,
+  printTaxInvoice,
+  sendLuxuryWhatsAppInvoice,
+} from '../utils/invoiceThermalUtils';
 
 const ORDER_STATUS = {
   pending: { label: 'Pending', cls: 'bg-amber-100 text-amber-800 border-amber-200', icon: Clock },
@@ -40,122 +50,26 @@ const itemTotal = (items) => (items || []).reduce((s, i) => s + (Number(i.price)
 const escapeHtml = (v) =>
   String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-const invoiceRowsHtml = (items) =>
-  (items || [])
-    .map((it, i) => {
-      const qty = Number(it.quantity) || 1;
-      const price = Number(it.price) || 0;
-      const variant = [it.size && `Size: ${it.size}`, it.color && `Colour: ${it.color}`].filter(Boolean).join(' · ');
-      return `
-      <tr>
-        <td class="c">${i + 1}</td>
-        <td>${escapeHtml(it.product_name)}${variant ? `<div class="sub">${escapeHtml(variant)}</div>` : ''}</td>
-        <td class="c">${qty}</td>
-        <td class="r">${money(price)}</td>
-        <td class="r">${money(price * qty)}</td>
-      </tr>`;
-    })
-    .join('');
-
-const buildInvoiceHtml = (order) => {
-  const items = order.items || [];
-  const subtotal = itemTotal(items);
-  const discount = Number(order.discount_amount) || 0;
-  const shipping = Number(order.shipping_amount) || 0;
-  const total = Number(order.total_amount) || Math.max(subtotal + shipping - discount, 0);
-  const paymentLabel = PAYMENT_STATUS[order.payment_status]?.label || order.payment_status || '—';
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>JALYN Invoice - ${escapeHtml(order.order_number)}</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; color: #2b2b2b; background: #f2eee9; }
-  .sheet { max-width: 800px; margin: 24px auto; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,.08); }
-  header { background: linear-gradient(135deg, #1c1418 0%, #3a2433 100%); color: #fff; padding: 28px 36px; display: flex; justify-content: space-between; align-items: flex-start; }
-  .logo { font-size: 26px; font-weight: 800; letter-spacing: 6px; }
-  .logo span { color: #e8b4c9; }
-  .tag { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #c9b8c1; margin-top: 2px; }
-  .inv-meta { text-align: right; }
-  .inv-meta h1 { font-size: 16px; letter-spacing: 4px; text-transform: uppercase; color: #e8b4c9; margin-bottom: 6px; }
-  .inv-meta p { font-size: 12px; color: #d8cdd2; line-height: 1.7; }
-  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 26px 36px; border-bottom: 1px solid #eee; }
-  .parties h4 { font-size: 10px; letter-spacing: 2.5px; color: #a63d78; text-transform: uppercase; margin-bottom: 8px; }
-  .parties p { font-size: 12.5px; line-height: 1.75; color: #4a4a4a; }
-  .parties strong { color: #1c1418; }
-  .items { width: 100%; border-collapse: collapse; padding: 0 36px; }
-  .items th { background: #faf5f7; color: #a63d78; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; text-align: left; padding: 12px 16px; }
-  .items td { padding: 13px 16px; font-size: 12.5px; border-bottom: 1px solid #f1ece8; vertical-align: top; }
-  .items .c { text-align: center; } .items .r { text-align: right; white-space: nowrap; }
-  .items .sub { font-size: 11px; color: #8a8a8a; margin-top: 2px; }
-  .totals { display: flex; justify-content: space-between; gap: 24px; padding: 24px 36px 30px; }
-  .left { font-size: 11.5px; color: #666; line-height: 1.9; }
-  .right { min-width: 230px; }
-  .right p { display: flex; justify-content: space-between; font-size: 12.5px; color: #555; padding: 4px 0; }
-  .right .grand { font-size: 15px; font-weight: 800; color: #1c1418; border-top: 2px solid #e8b4c9; margin-top: 8px; padding-top: 10px; }
-  .grand span { color: #a63d78; }
-  footer { background: #faf5f7; text-align: center; padding: 18px; font-size: 11.5px; color: #8a6b78; }
-  footer strong { color: #a63d78; }
-  @media print { body { background: #fff; } .sheet { box-shadow: none; margin: 0; border-radius: 0; } }
-</style>
-</head>
-<body>
-  <div class="sheet">
-    <header>
-      <div>
-        <div class="logo">JAL<span>YN</span></div>
-        <div class="tag">Luxury Ethnic Wear</div>
-      </div>
-      <div class="inv-meta">
-        <h1>Tax Invoice</h1>
-        <p>Invoice No: ${escapeHtml(order.order_number)}</p>
-        <p>Date: ${formatDate(order.created_at)}</p>
-      </div>
-    </header>
-    <section class="parties">
-      <div>
-        <h4>Sold By</h4>
-        <p><strong>JALYN Apparels</strong><br />Luxury Ethnic &amp; Occasion Wear<br />support@jalyn.in &middot; +91 98765 43210</p>
-      </div>
-      <div>
-        <h4>Billed To</h4>
-        <p><strong>${escapeHtml(order.customer_name)}</strong><br />${escapeHtml(order.customer_phone)}<br />${escapeHtml(order.customer_email)}<br />${escapeHtml(order.shipping_address)}</p>
-      </div>
-    </section>
-    <table class="items">
-      <thead>
-        <tr><th style="width:36px">#</th><th>Item</th><th style="width:70px">Qty</th><th style="width:110px">Price</th><th style="width:130px">Amount</th></tr>
-      </thead>
-      <tbody>
-        ${invoiceRowsHtml(items)}
-      </tbody>
-    </table>
-    <div class="totals">
-      <div class="left">
-        <p>Payment: <strong>${escapeHtml(order.payment_method || '—')}</strong></p>
-        <p>Payment Status: <strong>${escapeHtml(paymentLabel)}</strong></p>
-        <p>Order Status: <strong>${escapeHtml(ORDER_STATUS[order.order_status]?.label || order.order_status || '—')}</strong></p>
-        ${order.tracking_id ? `<p>Tracking (AWB): <strong>${escapeHtml(order.tracking_id)}</strong></p>` : ''}
-      </div>
-      <div class="right">
-        <p>Subtotal <span>${money(subtotal)}</span></p>
-        ${discount > 0 ? `<p>Discount <span>− ${money(discount)}</span></p>` : ''}
-        ${shipping > 0 ? `<p>Shipping <span>${money(shipping)}</span></p>` : ''}
-        <p class="grand">Grand Total <span>${money(total)}</span></p>
-      </div>
-    </div>
-    <footer>This is a computer generated invoice &middot; <strong>JALYN Apparels</strong> &middot; Luxury Ethnic Wear</footer>
-  </div>
-</body>
-</html>`;
+// Helper to check if order is Walk-in / In-Store POS or Online Order
+export const isWalkinOrder = (order) => {
+  if (!order) return false;
+  if (order.order_type === 'pos' || order.order_type === 'walkin') return true;
+  const addr = String(order.shipping_address || '').toLowerCase();
+  const name = String(order.customer_name || '').toLowerCase();
+  return (
+    addr.includes('counter') ||
+    addr.includes('in-store') ||
+    addr.includes('walk-in') ||
+    addr.includes('pos') ||
+    name.includes('walk-in')
+  );
 };
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'online', 'pos'
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
 
@@ -167,18 +81,6 @@ export default function OrdersPage() {
   // Detail edit state
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({});
-
-  // Create form state
-  const [createForm, setCreateForm] = useState({
-    customer_name: '',
-    customer_email: '',
-    customer_phone: '',
-    shipping_address: '',
-    payment_method: 'Online Payment (UPI)',
-    payment_status: 'paid',
-    order_status: 'pending',
-    items: [{ product_name: '', price: '', quantity: 1, size: '', color: '' }],
-  });
 
   const [toast, setToast] = useState(null);
   const showToast = (message, type = 'success') => {
@@ -222,44 +124,21 @@ export default function OrdersPage() {
     setDetailOrder((prev) => (prev && (prev.id === updated.id || prev.order_number === updated.order_number) ? { ...prev, ...updated } : prev));
   };
 
-  const downloadInvoice = (order) => {
-    const win = window.open('', '_blank');
-    if (!win) {
-      showToast('Popup blocked — please allow popups for this site.', 'error');
+  const sendInvoiceWhatsApp = (order) => {
+    const success = sendLuxuryWhatsAppInvoice(order, { includeSocial: true });
+    if (!success) {
+      showToast('No phone/WhatsApp number found on this order.', 'error');
       return;
     }
-    win.document.open();
-    win.document.write(buildInvoiceHtml(order));
-    win.document.close();
-    win.focus();
+    showToast('Opening WhatsApp with luxury tax invoice.');
   };
 
-  const sendInvoiceWhatsApp = (order) => {
-    const phone = String(order.customer_phone || '').replace(/\D/g, '');
-    if (!phone) {
-      showToast('No WhatsApp number on this order.', 'error');
-      return;
-    }
-    const lines = [
-      `*JALYN Apparels — Invoice ${order.order_number}*`,
-      `Date: ${formatDate(order.created_at)}`,
-      '',
-      `Customer: ${order.customer_name}`,
-      `Phone: ${order.customer_phone}`,
-      '',
-      '*Items:*',
-      ...(order.items || []).map((it) => {
-        const variant = [it.size && `Size ${it.size}`, it.color && `Colour ${it.color}`].filter(Boolean).join(' · ');
-        return `• ${it.product_name}${variant ? ` (${variant})` : ''} x${Number(it.quantity) || 1} — ${money((Number(it.price) || 0) * (Number(it.quantity) || 1))}`;
-      }),
-      '',
-      `*Order Total: ${money(order.total_amount)}*`,
-      `Payment: ${PAYMENT_STATUS[order.payment_status]?.label || order.payment_status}${order.payment_method ? ` (${order.payment_method})` : ''}`,
-      `Status: ${ORDER_STATUS[order.order_status]?.label || order.order_status}`,
-      '',
-      'Thank you for shopping with JALYN!',
-    ];
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
+  const printThermalBill = (order) => {
+    printThermalReceipt(order);
+  };
+
+  const handlePrintTaxInvoice = (order) => {
+    printTaxInvoice(order);
   };
 
   const handleStatusChange = async (id, payload) => {
@@ -308,49 +187,38 @@ export default function OrdersPage() {
     }
   };
 
-  const handleCreateSubmit = async (e) => {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      const payload = {
-        ...createForm,
-        items: createForm.items
-          .filter((i) => i.product_name?.trim())
-          .map((i) => ({
-            product_name: i.product_name.trim(),
-            price: Number(i.price) || 0,
-            quantity: Number(i.quantity) || 1,
-            size: i.size || null,
-            color: i.color || null,
-          })),
-        total_amount: itemTotal(createForm.items),
-      };
-      const res = await api.post('/orders', payload);
-      showToast(res.data?.message || 'Order created successfully.');
-      setShowCreate(false);
-      loadOrders();
-    } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to create order', 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
+  // Tab count badges
+  const tabCounts = useMemo(() => {
+    const online = orders.filter((o) => !isWalkinOrder(o)).length;
+    const pos = orders.filter((o) => isWalkinOrder(o)).length;
+    return { all: orders.length, online, pos };
+  }, [orders]);
 
   const kpis = useMemo(() => {
-    const pending = orders.filter((o) => o.order_status === 'pending').length;
-    const inTransit = orders.filter((o) => ['processing', 'shipped'].includes(o.order_status)).length;
-    const delivered = orders.filter((o) => o.order_status === 'delivered').length;
-    const revenue = orders
+    const currentTabOrders = orders.filter((o) => {
+      if (activeTab === 'online') return !isWalkinOrder(o);
+      if (activeTab === 'pos') return isWalkinOrder(o);
+      return true;
+    });
+
+    const pending = currentTabOrders.filter((o) => o.order_status === 'pending').length;
+    const inTransit = currentTabOrders.filter((o) => ['processing', 'shipped'].includes(o.order_status)).length;
+    const delivered = currentTabOrders.filter((o) => o.order_status === 'delivered').length;
+    const revenue = currentTabOrders
       .filter((o) => o.order_status !== 'cancelled' && o.payment_status === 'paid')
       .reduce((s, o) => s + (Number(o.total_amount) || itemTotal(o.items)), 0);
     return { pending, inTransit, delivered, revenue };
-  }, [orders]);
+  }, [orders, activeTab]);
 
   const [dateSort, setDateSort] = useState('newest');
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = orders.filter((o) => {
+      // Tab filter: Online vs Walkin/POS
+      if (activeTab === 'online' && isWalkinOrder(o)) return false;
+      if (activeTab === 'pos' && !isWalkinOrder(o)) return false;
+
       const matchesSearch =
         !q ||
         (o.order_number || '').toLowerCase().includes(q) ||
@@ -381,7 +249,7 @@ export default function OrdersPage() {
       if (timeB !== timeA) return timeB - timeA;
       return (Number(b.id) || 0) - (Number(a.id) || 0);
     });
-  }, [orders, search, statusFilter, paymentFilter, dateSort]);
+  }, [orders, activeTab, search, statusFilter, paymentFilter, dateSort]);
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -434,6 +302,54 @@ export default function OrdersPage() {
               <p className="text-xl font-bold text-gray-900">{money(kpis.revenue)}</p>
             </div>
           </div>
+        </div>
+
+        {/* Primary Order Tabs: All / Online / Walk-in POS */}
+        <div className="flex items-center gap-2 border-b border-gray-200/80 pb-2 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab('all')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
+              activeTab === 'all'
+                ? 'bg-[#2A1A22] text-white shadow-sm'
+                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+            }`}
+          >
+            <ShoppingBasket className="w-4 h-4" /> All Orders
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${activeTab === 'all' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'}`}>
+              {tabCounts.all}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('online')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
+              activeTab === 'online'
+                ? 'bg-[#AD4A85] text-white shadow-sm'
+                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+            }`}
+          >
+            <Globe className="w-4 h-4" /> 🛒 Online Customer Orders
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${activeTab === 'online' ? 'bg-white/20 text-white' : 'bg-pink-50 text-[#AD4A85]'}`}>
+              {tabCounts.online}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('pos')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
+              activeTab === 'pos'
+                ? 'bg-emerald-800 text-white shadow-sm'
+                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+            }`}
+          >
+            <Store className="w-4 h-4" /> 🏪 Walk-in / POS Billing
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${activeTab === 'pos' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-800'}`}>
+              {tabCounts.pos}
+            </span>
+          </button>
         </div>
 
         {/* Toolbar */}
@@ -491,9 +407,9 @@ export default function OrdersPage() {
             </button>
             <button
               onClick={() => setShowCreate(true)}
-              className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto bg-[#2A1A22] hover:bg-[#3D2631] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Plus className="w-4 h-4" /> Add Order
+              <Plus className="w-4 h-4 text-pink-300" /> POS Billing / Add Order
             </button>
           </div>
         </div>
@@ -533,7 +449,18 @@ export default function OrdersPage() {
                       className="hover:bg-pink-50/40 transition cursor-pointer"
                     >
                       <td className="py-3 px-4">
-                        <p className="font-bold text-gray-900 font-mono">{order.order_number}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-bold text-gray-900 font-mono">{order.order_number}</p>
+                          {isWalkinOrder(order) ? (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <Store className="w-2.5 h-2.5" /> Walk-in POS
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-pink-50 text-[#AD4A85] border border-pink-200">
+                              <Globe className="w-2.5 h-2.5" /> Online
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(order.created_at)}</p>
                       </td>
 
@@ -589,11 +516,18 @@ export default function OrdersPage() {
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button
-                            onClick={(e) => { e.stopPropagation(); downloadInvoice(order); }}
-                            className="p-1.5 rounded-lg text-gray-600 hover:text-brand-600 hover:bg-pink-100 transition"
-                            title="Download Invoice"
+                            onClick={(e) => { e.stopPropagation(); handlePrintTaxInvoice(order); }}
+                            className="p-1.5 rounded-lg text-gray-600 hover:text-[#AD4A85] hover:bg-pink-50 transition"
+                            title="Print Luxury Tax Invoice (A4)"
                           >
-                            <FileDown className="w-4 h-4" />
+                            <Printer className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); printThermalBill(order); }}
+                            className="p-1.5 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition"
+                            title="Print Thermal Bill (80mm)"
+                          >
+                            <ReceiptText className="w-4 h-4" />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); sendInvoiceWhatsApp(order); }}
@@ -638,6 +572,15 @@ export default function OrdersPage() {
                   <ShoppingBasket className="w-4 h-4 text-brand-400" />
                   Order <span className="font-mono">{detailOrder.order_number}</span>
                 </h3>
+                {isWalkinOrder(detailOrder) ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-700/50">
+                    <Store className="w-3 h-3" /> Walk-in POS
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-pink-950/80 text-pink-300 border border-pink-700/50">
+                    <Globe className="w-3 h-3" /> Online Order
+                  </span>
+                )}
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${ORDER_STATUS[detailOrder.order_status]?.cls}`}>
                   {ORDER_STATUS[detailOrder.order_status]?.label || detailOrder.order_status}
                 </span>
@@ -655,10 +598,16 @@ export default function OrdersPage() {
                       <Mail className="w-3.5 h-3.5" /> Email Customer
                     </a>
                     <button
-                      onClick={() => downloadInvoice(detailOrder)}
+                      onClick={() => handlePrintTaxInvoice(detailOrder)}
                       className="text-[11px] font-semibold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5"
                     >
-                      <FileDown className="w-3.5 h-3.5" /> Download Invoice
+                      <Printer className="w-3.5 h-3.5" /> Print Tax Invoice
+                    </button>
+                    <button
+                      onClick={() => printThermalBill(detailOrder)}
+                      className="text-[11px] font-semibold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5"
+                    >
+                      <ReceiptText className="w-3.5 h-3.5" /> Thermal Bill
                     </button>
                     <button
                       onClick={() => sendInvoiceWhatsApp(detailOrder)}
@@ -1093,240 +1042,13 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* ─── CREATE ORDER MODAL ─── */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[94vh] overflow-hidden shadow-2xl flex flex-col">
-            <div className="p-4 bg-gray-900 text-white flex items-center justify-between border-b border-gray-800">
-              <div>
-                <h3 className="font-bold text-sm flex items-center gap-2">
-                  <Plus className="w-4 h-4 text-brand-400" /> Create New Order
-                </h3>
-                <p className="text-[10px] text-gray-400">Manually create an order entry with customer, items, and status.</p>
-              </div>
-              <button onClick={() => setShowCreate(false)} className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateSubmit} className="flex-1 overflow-y-auto p-6 space-y-5 text-xs">
-              <div>
-                <h4 className="font-bold text-gray-900 text-xs mb-3 flex items-center gap-1.5">
-                  <User className="w-4 h-4 text-brand-600" /> Customer Information
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-semibold text-gray-700 mb-1">Customer Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={createForm.customer_name}
-                      onChange={(e) => setCreateForm({ ...createForm, customer_name: e.target.value })}
-                      placeholder="e.g. Meera Patel"
-                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-gray-700 mb-1">Phone</label>
-                    <input
-                      type="text"
-                      value={createForm.customer_phone}
-                      onChange={(e) => setCreateForm({ ...createForm, customer_phone: e.target.value })}
-                      placeholder="+91 98765 43210"
-                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
-                    />
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <label className="block font-semibold text-gray-700 mb-1">Customer Email *</label>
-                  <input
-                    type="email"
-                    required
-                    value={createForm.customer_email}
-                    onChange={(e) => setCreateForm({ ...createForm, customer_email: e.target.value })}
-                    placeholder="customer@example.com"
-                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
-                  />
-                </div>
-                <div className="mt-3">
-                  <label className="block font-semibold text-gray-700 mb-1">Shipping Address *</label>
-                  <textarea
-                    rows={2}
-                    required
-                    value={createForm.shipping_address}
-                    onChange={(e) => setCreateForm({ ...createForm, shipping_address: e.target.value })}
-                    placeholder="House, Street, Area, City, State, PIN"
-                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-bold text-gray-900 text-xs flex items-center gap-1.5">
-                    <Package className="w-4 h-4 text-brand-600" /> Order Items
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={() => setCreateForm({ ...createForm, items: [...createForm.items, { product_name: '', price: '', quantity: 1, size: '', color: '' }] })}
-                    className="bg-brand-50 text-brand-700 hover:bg-brand-100 font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Item
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {createForm.items.map((item, idx) => (
-                    <div key={idx} className="p-3 bg-gray-50 rounded-xl border border-gray-200 grid grid-cols-2 sm:grid-cols-12 gap-2.5 items-end">
-                      <div className="col-span-2 sm:col-span-4">
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Product Name</label>
-                        <input
-                          type="text"
-                          value={item.product_name}
-                          onChange={(e) => {
-                            const items = [...createForm.items];
-                            items[idx].product_name = e.target.value;
-                            setCreateForm({ ...createForm, items });
-                          }}
-                          placeholder="e.g. Floral Midi Dress"
-                          className="w-full px-2.5 py-2 rounded-lg border border-gray-300 font-medium"
-                        />
-                      </div>
-                      <div className="col-span-1 sm:col-span-2">
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Price (₹)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={item.price}
-                          onChange={(e) => {
-                            const items = [...createForm.items];
-                            items[idx].price = e.target.value;
-                            setCreateForm({ ...createForm, items });
-                          }}
-                          placeholder="1899"
-                          className="w-full px-2.5 py-2 rounded-lg border border-gray-300 font-medium"
-                        />
-                      </div>
-                      <div className="col-span-1 sm:col-span-2">
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Qty</label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const items = [...createForm.items];
-                            items[idx].quantity = e.target.value;
-                            setCreateForm({ ...createForm, items });
-                          }}
-                          className="w-full px-2.5 py-2 rounded-lg border border-gray-300 font-medium"
-                        />
-                      </div>
-                      <div className="col-span-1 sm:col-span-2">
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Size</label>
-                        <input
-                          type="text"
-                          value={item.size}
-                          onChange={(e) => {
-                            const items = [...createForm.items];
-                            items[idx].size = e.target.value;
-                            setCreateForm({ ...createForm, items });
-                          }}
-                          placeholder="M"
-                          className="w-full px-2.5 py-2 rounded-lg border border-gray-300 font-medium"
-                        />
-                      </div>
-                      <div className="col-span-1 sm:col-span-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (createForm.items.length === 1) return;
-                            setCreateForm({ ...createForm, items: createForm.items.filter((_, i) => i !== idx) });
-                          }}
-                          disabled={createForm.items.length === 1}
-                          className="w-full p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-30 transition"
-                          title="Remove item"
-                        >
-                          <Trash2 className="w-4 h-4 mx-auto" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-3 flex justify-end text-xs font-bold text-gray-900">
-                  <span className="bg-gray-100 px-3 py-1.5 rounded-lg">
-                    Total: {money(itemTotal(createForm.items))}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-bold text-gray-900 text-xs mb-3 flex items-center gap-1.5">
-                  <CreditCard className="w-4 h-4 text-brand-600" /> Payment & Fulfillment
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block font-semibold text-gray-700 mb-1">Payment Method</label>
-                    <select
-                      value={createForm.payment_method}
-                      onChange={(e) => setCreateForm({ ...createForm, payment_method: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
-                    >
-                      <option>Online Payment (UPI)</option>
-                      <option>Online Payment (Card)</option>
-                      <option>Cash on Delivery</option>
-                      <option>Bank Transfer</option>
-                      <option>Wallet</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-gray-700 mb-1">Payment Status</label>
-                    <select
-                      value={createForm.payment_status}
-                      onChange={(e) => setCreateForm({ ...createForm, payment_status: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
-                    >
-                      {Object.entries(PAYMENT_STATUS).map(([k, v]) => (
-                        <option key={k} value={k}>{v.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-gray-700 mb-1">Order Status</label>
-                    <select
-                      value={createForm.order_status}
-                      onChange={(e) => setCreateForm({ ...createForm, order_status: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
-                    >
-                      {Object.entries(ORDER_STATUS).map(([k, v]) => (
-                        <option key={k} value={k}>{v.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowCreate(false)}
-                  className="px-4 py-2.5 rounded-xl border border-gray-300 text-gray-600 font-semibold hover:bg-gray-100 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition"
-                >
-                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  Create Order
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* ─── POS BILLING & CREATE ORDER MODAL ─── */}
+      <PosBillingModal
+        isOpen={showCreate}
+        onClose={() => setShowCreate(false)}
+        onOrderCreated={loadOrders}
+        showToast={showToast}
+      />
     </div>
   );
 }

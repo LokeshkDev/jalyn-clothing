@@ -16,17 +16,22 @@ export const generateUniqueBarcodeNumber = async () => {
   let barcode = '';
   let attempts = 0;
 
-  while (!unique && attempts < 10) {
-    barcode = '890' + Math.floor(1000000000 + Math.random() * 9000000000).toString();
-    const [existing] = await pool.query('SELECT id FROM product_barcodes WHERE barcode = ?', [barcode]);
-    if (existing.length === 0) {
+  while (!unique && attempts < 30) {
+    const random5Digits = String(Math.floor(10000 + Math.random() * 90000)).padStart(5, '0');
+    barcode = `JN-${random5Digits}`;
+    try {
+      const [existing] = await pool.query('SELECT id FROM product_barcodes WHERE barcode = ?', [barcode]);
+      if (existing.length === 0) {
+        unique = true;
+      }
+    } catch (e) {
       unique = true;
     }
     attempts++;
   }
 
   if (!unique) {
-    throw new Error('Failed to generate unique barcode after 10 attempts');
+    barcode = `JN-${Date.now().toString().slice(-5)}`;
   }
 
   return barcode;
@@ -433,3 +438,37 @@ export const getStockHistory = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Failed to fetch stock history' });
   }
 };
+
+export const deleteBarcode = async (req, res) => {
+  const { barcodeId } = req.params;
+  try {
+    const [result] = await pool.query('DELETE FROM product_barcodes WHERE id = ?', [barcodeId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Barcode not found' });
+    }
+    return res.status(200).json({ success: true, message: 'Barcode deleted successfully' });
+  } catch (error) {
+    console.error('deleteBarcode error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to delete barcode' });
+  }
+};
+
+export const bulkDeleteBarcodes = async (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ success: false, message: 'Please provide an array of barcode IDs to delete' });
+  }
+
+  try {
+    const [result] = await pool.query('DELETE FROM product_barcodes WHERE id IN (?)', [ids]);
+    return res.status(200).json({
+      success: true,
+      message: `Successfully deleted ${result.affectedRows} barcode(s)`,
+      deletedCount: result.affectedRows,
+    });
+  } catch (error) {
+    console.error('bulkDeleteBarcodes error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to bulk delete barcodes' });
+  }
+};
+

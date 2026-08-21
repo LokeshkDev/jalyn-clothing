@@ -120,13 +120,17 @@ async function fetchCategoriesList() {
     if (res.data?.categories) {
       return res.data.categories
         .filter((c) => c.slug !== 'all')
-        .map((c) => ({
-          ...c,
-          id: c.id || c.slug,
-          title: c.name || c.title,
-          image: c.image_url || c.image || '/images/home/categories/dresses.webp',
-          subtitle: `${c.item_count || 12}+ Items`,
-        }));
+        .map((c) => {
+          const count = c.item_count !== undefined && c.item_count !== null ? Number(c.item_count) : 0;
+          return {
+            ...c,
+            id: c.id || c.slug,
+            title: c.name || c.title,
+            image: c.image_url || c.image || '/images/home/categories/dresses.webp',
+            item_count: count,
+            subtitle: count === 1 ? '1 Item' : `${count} Items`,
+          };
+        });
     }
   } catch (err) {
     console.warn('Failed to load categories from API, falling back to static data:', err);

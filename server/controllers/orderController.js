@@ -148,6 +148,9 @@ export const createOrder = async (req, res) => {
     customer_phone,
     shipping_address,
     total_amount,
+    discount_amount = 0,
+    shipping_amount = 0,
+    order_type,
     payment_status = 'pending',
     order_status = 'pending',
     payment_method = 'Online Payment',
@@ -162,6 +165,15 @@ export const createOrder = async (req, res) => {
     return res.status(400).json({ success: false, message: 'Customer name, email and shipping address are required.' });
   }
 
+  // Determine order_type ('pos' / 'walkin' or 'online')
+  const inferredOrderType =
+    order_type ||
+    (String(shipping_address).toLowerCase().includes('counter') ||
+    String(shipping_address).toLowerCase().includes('in-store') ||
+    String(customer_name).toLowerCase().includes('walk-in')
+      ? 'pos'
+      : 'online');
+
   const generatedOrderNum = createOrderNumber(Date.now() % 100000);
   const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
@@ -173,13 +185,17 @@ export const createOrder = async (req, res) => {
     customer_email: orderCustomerEmail,
     customer_phone: customer_phone || null,
     shipping_address,
-    total_amount: total_amount || 0,
+    total_amount: Number(total_amount) || 0,
+    discount_amount: Number(discount_amount) || 0,
+    shipping_amount: Number(shipping_amount) || 0,
+    order_type: inferredOrderType,
     payment_status,
     order_status,
     payment_method: payment_method || null,
     created_at: nowStr,
     items: items.map((i) => ({
       product_name: i.product_name || i.name || 'Untitled Item',
+      sku: i.sku || null,
       price: Number(i.price) || 0,
       quantity: Number(i.quantity || i.qty) || 1,
       size: i.size || null,
@@ -189,40 +205,84 @@ export const createOrder = async (req, res) => {
   };
 
   try {
-    const [result] = await pool.query(
-      `INSERT INTO orders
-       (order_number, user_id, customer_name, customer_email, customer_phone, shipping_address, total_amount, payment_method, payment_status, order_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        generatedOrderNum,
-        orderUserId,
-        customer_name,
-        orderCustomerEmail,
-        customer_phone || null,
-        shipping_address,
-        total_amount || 0,
-        payment_method || null,
-        payment_status,
-        order_status,
-      ]
-    );
-    const orderId = result.insertId;
+    let orderId;
+    try {
+      const [result] = await pool.query(
+        `INSERT INTO orders
+         (order_number, user_id, customer_name, customer_email, customer_phone, shipping_address, total_amount, discount_amount, shipping_amount, order_type, payment_method, payment_status, order_status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          generatedOrderNum,
+          orderUserId,
+          customer_name,
+          orderCustomerEmail,
+          customer_phone || null,
+          shipping_address,
+          Number(total_amount) || 0,
+          Number(discount_amount) || 0,
+          Number(shipping_amount) || 0,
+          inferredOrderType,
+          payment_method || null,
+          payment_status,
+          order_status,
+        ]
+      );
+      orderId = result.insertId;
+    } catch (colErr) {
+      // Fallback in case optional columns are pending ALTER TABLE
+      const [result] = await pool.query(
+        `INSERT INTO orders
+         (order_number, user_id, customer_name, customer_email, customer_phone, shipping_address, total_amount, payment_method, payment_status, order_status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          generatedOrderNum,
+          orderUserId,
+          customer_name,
+          orderCustomerEmail,
+          customer_phone || null,
+          shipping_address,
+          Number(total_amount) || 0,
+          payment_method || null,
+          payment_status,
+          order_status,
+        ]
+      );
+      orderId = result.insertId;
+    }
+
     createdOrderObject.id = orderId;
 
     for (const item of items) {
-      await pool.query(
-        `INSERT INTO order_items (order_id, product_name, price, quantity, size, color, image_url)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          orderId,
-          item.product_name || item.name || 'Untitled Item',
-          item.price || 0,
-          item.quantity || item.qty || 1,
-          item.size || null,
-          item.color || null,
-          item.image_url || item.image || null,
-        ]
-      );
+      try {
+        await pool.query(
+          `INSERT INTO order_items (order_id, product_name, sku, price, quantity, size, color, image_url)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            orderId,
+            item.product_name || item.name || 'Untitled Item',
+            item.sku || null,
+            Number(item.price) || 0,
+            Number(item.quantity || item.qty) || 1,
+            item.size || null,
+            item.color || null,
+            item.image_url || item.image || null,
+          ]
+        );
+      } catch (itemColErr) {
+        await pool.query(
+          `INSERT INTO order_items (order_id, product_name, price, quantity, size, color, image_url)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            orderId,
+            item.product_name || item.name || 'Untitled Item',
+            Number(item.price) || 0,
+            Number(item.quantity || item.qty) || 1,
+            item.size || null,
+            item.color || null,
+            item.image_url || item.image || null,
+          ]
+        );
+      }
     }
   } catch (error) {
     console.warn('DB insert in createOrder fallback:', error.message);

@@ -57,7 +57,7 @@ export default function ProductGallery({ product, images = [] }) {
               type="button"
               onClick={() => setSelectedIndex(idx)}
               className={cn(
-                'relative aspect-[4/5] w-16 sm:w-20 shrink-0 overflow-hidden rounded-xl bg-[#F7F1F2] transition-all',
+                'relative aspect-[4/5] w-16 sm:w-20 shrink-0 overflow-hidden rounded-xl bg-[#FAF6F8] transition-all',
                 selectedIndex === idx
                   ? 'border-2 border-primary shadow-soft scale-105'
                   : 'border border-primary/10 opacity-70 hover:opacity-100',
@@ -66,7 +66,14 @@ export default function ProductGallery({ product, images = [] }) {
               <img
                 src={imgUrl}
                 alt={`${product.title} view ${idx + 1}`}
+                loading="lazy"
+                decoding="async"
+                width="80"
+                height="100"
                 className="h-full w-full object-cover object-top"
+                onError={(e) => {
+                  e.currentTarget.src = '/images/products/floral-midi-dress.webp'
+                }}
               />
             </button>
           ))}
@@ -91,11 +98,16 @@ export default function ProductGallery({ product, images = [] }) {
           onMouseLeave={() => setIsZoomed(false)}
           onMouseMove={handleMouseMove}
           onClick={() => setLightboxOpen(true)}
-          className="group relative aspect-[4/5] w-full overflow-hidden rounded-[16px] bg-[#F7F1F2] border border-primary/5 cursor-zoom-in"
+          className="group relative aspect-[4/5] w-full overflow-hidden rounded-[16px] bg-[#FAF6F8] border border-primary/5 cursor-zoom-in"
         >
           <img
             src={currentImage}
             alt={product.title}
+            fetchPriority="high"
+            loading="eager"
+            decoding="async"
+            width="600"
+            height="750"
             className={cn(
               'h-full w-full object-cover object-top transition-transform duration-300',
               isZoomed ? 'scale-125' : 'scale-100',
@@ -107,6 +119,9 @@ export default function ProductGallery({ product, images = [] }) {
                   }
                 : undefined
             }
+            onError={(e) => {
+              e.currentTarget.src = '/images/products/floral-midi-dress.webp'
+            }}
           />
 
           {/* Top-Left Badge */}

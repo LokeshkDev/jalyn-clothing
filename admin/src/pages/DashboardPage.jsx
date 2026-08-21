@@ -11,11 +11,19 @@ import {
   CheckCircle2,
   AlertTriangle,
   PackageX,
+  Store,
+  Layers,
+  FileSpreadsheet,
+  Plus
 } from 'lucide-react';
 import Header from '../components/Header';
+import BiTaxReport from '../components/BiTaxReport';
 import api from '../services/api';
+import { openGlobalPosBilling } from '../utils/billingEvents';
 
 export default function DashboardPage() {
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'bi_report'
+  const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState({
     productsCount: 0,
     categoriesCount: 0,
@@ -24,44 +32,95 @@ export default function DashboardPage() {
   });
   const [notifications, setNotifications] = useState({ newOrders: [], lowStock: [] });
 
-  useEffect(() => {
-    async function loadStats() {
-      try {
-        const [prodRes, catRes, orderRes, notifRes] = await Promise.allSettled([
-          api.get('/products'),
-          api.get('/categories'),
-          api.get('/orders'),
-          api.get('/notifications'),
-        ]);
+  const loadStats = async () => {
+    try {
+      const [prodRes, catRes, orderRes, notifRes] = await Promise.allSettled([
+        api.get('/products'),
+        api.get('/categories'),
+        api.get('/orders'),
+        api.get('/notifications'),
+      ]);
 
-        setStats({
-          productsCount: prodRes.status === 'fulfilled' ? prodRes.value.data?.products?.length || 0 : 0,
-          categoriesCount: catRes.status === 'fulfilled' ? catRes.value.data?.categories?.length || 0 : 0,
-          ordersCount: orderRes.status === 'fulfilled' ? orderRes.value.data?.orders?.length || 0 : 0,
-          serverStatus: 'online',
-        });
-        if (notifRes.status === 'fulfilled') {
-          setNotifications(notifRes.value.data?.data || { newOrders: [], lowStock: [] });
-        }
-      } catch (err) {
-        setStats((prev) => ({ ...prev, serverStatus: 'error' }));
+      const loadedOrders = orderRes.status === 'fulfilled' ? orderRes.value.data?.orders || [] : [];
+      setOrders(loadedOrders);
+
+      setStats({
+        productsCount: prodRes.status === 'fulfilled' ? prodRes.value.data?.products?.length || 0 : 0,
+        categoriesCount: catRes.status === 'fulfilled' ? catRes.value.data?.categories?.length || 0 : 0,
+        ordersCount: loadedOrders.length,
+        serverStatus: 'online',
+      });
+      if (notifRes.status === 'fulfilled') {
+        setNotifications(notifRes.value.data?.data || { newOrders: [], lowStock: [] });
       }
+    } catch (err) {
+      setStats((prev) => ({ ...prev, serverStatus: 'error' }));
     }
+  };
+
+  useEffect(() => {
     loadStats();
   }, []);
 
   const statCards = [
-    { title: 'Total Products', value: stats.productsCount, icon: ShoppingBag, color: 'from-pink-500 to-rose-600', link: '/products' },
-    { title: 'Categories', value: stats.categoriesCount, icon: FolderTree, color: 'from-purple-500 to-indigo-600', link: '/categories' },
-    { title: 'Orders Placed', value: stats.ordersCount, icon: ShoppingBasket, color: 'from-amber-500 to-orange-600', link: '/orders' },
-    { title: 'CMS Sections', value: '4 Managed', icon: Sliders, color: 'from-emerald-500 to-teal-600', link: '/cms' },
+    { title: 'Total Products', value: stats.productsCount, icon: ShoppingBag, color: 'bg-[#2A1A22]', link: '/products' },
+    { title: 'Categories', value: stats.categoriesCount, icon: FolderTree, color: 'bg-[#AD4A85]', link: '/categories' },
+    { title: 'Orders Placed', value: stats.ordersCount, icon: ShoppingBasket, color: 'bg-[#2A1A22]', link: '/orders' },
+    { title: 'CMS Sections', value: '4 Managed', icon: Sliders, color: 'bg-[#AD4A85]', link: '/cms' },
   ];
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <Header title="Dashboard Overview" subtitle="Welcome back! Manage your store content and inventory." />
+      <Header title="Dashboard & BI Analytics" subtitle="Store management, real-time POS billing & Tally tax reporting center." />
 
       <main className="p-6 space-y-6 max-w-7xl mx-auto">
+        {/* Primary Dashboard Tab Switcher & Quick Billing Launcher */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-gray-200/80 pb-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab('overview')}
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
+                activeTab === 'overview'
+                  ? 'bg-[#2A1A22] text-white shadow-sm'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4" /> Store Overview
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('bi_report')}
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
+                activeTab === 'bi_report'
+                  ? 'bg-[#AD4A85] text-white shadow-sm'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              }`}
+            >
+              <FileSpreadsheet className="w-4 h-4" /> 📊 BI & Tally GST Reports
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={openGlobalPosBilling}
+            className="bg-[#2A1A22] hover:bg-[#3D2631] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center gap-2 cursor-pointer"
+            title="Open Walk-in Billing Counter"
+          >
+            <Store className="w-4 h-4 text-pink-300" />
+            <span>POS Billing / New Bill</span>
+          </button>
+        </div>
+
+        {/* Tab 1: BI & Tally Tax/GST Reporting View */}
+        {activeTab === 'bi_report' && (
+          <BiTaxReport orders={orders} onRefresh={loadStats} />
+        )}
+
+        {/* Tab 2: Store Overview */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
         {/* Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {statCards.map((card, i) => {
@@ -211,8 +270,9 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-
         </div>
+        </div>
+        )}
       </main>
     </div>
   );

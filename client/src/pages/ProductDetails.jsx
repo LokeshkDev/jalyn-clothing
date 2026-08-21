@@ -125,20 +125,24 @@ export default function ProductDetails() {
 
   // Derive multiple high quality images for gallery based on color selection
   const galleryImages = useMemo(() => {
-    // Check if color specific images exist
-    const colorSpecific = product.color_images?.[selectedColor] || product.color_images?.[typeof selectedColor === 'object' ? selectedColor.name : selectedColor]
-    if (colorSpecific && colorSpecific.length > 0) {
-      return colorSpecific
+    if (Array.isArray(product.gallery) && product.gallery.length > 0) {
+      return product.gallery.filter(Boolean)
+    }
+    if (Array.isArray(product.images?.gallery) && product.images.gallery.length > 0) {
+      return product.images.gallery.filter(Boolean)
     }
 
-    const primaryImg = product.image || product.primary_image || product.images?.primary
+    // Check if color specific images exist
+    const colorKey = typeof selectedColor === 'object' ? selectedColor?.name || selectedColor?.id : selectedColor
+    const colorSpecific = product.color_images?.[colorKey] || product.colorImages?.[colorKey]
+    if (colorSpecific && (Array.isArray(colorSpecific) ? colorSpecific.length > 0 : Boolean(colorSpecific))) {
+      return Array.isArray(colorSpecific) ? colorSpecific : [colorSpecific]
+    }
+
+    const primaryImg = product.image || product.primary_image || product.images?.primary || '/images/products/floral-midi-dress.webp'
     const hoverImg = product.hoverImage || product.hover_image || product.images?.hover
     const list = [primaryImg]
     if (hoverImg && hoverImg !== primaryImg) list.push(hoverImg)
-    list.push(
-      '/images/products/blush-pink-coord.webp',
-      '/images/products/blush-pink-coord-hover.webp',
-    )
     return list
   }, [product, selectedColor])
 

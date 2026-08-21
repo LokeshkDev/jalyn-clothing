@@ -53,8 +53,8 @@ export default function useScannerInput(onScan, options = {}) {
       return;
     }
 
-    // Only capture numeric characters and some barcode chars
-    if (e.key.length === 1 && /[0-9]/.test(e.key)) {
+    // Capture alphanumeric characters and barcode chars
+    if (e.key.length === 1 && /[0-9a-zA-Z\-_]/.test(e.key)) {
       bufferRef.current += e.key;
       timestampsRef.current.push(now);
       

@@ -237,7 +237,9 @@ export default function CategoriesPage() {
               label="CATEGORY BANNER (MULTER UPLOAD)"
               value={imageUrl}
               onChange={setImageUrl}
-              aspectRatio="aspect-[16/9]"
+              aspectRatio="aspect-[4/5]"
+              recommendedSize="800 × 1000 px (4:5 Ratio)"
+              placeholderText="Upload Category Cover Image (800 × 1000 px)"
             />
 
             <div className="flex items-center gap-2 pt-2">

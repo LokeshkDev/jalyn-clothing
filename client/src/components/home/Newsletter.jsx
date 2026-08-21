@@ -1,5 +1,6 @@
 import { useForm } from 'react-hook-form'
-import { Mail, CheckCircle2, PartyPopper } from 'lucide-react'
+import { CheckCircle2, Sparkles, MessageCircle } from 'lucide-react'
+import { WhatsAppIcon } from '@/components/ui/BrandIcons'
 import { Button } from '@/components/ui/Button'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
@@ -17,9 +18,13 @@ export default function Newsletter() {
 
   const onSubmit = async (data) => {
     try {
-      const res = await api.post('/newsletter/subscribe', { email: data.email, source: 'homepage' })
+      const cleanNumber = data.phone.replace(/[^0-9]/g, '')
+      const res = await api.post('/newsletter/subscribe', {
+        phone: cleanNumber,
+        source: 'homepage_whatsapp',
+      })
       setStatus('success')
-      setMessage(res.data?.message || 'You are in! Welcome to the JALYN inner circle.')
+      setMessage(res.data?.message || 'Welcome to the JALYN WhatsApp VIP Club!')
       reset()
     } catch (err) {
       setStatus('error')
@@ -44,18 +49,18 @@ export default function Newsletter() {
         transition={{ duration: 0.65 }}
       >
         <div className="flex items-start gap-4">
-          <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-soft">
-            <Mail className="h-5 w-5" strokeWidth={1.5} />
+          <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#25D366]/15 text-[#25D366] ring-2 ring-[#25D366]/20 shadow-soft">
+            <WhatsAppIcon className="h-6 w-6 text-[#25D366]" />
           </div>
           <div>
             <h2
               id="newsletter-heading"
-              className="font-display text-2xl font-medium text-ink"
+              className="font-display text-2xl font-medium text-ink flex items-center gap-2"
             >
-              Be the first to know
+              Join our WhatsApp VIP Club
             </h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Get updates on new arrivals, exclusive offers &amp; more.
+              Get instant updates on new arrivals, exclusive discounts &amp; flash drops.
             </p>
           </div>
         </div>
@@ -68,14 +73,14 @@ export default function Newsletter() {
             className="flex max-w-md items-center gap-3 rounded-2xl bg-white/90 px-5 py-4 shadow-soft"
             role="status"
           >
-            <CheckCircle2 className="h-8 w-8 shrink-0 text-primary" strokeWidth={1.75} />
+            <CheckCircle2 className="h-8 w-8 shrink-0 text-[#25D366]" strokeWidth={1.75} />
             <div>
               <p className="font-display text-base font-medium text-ink">
                 {message}
               </p>
               <p className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-muted">
-                <PartyPopper className="h-3.5 w-3.5 text-primary" />
-                Fresh drops &amp; secret offers land in your inbox first.
+                <Sparkles className="h-3.5 w-3.5 text-[#25D366]" />
+                Secret coupon drops &amp; new collections will reach you on WhatsApp first.
               </p>
             </div>
           </motion.div>
@@ -86,26 +91,32 @@ export default function Newsletter() {
             noValidate
           >
             <div className="flex-1">
-              <label htmlFor="newsletter-email" className="sr-only">
-                Email address
+              <label htmlFor="newsletter-whatsapp" className="sr-only">
+                WhatsApp Number
               </label>
-              <input
-                id="newsletter-email"
-                type="email"
-                placeholder="Enter your email address"
-                className="w-full rounded-md border border-primary/10 bg-white px-4 py-3.5 text-sm text-ink outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                {...register('email', {
-                  required: 'Email is required',
-                  pattern: {
-                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                    message: 'Enter a valid email',
-                  },
-                })}
-                aria-invalid={!!errors.email}
-              />
-              {errors.email && (
-                <p className="mt-1 text-xs text-primary" role="alert">
-                  {errors.email.message}
+              <div className="relative flex items-center">
+                <div className="absolute left-3.5 flex items-center gap-1.5 text-xs font-semibold text-gray-500 pointer-events-none border-r border-gray-200 pr-2">
+                  <WhatsAppIcon className="h-3.5 w-3.5 text-[#25D366]" />
+                  <span>+91</span>
+                </div>
+                <input
+                  id="newsletter-whatsapp"
+                  type="tel"
+                  placeholder="Enter 10-digit WhatsApp number"
+                  className="w-full rounded-xl border border-primary/15 bg-white pl-16 pr-4 py-3.5 text-sm text-ink font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-sm"
+                  {...register('phone', {
+                    required: 'WhatsApp number is required',
+                    pattern: {
+                      value: /^[6-9]\d{9}$/,
+                      message: 'Enter a valid 10-digit mobile number',
+                    },
+                  })}
+                  aria-invalid={!!errors.phone}
+                />
+              </div>
+              {errors.phone && (
+                <p className="mt-1 text-xs text-primary font-medium" role="alert">
+                  {errors.phone.message}
                 </p>
               )}
               {status === 'error' && (
@@ -114,8 +125,8 @@ export default function Newsletter() {
                 </p>
               )}
             </div>
-            <Button type="submit" disabled={isSubmitting} className="shrink-0">
-              {isSubmitting ? '…' : 'Subscribe'}
+            <Button type="submit" disabled={isSubmitting} className="shrink-0 rounded-xl px-5 py-3.5 bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold shadow-md">
+              {isSubmitting ? 'Subscribing…' : 'Join on WhatsApp'}
             </Button>
           </form>
         )}

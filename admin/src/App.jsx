@@ -15,6 +15,11 @@ import ScannerPage from './pages/ScannerPage';
 import BarcodesPage from './pages/BarcodesPage';
 import StockHistoryPage from './pages/StockHistoryPage';
 import NewsletterPage from './pages/NewsletterPage';
+import VendorsPage from './pages/VendorsPage';
+import RacksPage from './pages/RacksPage';
+import GodownsPage from './pages/GodownsPage';
+import PosBillingModal from './components/PosBillingModal';
+import { onGlobalPosBilling } from './utils/billingEvents';
 import api from './services/api';
 import { ShieldAlert, ArrowLeft, Loader2 } from 'lucide-react';
 
@@ -63,6 +68,14 @@ function RoleGuard({ user, allowedRoles, children }) {
 }
 
 function ProtectedLayout({ user, onLogout }) {
+  const [globalPosOpen, setGlobalPosOpen] = useState(false);
+
+  useEffect(() => {
+    return onGlobalPosBilling(() => {
+      setGlobalPosOpen(true);
+    });
+  }, []);
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -144,6 +157,30 @@ function ProtectedLayout({ user, onLogout }) {
               </RoleGuard>
             }
           />
+          <Route
+            path="/vendors"
+            element={
+              <RoleGuard user={user} allowedRoles={['superadmin', 'admin', 'manager']}>
+                <VendorsPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="/racks"
+            element={
+              <RoleGuard user={user} allowedRoles={['superadmin', 'admin', 'manager']}>
+                <RacksPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="/godowns"
+            element={
+              <RoleGuard user={user} allowedRoles={['superadmin', 'admin', 'manager']}>
+                <GodownsPage />
+              </RoleGuard>
+            }
+          />
 
           {/* POS, Inventory, Scanning & Orders — Staff, Manager, Admin & Super Admin */}
           <Route
@@ -182,6 +219,17 @@ function ProtectedLayout({ user, onLogout }) {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
+
+      {/* Global POS Billing Modal */}
+      {globalPosOpen && (
+        <PosBillingModal
+          isOpen={globalPosOpen}
+          onClose={() => setGlobalPosOpen(false)}
+          onOrderCreated={() => {
+            // Refreshes or order events can be handled by listeners
+          }}
+        />
+      )}
     </div>
   );
 }

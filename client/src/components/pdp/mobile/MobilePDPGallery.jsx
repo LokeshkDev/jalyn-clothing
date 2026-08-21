@@ -65,7 +65,7 @@ export default function MobilePDPGallery({ product, images = [] }) {
       {/* Main Image Container */}
       <div
         ref={containerRef}
-        className="relative aspect-[4/5] w-full overflow-hidden rounded-[18px] bg-[#F7F1F2]"
+        className="relative aspect-[4/5] w-full overflow-hidden rounded-[18px] bg-[#FAF6F8]"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -78,12 +78,20 @@ export default function MobilePDPGallery({ product, images = [] }) {
             key={currentIndex}
             src={imageList[currentIndex]}
             alt={`${product.title} — view ${currentIndex + 1}`}
+            fetchPriority={currentIndex === 0 ? 'high' : 'auto'}
+            loading={currentIndex === 0 ? 'eager' : 'lazy'}
+            decoding="async"
+            width="480"
+            height="600"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.2 }}
             className="h-full w-full object-cover object-top select-none"
             draggable={false}
+            onError={(e) => {
+              e.currentTarget.src = '/images/products/floral-midi-dress.webp'
+            }}
           />
         </AnimatePresence>
 
@@ -132,7 +140,7 @@ export default function MobilePDPGallery({ product, images = [] }) {
               type="button"
               onClick={() => setCurrentIndex(idx)}
               className={cn(
-                'relative aspect-[4/5] w-16 shrink-0 overflow-hidden rounded-xl bg-[#F7F1F2] transition-all',
+                'relative aspect-[4/5] w-16 shrink-0 overflow-hidden rounded-xl bg-[#FAF6F8] transition-all',
                 currentIndex === idx
                   ? 'border-2 border-primary ring-2 ring-primary/20 scale-105'
                   : 'border border-primary/10 opacity-70 hover:opacity-100',
@@ -141,7 +149,14 @@ export default function MobilePDPGallery({ product, images = [] }) {
               <img
                 src={imgUrl}
                 alt={`${product.title} thumb ${idx + 1}`}
+                loading="lazy"
+                decoding="async"
+                width="64"
+                height="80"
                 className="h-full w-full object-cover object-top"
+                onError={(e) => {
+                  e.currentTarget.src = '/images/products/floral-midi-dress.webp'
+                }}
               />
             </button>
           ))}

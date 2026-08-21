@@ -8,7 +8,7 @@ import { generateBarcodeSVG } from '../utils/barcodeEncoder';
 import {
   Plus, Edit, Trash2, Search, Sparkles, RefreshCw, Loader2, X, Globe, Store,
   Layers, Palette, Ruler, ShieldAlert, History, Zap, Check, AlertCircle, ShoppingBag,
-  Barcode, Printer, Download, RotateCcw, Eye
+  Barcode, Printer, Download, RotateCcw, Eye, Handshake, Boxes, Warehouse, MapPin, Phone
 } from 'lucide-react';
 
 const SIZE_PRESETS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
@@ -30,7 +30,30 @@ const ATTR_LABELS = {
   fit: 'Fit',
   pattern: 'Pattern',
   season: 'Season',
-  brand: 'Brand',
+};
+
+// Ensure a saved/loaded size_guide always has a valid shape (prevents empty-table crashes)
+const DEFAULT_SIZE_GUIDE = {
+  enabled: true,
+  unit: 'inches',
+  image: '',
+  columns: ['Bust', 'Waist', 'Hips', 'Length'],
+  rows: [
+    { size: 'S', Bust: '34', Waist: '28', Hips: '38', Length: '44.5' },
+    { size: 'M', Bust: '36', Waist: '30', Hips: '40', Length: '45' },
+    { size: 'L', Bust: '38', Waist: '32', Hips: '42', Length: '45.5' },
+  ],
+};
+
+const normalizeSizeGuide = (sg) => {
+  if (!sg || typeof sg !== 'object') return { ...DEFAULT_SIZE_GUIDE };
+  return {
+    enabled: sg.enabled !== undefined ? !!sg.enabled : true,
+    unit: sg.unit || 'inches',
+    image: sg.image || '',
+    columns: Array.isArray(sg.columns) && sg.columns.length > 0 ? sg.columns : [...DEFAULT_SIZE_GUIDE.columns],
+    rows: Array.isArray(sg.rows) ? sg.rows : [],
+  };
 };
 
 export default function ProductsPage() {
@@ -68,6 +91,15 @@ export default function ProductsPage() {
   const [customOptions, setCustomOptions] = useState({});
   const [addingAttr, setAddingAttr] = useState(null);
   const [customValue, setCustomValue] = useState('');
+
+  // Vendor / Rack / Godown references
+  const [vendors, setVendors] = useState([]);
+  const [racks, setRacks] = useState([]);
+  const [godowns, setGodowns] = useState([]);
+
+  // Quick-create modals (Vendor & Rack from the product workflow)
+  const [quickVendorModal, setQuickVendorModal] = useState({ open: false, submitting: false, name: '', company_name: '', phone: '', email: '' });
+  const [quickRackModal, setQuickRackModal] = useState({ open: false, submitting: false, name: '', code: '' });
 
   // Form State for Product Add/Edit
   const [formData, setFormData] = useState({
@@ -114,19 +146,28 @@ export default function ProductsPage() {
     fit: '',
     pattern: '',
     season: '',
+    vendor_id: '',
+    rack_id: '',
+    godown_stock: [],
   });
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [pRes, cRes, fRes] = await Promise.all([
+      const [pRes, cRes, fRes, vRes, rRes, gRes] = await Promise.all([
         api.get('/products', { params: { include_offline: '1' } }),
         api.get('/categories').catch(() => ({ data: { categories: [] } })),
         api.get('/filter-options').catch(() => ({ data: { options: {} } })),
+        api.get('/vendors').catch(() => ({ data: { vendors: [] } })),
+        api.get('/racks').catch(() => ({ data: { racks: [] } })),
+        api.get('/godowns').catch(() => ({ data: { godowns: [] } })),
       ]);
       setProducts(pRes.data.products || []);
       setCategories(cRes.data.categories || []);
       setCustomOptions(fRes.data.options || {});
+      setVendors(vRes.data.vendors || []);
+      setRacks(rRes.data.racks || []);
+      setGodowns(gRes.data.godowns || []);
     } catch (err) {
       showToast('Failed to load products', 'error');
     } finally {
@@ -138,6 +179,15 @@ export default function ProductsPage() {
     loadData();
   }, []);
 
+  const generateAlphanumericSku = () => {
+    const chars = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let rand = '';
+    for (let i = 0; i < 4; i++) {
+      rand += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `SKU-${rand}`;
+  };
+
   const handleOpenAddModal = () => {
     setEditingId(null);
     setProductBarcodes([]);
@@ -146,7 +196,7 @@ export default function ProductsPage() {
       title: '',
       slug: '',
       product_code: 'JAL-' + Math.floor(1000 + Math.random() * 9000),
-      base_sku: 'JLN-' + Math.floor(100 + Math.random() * 900),
+      base_sku: generateAlphanumericSku(),
       category_slug: 'dresses',
       brand: 'JALYN',
       price: '',
@@ -169,23 +219,16 @@ export default function ProductsPage() {
       ],
       color_images: {},
       variants: [],
-      size_guide: {
-        enabled: true,
-        unit: 'inches',
-        image: '',
-        columns: ['Bust', 'Waist', 'Hips', 'Length'],
-        rows: [
-          { size: 'S', Bust: '34', Waist: '28', Hips: '38', Length: '44.5' },
-          { size: 'M', Bust: '36', Waist: '30', Hips: '40', Length: '45' },
-          { size: 'L', Bust: '38', Waist: '32', Hips: '42', Length: '45.5' },
-        ],
-      },
+      size_guide: normalizeSizeGuide(undefined),
       fabric: '',
       sleeve: '',
       occasion: '',
       fit: '',
       pattern: '',
       season: '',
+      vendor_id: '',
+      rack_id: '',
+      godown_stock: (godowns || []).map((g) => ({ godown_id: g.id, stock: 0 })),
     });
     setIsModalOpen(true);
   };
@@ -221,19 +264,16 @@ export default function ProductsPage() {
       colors: colorObjs.length > 0 ? colorObjs : [{ name: 'Rose', hex: '#AD4A85', images: [] }],
       color_images: p.color_images || {},
       variants: Array.isArray(p.variants) ? p.variants : [],
-      size_guide: p.size_guide || {
-        enabled: true,
-        unit: 'inches',
-        image: '',
-        columns: ['Bust', 'Waist', 'Hips', 'Length'],
-        rows: [],
-      },
+      size_guide: normalizeSizeGuide(p.size_guide),
       fabric: p.fabric || '',
       sleeve: p.sleeve || '',
       occasion: p.occasion || '',
       fit: p.fit || '',
       pattern: p.pattern || '',
       season: p.season || '',
+      vendor_id: p.vendor_id ? String(p.vendor_id) : '',
+      rack_id: p.rack_id ? String(p.rack_id) : '',
+      godown_stock: (godowns || []).map((g) => ({ godown_id: g.id, stock: 0 })),
     });
     setIsModalOpen(true);
 
@@ -244,6 +284,20 @@ export default function ProductsPage() {
       .then(res => setProductBarcodes(res.data.data || []))
       .catch(() => setProductBarcodes([]))
       .finally(() => setBarcodesLoading(false));
+
+    // Load per-godown stock for this product
+    api.get(`/godowns/stock/product/${p.id}`)
+      .then((res) => {
+        const stock = res.data.stock || [];
+        setFormData((prev) => ({
+          ...prev,
+          godown_stock: (godowns || []).map((g) => {
+            const found = stock.find((s) => s.id === g.id);
+            return { godown_id: g.id, stock: found ? found.stock : 0 };
+          }),
+        }));
+      })
+      .catch(() => {});
   };
 
   // Custom Filter Option Helpers
@@ -295,6 +349,65 @@ export default function ProductsPage() {
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to remove option', 'error');
     }
+  };
+
+  // ─── Quick-Create: Vendor & Rack from the product workflow ───
+  const handleQuickCreateVendor = async (e) => {
+    e.preventDefault();
+    setQuickVendorModal((m) => ({ ...m, submitting: true }));
+    try {
+      const res = await api.post('/vendors', {
+        name: quickVendorModal.name.trim(),
+        company_name: quickVendorModal.company_name.trim(),
+        phone: quickVendorModal.phone.trim(),
+        email: quickVendorModal.email.trim(),
+        status: 'active',
+      });
+      const createdId = res.data.vendor?.id;
+      const vRes = await api.get('/vendors');
+      setVendors(vRes.data.vendors || []);
+      if (createdId) {
+        setFormData((prev) => ({ ...prev, vendor_id: String(createdId) }));
+      }
+      setQuickVendorModal({ open: false, submitting: false, name: '', company_name: '', phone: '', email: '' });
+      showToast(`Vendor "${quickVendorModal.name.trim()}" created & assigned!`);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to create vendor', 'error');
+      setQuickVendorModal((m) => ({ ...m, submitting: false }));
+    }
+  };
+
+  const handleQuickCreateRack = async (e) => {
+    e.preventDefault();
+    setQuickRackModal((m) => ({ ...m, submitting: true }));
+    try {
+      const res = await api.post('/racks', {
+        name: quickRackModal.name.trim(),
+        code: quickRackModal.code.trim(),
+        status: 'active',
+      });
+      const createdId = res.data.rack?.id;
+      const rRes = await api.get('/racks');
+      setRacks(rRes.data.racks || []);
+      if (createdId) {
+        setFormData((prev) => ({ ...prev, rack_id: String(createdId) }));
+      }
+      setQuickRackModal({ open: false, submitting: false, name: '', code: '' });
+      showToast(`Rack "${quickRackModal.name.trim()}" created & assigned!`);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to create rack', 'error');
+      setQuickRackModal((m) => ({ ...m, submitting: false }));
+    }
+  };
+
+  const handleUpdateGodownStock = (godownId, value) => {
+    const stock = parseInt(value, 10);
+    setFormData((prev) => ({
+      ...prev,
+      godown_stock: (prev.godown_stock || []).map((s) =>
+        s.godown_id === godownId ? { ...s, stock: isNaN(stock) ? 0 : stock } : s
+      ),
+    }));
   };
 
   // Automated Variant Matrix Generation
@@ -439,6 +552,40 @@ export default function ProductsPage() {
     }
   };
 
+  // ─── Size Guide Editor Helpers ───
+  const updateSizeGuide = (patch) =>
+    setFormData((prev) => ({
+      ...prev,
+      size_guide: { ...(normalizeSizeGuide(prev.size_guide)), ...patch },
+    }));
+
+  const handleSizeGuideCellChange = (rIdx, col, value) => {
+    const sg = normalizeSizeGuide(formData.size_guide);
+    const newRows = sg.rows.map((row, i) => (i === rIdx ? { ...row, [col]: value } : row));
+    updateSizeGuide({ rows: newRows });
+  };
+
+  const handleSizeGuideRowSizeChange = (rIdx, value) => {
+    const sg = normalizeSizeGuide(formData.size_guide);
+    const newRows = sg.rows.map((row, i) => (i === rIdx ? { ...row, size: value } : row));
+    updateSizeGuide({ rows: newRows });
+  };
+
+  const handleAddSizeGuideRow = () => {
+    const sg = normalizeSizeGuide(formData.size_guide);
+    const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+    const used = new Set(sg.rows.map((r) => r.size));
+    const nextSize = sizes.find((s) => !used.has(s)) || `Size ${sg.rows.length + 1}`;
+    const newRow = { size: nextSize };
+    sg.columns.forEach((col) => { newRow[col] = ''; });
+    updateSizeGuide({ rows: [...sg.rows, newRow] });
+  };
+
+  const handleDeleteSizeGuideRow = (rIdx) => {
+    const sg = normalizeSizeGuide(formData.size_guide);
+    updateSizeGuide({ rows: sg.rows.filter((_, i) => i !== rIdx) });
+  };
+
   // Form Submit Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -452,6 +599,11 @@ export default function ProductsPage() {
           if (c.images && c.images.length > 0) acc[c.name] = c.images;
           return acc;
         }, {}),
+        vendor_id: formData.vendor_id || null,
+        rack_id: formData.rack_id || null,
+        godown_stock: (formData.godown_stock || [])
+          .filter((s) => s.godown_id)
+          .map((s) => ({ godown_id: s.godown_id, stock: parseInt(s.stock, 10) || 0 })),
       };
 
       if (editingId) {
@@ -632,6 +784,7 @@ export default function ProductsPage() {
                   <th className="py-3.5 px-4">Category</th>
                   <th className="py-3.5 px-4">Channel Availability</th>
                   <th className="py-3.5 px-4">Variants</th>
+                  <th className="py-3.5 px-4">Vendor / Rack</th>
                   <th className="py-3.5 px-4">Price</th>
                   <th className="py-3.5 px-4">Stock Balance</th>
                   <th className="py-3.5 px-4 text-right">Actions</th>
@@ -639,8 +792,9 @@ export default function ProductsPage() {
               </thead>
               <tbody className="divide-y divide-gray-100 font-medium">
                 {filteredProducts.map((p) => {
-                  const hasLowStock = (p.stock || 0) <= (p.low_stock_threshold || 5);
-                  const isCritical = (p.stock || 0) < 3;
+                  const effectiveStock = p.effective_stock ?? p.stock ?? 0;
+                  const hasLowStock = effectiveStock <= (p.low_stock_threshold || 5);
+                  const isCritical = effectiveStock < 3;
                   const variantCount = Array.isArray(p.variants) ? p.variants.length : 0;
 
                   return (
@@ -695,6 +849,37 @@ export default function ProductsPage() {
                         </span>
                       </td>
 
+                      <td className="py-3 px-4">
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded ${
+                              p.vendor_id
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-gray-50 text-gray-400 border border-gray-200'
+                            }`}
+                            title="Assigned Vendor"
+                          >
+                            <Handshake className="w-3 h-3" />
+                            {p.vendor_id
+                              ? (vendors.find((v) => String(v.id) === String(p.vendor_id))?.name || `Vendor #${p.vendor_id}`)
+                              : 'No Vendor'}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded ${
+                              p.rack_id
+                                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                : 'bg-gray-50 text-gray-400 border border-gray-200'
+                            }`}
+                            title="Assigned Rack"
+                          >
+                            <Boxes className="w-3 h-3" />
+                            {p.rack_id
+                              ? (racks.find((r) => String(r.id) === String(p.rack_id))?.name || `Rack #${p.rack_id}`)
+                              : 'No Rack'}
+                          </span>
+                        </div>
+                      </td>
+
                       <td className="py-3 px-4 font-semibold text-gray-900">
                         ₹{p.price}
                         {p.original_price > p.price && (
@@ -705,17 +890,27 @@ export default function ProductsPage() {
                       </td>
 
                       <td className="py-3 px-4">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1 ${
-                            isCritical
-                              ? 'bg-red-100 text-red-700 border border-red-200 animate-pulse'
-                              : hasLowStock
-                                ? 'bg-amber-100 text-amber-800 border border-amber-200 animate-pulse'
-                                : 'bg-emerald-100 text-emerald-800'
-                          }`}
-                        >
-                          {p.stock || 0} in stock {isCritical ? ' (Critical)' : hasLowStock ? ' (Low)' : ''}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1 ${
+                              isCritical
+                                ? 'bg-red-100 text-red-700 border border-red-200 animate-pulse'
+                                : hasLowStock
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-200 animate-pulse'
+                                  : 'bg-emerald-100 text-emerald-800'
+                            }`}
+                            title={(() => {
+                              const parts = [];
+                              if (p.godown_count > 0) parts.push(`Godown distribution: ${p.godown_total || 0} units across ${p.godown_count} godown(s)`);
+                              const vTotal = Array.isArray(p.variants) ? p.variants.reduce((s, v) => s + (parseInt(v.stock, 10) || 0), 0) : 0;
+                              if (p.variants && p.variants.length > 0) parts.push(`Variant stock total: ${vTotal} units`);
+                              parts.push(`Stored balance: ${p.stock ?? 0} units`);
+                              return `Dynamic stock (${p.effective_stock ?? p.stock}): ${parts.join(' | ')}`;
+                            })()}
+                          >
+                            {p.effective_stock ?? p.stock ?? 0} in stock {isCritical ? ' (Critical)' : hasLowStock ? ' (Low)' : ''}
+                          </span>
+                        </div>
                       </td>
 
                       <td className="py-3 px-4 text-right">
@@ -795,6 +990,39 @@ export default function ProductsPage() {
                         onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                         placeholder="e.g. silk-satin-midi-dress"
                         className="w-full px-3 py-2 rounded-xl border border-gray-300 font-mono focus:ring-2 focus:ring-brand-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-semibold text-gray-700">SKU Code (SKU-0U02 format) *</label>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, base_sku: generateAlphanumericSku() })}
+                          className="text-[10px] text-[#AD4A85] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <RefreshCw className="w-2.5 h-2.5" /> Auto-Generate
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={formData.base_sku}
+                        onChange={(e) => setFormData({ ...formData, base_sku: e.target.value.toUpperCase() })}
+                        placeholder="e.g. SKU-0U02"
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-mono font-bold uppercase focus:ring-2 focus:ring-brand-500 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1">Product Code</label>
+                      <input
+                        type="text"
+                        value={formData.product_code}
+                        onChange={(e) => setFormData({ ...formData, product_code: e.target.value.toUpperCase() })}
+                        placeholder="e.g. JAL-1001"
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-mono focus:ring-2 focus:ring-brand-500 bg-white"
                       />
                     </div>
                   </div>
@@ -1148,12 +1376,16 @@ export default function ProductsPage() {
                       value={formData.primary_image}
                       onChange={(url) => setFormData({ ...formData, primary_image: url })}
                       aspectRatio="aspect-[4/5]"
+                      recommendedSize="1200 × 1500 px (4:5 Ratio)"
+                      placeholderText="Upload Primary Cover Image (1200 × 1500 px)"
                     />
                     <ImageUploader
                       label="Hover / Second Image"
                       value={formData.hover_image}
                       onChange={(url) => setFormData({ ...formData, hover_image: url })}
                       aspectRatio="aspect-[4/5]"
+                      recommendedSize="1200 × 1500 px (4:5 Ratio)"
+                      placeholderText="Upload Hover / Second Angle (1200 × 1500 px)"
                     />
                   </div>
                 </div>
@@ -1238,7 +1470,9 @@ export default function ProductsPage() {
                               newCols[idx].images = imgs;
                               setFormData({ ...formData, colors: newCols });
                             }}
-                            aspectRatio="aspect-[4/3]"
+                            aspectRatio="aspect-[4/5]"
+                            recommendedSize="1200 × 1500 px (4:5 Ratio)"
+                            placeholderText={`Upload ${col.name} Product Photo (1200 × 1500 px)`}
                           />
                         </div>
                       </div>
@@ -1456,12 +1690,7 @@ export default function ProductsPage() {
                         <input
                           type="checkbox"
                           checked={formData.size_guide.enabled}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              size_guide: { ...formData.size_guide, enabled: e.target.checked },
-                            })
-                          }
+                          onChange={(e) => updateSizeGuide({ enabled: e.target.checked })}
                           className="h-4 w-4 text-brand-600 rounded"
                         />
                       </label>
@@ -1473,12 +1702,7 @@ export default function ProductsPage() {
                           <label className="font-semibold text-gray-700">Measurement Unit:</label>
                           <select
                             value={formData.size_guide.unit}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                size_guide: { ...formData.size_guide, unit: e.target.value },
-                              })
-                            }
+                            onChange={(e) => updateSizeGuide({ unit: e.target.value })}
                             className="px-3 py-1.5 rounded-lg border border-gray-300 font-medium bg-white text-xs"
                           >
                             <option value="inches">Inches (in)</option>
@@ -1497,33 +1721,63 @@ export default function ProductsPage() {
                                     {col} ({formData.size_guide.unit})
                                   </th>
                                 ))}
+                                <th className="py-2 px-3 w-10"></th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
+                              {formData.size_guide.rows.length === 0 && (
+                                <tr>
+                                  <td colSpan={formData.size_guide.columns.length + 2} className="py-6 text-center text-gray-400 text-[11px]">
+                                    No size rows yet. Click "Add Size Row" below to start entering measurements.
+                                  </td>
+                                </tr>
+                              )}
                               {formData.size_guide.rows.map((r, rIdx) => (
                                 <tr key={rIdx}>
-                                  <td className="py-2 px-3 font-bold text-gray-900">{r.size}</td>
+                                  <td className="py-2 px-3">
+                                    <input
+                                      type="text"
+                                      value={r.size || ''}
+                                      onChange={(e) => handleSizeGuideRowSizeChange(rIdx, e.target.value)}
+                                      className="w-16 px-2 py-1 border border-gray-300 rounded font-bold text-xs"
+                                    />
+                                  </td>
                                   {formData.size_guide.columns.map((col, cIdx) => (
                                     <td key={cIdx} className="py-2 px-3">
                                       <input
                                         type="text"
                                         value={r[col] || ''}
-                                        onChange={(e) => {
-                                          const newRows = [...formData.size_guide.rows];
-                                          newRows[rIdx][col] = e.target.value;
-                                          setFormData({
-                                            ...formData,
-                                            size_guide: { ...formData.size_guide, rows: newRows },
-                                          });
-                                        }}
-                                        className="w-16 px-2 py-1 border border-gray-300 rounded font-medium text-xs"
+                                        onChange={(e) => handleSizeGuideCellChange(rIdx, col, e.target.value)}
+                                        className="w-16 px-2 py-1 border border-gray-300 rounded font-medium text-xs focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
                                       />
                                     </td>
                                   ))}
+                                  <td className="py-2 px-3">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteSizeGuideRow(rIdx)}
+                                      className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition cursor-pointer"
+                                      title="Delete row"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
+                          <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-t border-gray-200">
+                            <button
+                              type="button"
+                              onClick={handleAddSizeGuideRow}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-[11px] rounded-lg shadow-sm transition cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" /> Add Size Row
+                            </button>
+                            <span className="text-[10px] text-gray-400">
+                              {formData.size_guide.rows.length} size row{formData.size_guide.rows.length === 1 ? '' : 's'}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1691,6 +1945,120 @@ export default function ProductsPage() {
                 </div>
               )}
 
+              {/* SECTION 9: VENDOR, RACK & GODOWN STOCK */}
+              <div className="space-y-4">
+                <div className="h-[1.5px] bg-brand-600/20 my-6" />
+                <div className="flex items-center gap-2 text-brand-700">
+                  <Handshake className="w-4 h-4" />
+                  <span className="font-bold text-xs uppercase tracking-wider">9. Vendor, Rack &amp; Godown Stock</span>
+                </div>
+                <div className="h-[1.5px] bg-brand-600/20 my-2" />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Vendor */}
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Assigned Vendor</label>
+                    <div className="flex gap-2">
+                      <select
+                        value={formData.vendor_id}
+                        onChange={(e) => setFormData({ ...formData, vendor_id: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500 bg-white"
+                      >
+                        <option value="">No Vendor</option>
+                        {vendors
+                          .filter((v) => v.status === 'active')
+                          .map((v) => (
+                            <option key={v.id} value={String(v.id)}>
+                              {v.name}{v.company_name ? ` — ${v.company_name}` : ''}
+                            </option>
+                          ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setQuickVendorModal({ ...quickVendorModal, open: true })}
+                        className="px-3 py-2 rounded-xl border border-dashed border-brand-400 bg-brand-50 text-brand-700 font-bold text-[11px] hover:bg-brand-100 transition whitespace-nowrap cursor-pointer"
+                        title="Quick-create a vendor"
+                      >
+                        + Add Vendor
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Rack */}
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-1">Assigned Rack (Store Placement)</label>
+                    <div className="flex gap-2">
+                      <select
+                        value={formData.rack_id}
+                        onChange={(e) => setFormData({ ...formData, rack_id: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500 bg-white"
+                      >
+                        <option value="">No Rack</option>
+                        {racks
+                          .filter((r) => r.status === 'active')
+                          .map((r) => (
+                            <option key={r.id} value={String(r.id)}>
+                              {r.name}{r.code ? ` (${r.code})` : ''}
+                            </option>
+                          ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setQuickRackModal({ ...quickRackModal, open: true })}
+                        className="px-3 py-2 rounded-xl border border-dashed border-brand-400 bg-brand-50 text-brand-700 font-bold text-[11px] hover:bg-brand-100 transition whitespace-nowrap cursor-pointer"
+                        title="Quick-create a rack"
+                      >
+                        + Add Rack
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Godown Stock Distribution */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold text-gray-700">Godown / Branch Stock Distribution</label>
+                    <span className="text-[10px] text-gray-400">
+                      Total: <strong className="text-gray-700">{((formData.godown_stock || []).reduce((s, g) => s + (parseInt(g.stock, 10) || 0), 0))} units</strong>
+                    </span>
+                  </div>
+                  {godowns.length === 0 ? (
+                    <div className="p-3 bg-gray-50 border border-dashed border-gray-300 rounded-xl text-gray-400 text-[11px]">
+                      No godowns configured yet. Visit Godown Management to add one.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {(formData.godown_stock || []).map((g) => {
+                        const godown = godowns.find((gd) => gd.id === g.godown_id);
+                        if (!godown) return null;
+                        return (
+                          <div key={g.godown_id} className="p-3 rounded-xl border border-gray-200 bg-gray-50/50">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Warehouse className="w-3.5 h-3.5 text-brand-600" />
+                              <span className="font-bold text-gray-800 text-[11px]">{godown.name}</span>
+                              {!!godown.is_default && (
+                                <span className="text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">DEFAULT</span>
+                              )}
+                            </div>
+                            <input
+                              type="number"
+                              min="0"
+                              value={g.stock}
+                              onChange={(e) => handleUpdateGodownStock(g.godown_id, e.target.value)}
+                              placeholder="0"
+                              className="w-full px-3 py-2 rounded-xl border border-gray-300 font-bold text-base focus:ring-2 focus:ring-brand-500"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Stock entered here is added to the selected godowns. Product total stock auto-calculates from the sum of all godown stock.
+                  </p>
+                </div>
+              </div>
+
               {/* Bottom Actions Bar */}
               <div className="pt-4 border-t border-gray-200 flex items-center justify-between">
                 <p className="text-[11px] text-gray-400 font-medium">
@@ -1818,8 +2186,156 @@ export default function ProductsPage() {
               />
             </div>
             <p className="text-center text-[10px] text-gray-400 mt-3">
-              Exact preview at 76.2mm × 50.8mm (3″ × 2″)
+              Exact preview at 50mm × 25mm — prints 2 stickers per row
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ─── QUICK-CREATE VENDOR MODAL ─── */}
+      {quickVendorModal.open && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl flex flex-col">
+            <div className="p-4 bg-gray-900 text-white flex items-center justify-between border-b border-gray-800">
+              <div>
+                <h3 className="font-bold text-sm flex items-center gap-2">
+                  <Handshake className="w-4 h-4 text-brand-400" /> Quick Create Vendor
+                </h3>
+                <p className="text-[11px] text-gray-400">Creates the vendor and assigns it to this product.</p>
+              </div>
+              <button
+                onClick={() => setQuickVendorModal({ ...quickVendorModal, open: false })}
+                className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleQuickCreateVendor} className="p-6 space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Vendor Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={quickVendorModal.name}
+                    onChange={(e) => setQuickVendorModal({ ...quickVendorModal, name: e.target.value })}
+                    placeholder="e.g. Meera Fabrics"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Company Name</label>
+                  <input
+                    type="text"
+                    value={quickVendorModal.company_name}
+                    onChange={(e) => setQuickVendorModal({ ...quickVendorModal, company_name: e.target.value })}
+                    placeholder="e.g. Meera Textiles Pvt. Ltd."
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Phone</label>
+                  <input
+                    type="tel"
+                    value={quickVendorModal.phone}
+                    onChange={(e) => setQuickVendorModal({ ...quickVendorModal, phone: e.target.value })}
+                    placeholder="e.g. 9876543210"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={quickVendorModal.email}
+                    onChange={(e) => setQuickVendorModal({ ...quickVendorModal, email: e.target.value })}
+                    placeholder="e.g. contact@meerafabrics.com"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+              </div>
+              <div className="pt-4 border-t border-gray-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setQuickVendorModal({ ...quickVendorModal, open: false })}
+                  className="px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-100 font-semibold text-gray-600 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={quickVendorModal.submitting}
+                  className="px-6 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {quickVendorModal.submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Create Vendor
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── QUICK-CREATE RACK MODAL ─── */}
+      {quickRackModal.open && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl flex flex-col">
+            <div className="p-4 bg-gray-900 text-white flex items-center justify-between border-b border-gray-800">
+              <div>
+                <h3 className="font-bold text-sm flex items-center gap-2">
+                  <Boxes className="w-4 h-4 text-brand-400" /> Quick Create Rack
+                </h3>
+                <p className="text-[11px] text-gray-400">Creates the rack and assigns it to this product.</p>
+              </div>
+              <button
+                onClick={() => setQuickRackModal({ ...quickRackModal, open: false })}
+                className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleQuickCreateRack} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Rack Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={quickRackModal.name}
+                  onChange={(e) => setQuickRackModal({ ...quickRackModal, name: e.target.value })}
+                  placeholder="e.g. Rack A"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Rack Code</label>
+                <input
+                  type="text"
+                  value={quickRackModal.code}
+                  onChange={(e) => setQuickRackModal({ ...quickRackModal, code: e.target.value.toUpperCase() })}
+                  placeholder="e.g. RACK-A"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 font-mono font-medium focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+              <div className="pt-4 border-t border-gray-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setQuickRackModal({ ...quickRackModal, open: false })}
+                  className="px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-100 font-semibold text-gray-600 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={quickRackModal.submitting}
+                  className="px-6 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {quickRackModal.submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Create Rack
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

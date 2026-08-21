@@ -7,6 +7,8 @@ import {
   getBarcodes,
   getBarcodesByProduct,
   getStockHistory,
+  deleteBarcode,
+  bulkDeleteBarcodes,
 } from '../controllers/barcodeController.js';
 
 const router = express.Router();
@@ -14,6 +16,8 @@ const router = express.Router();
 router.post('/scan', verifyToken, staffOrAbove, scanBarcode);
 router.post('/generate/:productId', verifyToken, staffOrAbove, generateProductBarcodes);
 router.post('/regenerate/:barcodeId', verifyToken, staffOrAbove, regenerateBarcode);
+router.post('/bulk-delete', verifyToken, staffOrAbove, bulkDeleteBarcodes);
+router.delete('/:barcodeId', verifyToken, staffOrAbove, deleteBarcode);
 router.get('/', verifyToken, staffOrAbove, getBarcodes);
 router.get('/stock-history', verifyToken, staffOrAbove, getStockHistory);
 router.get('/product/:productId', verifyToken, staffOrAbove, getBarcodesByProduct);

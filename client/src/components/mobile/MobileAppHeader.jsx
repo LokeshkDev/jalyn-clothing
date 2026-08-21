@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { Link } from 'react-router-dom'
 import { Menu, Search, Heart, MapPin } from 'lucide-react'
 import logo from '@/assets/jalyn-logo.png'
 import { useUIStore, useWishlistStore } from '@/store'
-import LocationModal, { getSavedLocation } from '@/components/location/LocationModal'
+import { getSavedLocation } from '@/lib/locationUtils'
+
+const LocationModal = lazy(() => import('@/components/location/LocationModal'))
 
 export default function MobileAppHeader() {
   const wishCount = useWishlistStore((s) => s.ids.length)
@@ -63,11 +65,15 @@ export default function MobileAppHeader() {
         </div>
       </header>
 
-      <LocationModal
-        isOpen={locationModalOpen}
-        onClose={() => setLocationModalOpen(false)}
-        onLocationSelect={(loc) => setCurrentLocation(loc)}
-      />
+      {locationModalOpen && (
+        <Suspense fallback={null}>
+          <LocationModal
+            isOpen={locationModalOpen}
+            onClose={() => setLocationModalOpen(false)}
+            onLocationSelect={(loc) => setCurrentLocation(loc)}
+          />
+        </Suspense>
+      )}
     </>
   )
 }

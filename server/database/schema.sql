@@ -79,8 +79,87 @@ CREATE TABLE IF NOT EXISTS `products` (
   `is_sale` TINYINT(1) DEFAULT 0,
   `sale_order` INT DEFAULT 0,
   `sale_published` TINYINT(1) DEFAULT 1,
+  `vendor_id` INT NULL,
+  `rack_id` INT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 3b. Vendors Table
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `vendors` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(150) NOT NULL,
+  `company_name` VARCHAR(200) NULL,
+  `phone` VARCHAR(20) NULL,
+  `email` VARCHAR(150) NULL,
+  `address` TEXT NULL,
+  `city` VARCHAR(100) NULL,
+  `state` VARCHAR(100) NULL,
+  `pincode` VARCHAR(10) NULL,
+  `gst_number` VARCHAR(20) NULL,
+  `notes` TEXT NULL,
+  `status` ENUM('active', 'inactive') DEFAULT 'active',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 3c. Racks Table
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `racks` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(150) NOT NULL,
+  `code` VARCHAR(50) NULL,
+  `description` TEXT NULL,
+  `status` ENUM('active', 'inactive') DEFAULT 'active',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 3d. Godowns / Branches Table
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `godowns` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(150) NOT NULL,
+  `code` VARCHAR(50) NULL,
+  `address` TEXT NULL,
+  `city` VARCHAR(100) NULL,
+  `contact_person` VARCHAR(100) NULL,
+  `phone` VARCHAR(20) NULL,
+  `notes` TEXT NULL,
+  `is_default` TINYINT(1) DEFAULT 0,
+  `status` ENUM('active', 'inactive') DEFAULT 'active',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uq_godown_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Seed two default godowns/branches (idempotent)
+INSERT INTO `godowns` (`name`, `code`, `is_default`, `status`) VALUES
+('Godown 1', 'GDN-1', 1, 'active'),
+('Godown 2', 'GDN-2', 0, 'active')
+ON DUPLICATE KEY UPDATE `code` = VALUES(`code`);
+
+-- FK constraints for products -> vendors/racks (run after tables above exist)
+ALTER TABLE `products` ADD CONSTRAINT `fk_products_vendor` FOREIGN KEY (`vendor_id`) REFERENCES `vendors`(`id`) ON DELETE SET NULL;
+ALTER TABLE `products` ADD CONSTRAINT `fk_products_rack` FOREIGN KEY (`rack_id`) REFERENCES `racks`(`id`) ON DELETE SET NULL;
+
+-- --------------------------------------------------------
+-- 3e. Product Godown Stock Table (separate stock per godown)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `product_godown_stock` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `product_id` INT NOT NULL,
+  `godown_id` INT NOT NULL,
+  `stock` INT NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uq_product_godown` (`product_id`, `godown_id`),
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`godown_id`) REFERENCES `godowns`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------

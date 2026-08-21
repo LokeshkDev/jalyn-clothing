@@ -1,16 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Printer, Download, Plus, Minus, Settings, FileText, Info } from 'lucide-react';
+import { X, Printer, Download, Plus, Minus, Info } from 'lucide-react';
 import BarcodeLabel from './BarcodeLabel';
 import { generateBarcodePNG } from '../utils/barcodeEncoder';
-import { BARCODE_LABEL_CONFIG, calculateA4Grid } from '../utils/barcodeLabelConfig';
+import { BARCODE_LABEL_CONFIG } from '../utils/barcodeLabelConfig';
+
+const LABELS_PER_ROW = 2;
+const LABEL_WIDTH_MM = 50;
+const LABEL_HEIGHT_MM = 25;
+const ROW_WIDTH_MM = LABELS_PER_ROW * LABEL_WIDTH_MM; // 100mm
+const ROW_HEIGHT_MM = LABEL_HEIGHT_MM; // 25mm
 
 const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }) => {
   const [copiesMap, setCopiesMap] = useState({});
   const [globalCopies, setGlobalCopies] = useState(defaultCopies);
-  
-  const [printMode, setPrintMode] = useState('direct'); // 'direct' or 'a4'
+
   const [companyName, setCompanyName] = useState(BARCODE_LABEL_CONFIG.label.companyName);
-  
+
   const [showProductName, setShowProductName] = useState(BARCODE_LABEL_CONFIG.label.showProductName);
   const [showColor, setShowColor] = useState(BARCODE_LABEL_CONFIG.label.showColor);
   const [showSize, setShowSize] = useState(BARCODE_LABEL_CONFIG.label.showSize);
@@ -59,7 +64,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
       price: item.price,
       barcode: item.barcode
     };
-    
+
     const config = {
       ...BARCODE_LABEL_CONFIG,
       label: {
@@ -72,7 +77,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
         showBarcodeNumber
       }
     };
-    
+
     const dataUrl = generateBarcodePNG(labelData, config);
     const a = document.createElement('a');
     a.href = dataUrl;
@@ -92,6 +97,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     }
   };
 
+  // Expand copies into the full label list, then chunk into rows of 2
   const printLabels = useMemo(() => {
     const list = [];
     barcodes.forEach(item => {
@@ -103,14 +109,22 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     return list;
   }, [barcodes, copiesMap]);
 
-  if (!isOpen) return null;
+  const printRows = useMemo(() => {
+    const rows = [];
+    for (let i = 0; i < printLabels.length; i += LABELS_PER_ROW) {
+      rows.push(printLabels.slice(i, i + LABELS_PER_ROW));
+    }
+    return rows;
+  }, [printLabels]);
 
-  const isSingle = barcodes.length === 1;
+  const totalRows = printRows.length;
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-hidden bg-black/50 backdrop-blur-sm">
       <div className="relative w-full max-w-5xl h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
@@ -123,42 +137,45 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-          
+
           {/* Left: Preview Area */}
           <div className="flex-1 bg-gray-50 overflow-y-auto p-6 flex flex-col relative">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-gray-700">Preview</h3>
-              <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">
-                {printLabels.length} Total Labels
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">
+                  {printLabels.length} Total Labels
+                </span>
+                <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">
+                  {totalRows} Row{totalRows === 1 ? '' : 's'} × {LABELS_PER_ROW}
+                </span>
+              </div>
             </div>
-            
-            <div className={`flex-1 flex ${isSingle ? 'items-center justify-center' : 'items-start justify-center'}`}>
-              <div className={isSingle ? '' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'}>
+
+            <div className="flex-1 flex items-start justify-center">
+              <div className="w-full max-w-full space-y-6">
                 {barcodes.map(item => (
-                  <div key={item.barcode} className="flex flex-col items-center gap-3">
-                    <div className="bg-white p-2 rounded-xl border border-gray-200 shadow-sm transition-transform hover:scale-105">
-                      <div className="relative overflow-hidden bg-white" style={{ width: '76.2mm', height: '50.8mm' }}>
-                        <BarcodeLabel
-                          barcode={item.barcode}
-                          productName={item.productName}
-                          color={item.color}
-                          size={item.size}
-                          price={item.price}
-                          companyName={companyName}
-                          showProductName={showProductName}
-                          showColor={showColor}
-                          showSize={showSize}
-                          showPrice={showPrice}
-                          showBarcodeNumber={showBarcodeNumber}
-                          forPrint={false}
-                        />
-                      </div>
+                  <div key={item.barcode} className="flex flex-col items-center gap-2">
+                    <div className="bg-white p-1 rounded-xl border border-gray-200 shadow-sm">
+                      <BarcodeLabel
+                        barcode={item.barcode}
+                        productName={item.productName}
+                        color={item.color}
+                        size={item.size}
+                        price={item.price}
+                        companyName={companyName}
+                        showProductName={showProductName}
+                        showColor={showColor}
+                        showSize={showSize}
+                        showPrice={showPrice}
+                        showBarcodeNumber={showBarcodeNumber}
+                        forPrint={false}
+                      />
                     </div>
-                    
+
                     {/* Copy Control */}
                     <div className="flex items-center bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
-                      <button 
+                      <button
                         onClick={() => handleCopyChange(item.barcode, -1)}
                         className="p-1 text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded-md transition-colors disabled:opacity-50"
                         disabled={(copiesMap[item.barcode] || 1) <= 1}
@@ -168,7 +185,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
                       <span className="w-12 text-center text-sm font-medium text-gray-700">
                         {copiesMap[item.barcode] || 1}
                       </span>
-                      <button 
+                      <button
                         onClick={() => handleCopyChange(item.barcode, 1)}
                         className="p-1 text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded-md transition-colors disabled:opacity-50"
                         disabled={(copiesMap[item.barcode] || 1) >= 50}
@@ -178,6 +195,44 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
                     </div>
                   </div>
                 ))}
+
+                {/* Bulk row layout preview (2 per row) */}
+                {barcodes.length > 1 && (
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <p className="text-xs text-gray-500 mb-3 font-medium">
+                      Bulk layout — exactly {LABELS_PER_ROW} stickers per row ({ROW_WIDTH_MM}mm × {ROW_HEIGHT_MM}mm each row):
+                    </p>
+                    <div className="space-y-1 bg-white p-3 rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+                      {printRows.slice(0, 4).map((row, rIdx) => (
+                        <div key={rIdx} className="flex" style={{ width: `${ROW_WIDTH_MM}mm` }}>
+                          {row.map((item, i) => (
+                            <div key={i} style={{ width: `${LABEL_WIDTH_MM}mm`, height: `${LABEL_HEIGHT_MM}mm` }} className="shrink-0">
+                              <BarcodeLabel
+                                barcode={item.barcode}
+                                productName={item.productName}
+                                color={item.color}
+                                size={item.size}
+                                price={item.price}
+                                companyName={companyName}
+                                showProductName={showProductName}
+                                showColor={showColor}
+                                showSize={showSize}
+                                showPrice={showPrice}
+                                showBarcodeNumber={showBarcodeNumber}
+                                forPrint={false}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                      {printRows.length > 4 && (
+                        <p className="text-[10px] text-gray-400 text-center pt-1">
+                          + {printRows.length - 4} more row{printRows.length - 4 === 1 ? '' : 's'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -185,42 +240,10 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
           {/* Right: Controls */}
           <div className="w-full md:w-80 border-l border-gray-100 bg-white flex flex-col h-full shrink-0">
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              
-              {/* Print Mode */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium text-gray-900 flex items-center gap-2">
-                  <Settings className="w-4 h-4 text-gray-500" />
-                  Print Mode
-                </h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setPrintMode('direct')}
-                    className={`flex flex-col items-center p-3 rounded-xl border text-xs font-medium transition-colors ${
-                      printMode === 'direct' 
-                        ? 'border-brand-500 bg-brand-50 text-brand-700' 
-                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Printer className={`w-5 h-5 mb-1 ${printMode === 'direct' ? 'text-brand-600' : 'text-gray-400'}`} />
-                    Direct Label
-                  </button>
-                  <button
-                    onClick={() => setPrintMode('a4')}
-                    className={`flex flex-col items-center p-3 rounded-xl border text-xs font-medium transition-colors ${
-                      printMode === 'a4' 
-                        ? 'border-brand-500 bg-brand-50 text-brand-700' 
-                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <FileText className={`w-5 h-5 mb-1 ${printMode === 'a4' ? 'text-brand-600' : 'text-gray-400'}`} />
-                    A4 Bulk
-                  </button>
-                </div>
-              </div>
 
               {/* Global Copies */}
               <div className="space-y-3">
-                <label className="text-sm font-medium text-gray-900 block">Global Copies</label>
+                <label className="text-sm font-medium text-gray-900 block">Copies Per Label</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
@@ -239,7 +262,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
               {/* Content Settings */}
               <div className="space-y-4">
                 <h3 className="text-sm font-medium text-gray-900">Label Content</h3>
-                
+
                 <div className="space-y-3">
                   <div>
                     <label className="text-xs text-gray-500 block mb-1">Company Name</label>
@@ -254,45 +277,45 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
 
                   <div className="space-y-2 pt-2">
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={showProductName} 
+                      <input
+                        type="checkbox"
+                        checked={showProductName}
                         onChange={(e) => setShowProductName(e.target.checked)}
                         className="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
                       />
                       <span className="text-sm text-gray-700">Product Name</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={showColor} 
+                      <input
+                        type="checkbox"
+                        checked={showColor}
                         onChange={(e) => setShowColor(e.target.checked)}
                         className="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
                       />
                       <span className="text-sm text-gray-700">Color</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={showSize} 
+                      <input
+                        type="checkbox"
+                        checked={showSize}
                         onChange={(e) => setShowSize(e.target.checked)}
                         className="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
                       />
                       <span className="text-sm text-gray-700">Size</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={showPrice} 
+                      <input
+                        type="checkbox"
+                        checked={showPrice}
                         onChange={(e) => setShowPrice(e.target.checked)}
                         className="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
                       />
                       <span className="text-sm text-gray-700">Price</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={showBarcodeNumber} 
+                      <input
+                        type="checkbox"
+                        checked={showBarcodeNumber}
                         onChange={(e) => setShowBarcodeNumber(e.target.checked)}
                         className="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
                       />
@@ -306,12 +329,12 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3">
                 <Info className="w-5 h-5 text-blue-500 shrink-0" />
                 <div className="text-xs text-blue-800 space-y-1">
-                  <p className="font-medium">Print Settings:</p>
+                  <p className="font-medium">Fixed Label Size — 50mm × 25mm</p>
                   <ul className="list-disc pl-4 space-y-0.5">
-                    <li>Scale: 100% (Actual Size)</li>
-                    <li>Disable "Fit to Page"</li>
-                    <li>Use correct paper size</li>
-                    <li>Margins: Minimum</li>
+                    <li>Exactly {LABELS_PER_ROW} stickers per row ({ROW_WIDTH_MM}mm × {ROW_HEIGHT_MM}mm)</li>
+                    <li>Print height: {totalRows} row{totalRows === 1 ? '' : 's'} × {ROW_HEIGHT_MM}mm = {totalRows * ROW_HEIGHT_MM}mm</li>
+                    <li>Scale: 100% (Actual Size) — no "Fit to Page"</li>
+                    <li>Margins: None (0mm)</li>
                   </ul>
                 </div>
               </div>
@@ -339,30 +362,39 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
         </div>
       </div>
 
-      {/* Hidden Print Area */}
-      <div id="barcode-print-area" className={printMode === 'a4' ? 'barcode-print-grid' : ''} style={{ display: 'none' }}>
-        {printLabels.map((item, index) => (
-          <div key={`${item.barcode}-${index}`} className="print-label">
-            <BarcodeLabel
-              barcode={item.barcode}
-              productName={item.productName}
-              color={item.color}
-              size={item.size}
-              price={item.price}
-              companyName={companyName}
-              showProductName={showProductName}
-              showColor={showColor}
-              showSize={showSize}
-              showPrice={showPrice}
-              showBarcodeNumber={showBarcodeNumber}
-              forPrint={true}
-            />
+      {/* Hidden Print Area — rows of exactly 2 labels, each row = one 100mm × 25mm page */}
+      <div id="barcode-print-area" style={{ display: 'none' }}>
+        {printRows.map((row, rowIndex) => (
+          <div key={rowIndex} className="print-label-row">
+            {row.map((item, labelIndex) => (
+              <div key={`${item.barcode}-${rowIndex}-${labelIndex}`} className="print-label">
+                <BarcodeLabel
+                  barcode={item.barcode}
+                  productName={item.productName}
+                  color={item.color}
+                  size={item.size}
+                  price={item.price}
+                  companyName={companyName}
+                  showProductName={showProductName}
+                  showColor={showColor}
+                  showSize={showSize}
+                  showPrice={showPrice}
+                  showBarcodeNumber={showBarcodeNumber}
+                  forPrint={true}
+                />
+              </div>
+            ))}
           </div>
         ))}
       </div>
 
-      {/* Print Styles */}
+      {/* Print Styles — physical 50×25mm stickers, 2 per row, no scaling, no rotation */}
       <style dangerouslySetInnerHTML={{ __html: `
+        @page barcode-row {
+          size: ${ROW_WIDTH_MM}mm ${ROW_HEIGHT_MM}mm;
+          margin: 0;
+        }
+
         @media print {
           body * {
             visibility: hidden !important;
@@ -375,29 +407,35 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            display: flex !important;
-            flex-wrap: wrap;
-            align-content: flex-start;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
+            width: ${ROW_WIDTH_MM}mm !important;
           }
-          .barcode-print-grid {
+          .print-label-row {
+            page: barcode-row;
             display: grid !important;
-            grid-template-columns: repeat(auto-fill, 76.2mm);
-            gap: 2mm;
-            padding: 10mm;
-          }
-          .print-label {
-            width: 76.2mm !important;
-            height: 50.8mm !important;
+            grid-template-columns: repeat(${LABELS_PER_ROW}, ${LABEL_WIDTH_MM}mm) !important;
+            grid-auto-rows: ${LABEL_HEIGHT_MM}mm !important;
+            width: ${ROW_WIDTH_MM}mm !important;
+            height: ${ROW_HEIGHT_MM}mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
             box-sizing: border-box !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
+            break-after: page !important;
+            page-break-after: always !important;
+          }
+          .print-label {
+            width: ${LABEL_WIDTH_MM}mm !important;
+            height: ${LABEL_HEIGHT_MM}mm !important;
             margin: 0 !important;
             padding: 0 !important;
+            box-sizing: border-box !important;
             overflow: hidden !important;
-          }
-          @page {
-            margin: 0;
-            size: ${printMode === 'a4' ? 'A4' : '76.2mm 50.8mm'};
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
           }
         }
       `}} />

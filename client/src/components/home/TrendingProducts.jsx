@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Autoplay } from 'swiper/modules'
 import { PRODUCTS } from '@/constants/data'
 import ProductCard from '@/components/ui/ProductCard'
-import QuickViewModal from '@/components/shop/QuickViewModal'
 import { Button } from '@/components/ui/Button'
 import SectionHeader from '@/components/ui/SectionHeader'
 import { useProductsApi } from '@/hooks/useProductsApi'
+
+const QuickViewModal = lazy(() => import('@/components/shop/QuickViewModal'))
 
 import 'swiper/css'
 
@@ -77,11 +78,15 @@ export default function TrendingProducts() {
         </motion.div>
       </div>
 
-      <QuickViewModal
-        product={quickViewProduct}
-        open={Boolean(quickViewProduct)}
-        onClose={() => setQuickViewProduct(null)}
-      />
+      {quickViewProduct && (
+        <Suspense fallback={null}>
+          <QuickViewModal
+            product={quickViewProduct}
+            open={Boolean(quickViewProduct)}
+            onClose={() => setQuickViewProduct(null)}
+          />
+        </Suspense>
+      )}
     </motion.section>
   )
 }

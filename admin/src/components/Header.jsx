@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ExternalLink, Bell, ShoppingBag, AlertTriangle, CheckCheck, Inbox } from 'lucide-react';
+import { ExternalLink, Bell, ShoppingBag, AlertTriangle, CheckCheck, Inbox, Store } from 'lucide-react';
 import api from '../services/api';
+import { openGlobalPosBilling } from '../utils/billingEvents';
 
 const SEEN_KEY = 'jalyn_notif_seen_at';
 
@@ -19,6 +20,8 @@ export default function Header({ title, subtitle }) {
   const [notifications, setNotifications] = useState({ newOrders: [], lowStock: [] });
   const [open, setOpen] = useState(false);
   const [error, setError] = useState(false);
+  const [seenAt, setSeenAt] = useState(() => parseInt(localStorage.getItem(SEEN_KEY) || '0', 10));
+  const stockTimeRef = useRef({});
   const wrapperRef = useRef(null);
   const navigate = useNavigate();
 
@@ -55,27 +58,39 @@ export default function Header({ title, subtitle }) {
       time: o.created_at,
       to: '/orders',
     }));
-    const stock = notifications.lowStock.map((p) => ({
-      id: `stock-${p.id}`,
-      type: 'stock',
-      title: p.title,
-      subtitle: `Low stock: only ${p.stock} left`,
-      time: new Date().toISOString(),
-      to: '/products',
-    }));
+    // Low-stock items keep a STABLE first-seen timestamp per product so that
+    // marking them read actually sticks (fresh Date.now() per poll never would).
+    const stock = notifications.lowStock.map((p) => {
+      if (!stockTimeRef.current[p.id]) {
+        stockTimeRef.current[p.id] = new Date().toISOString();
+      }
+      return {
+        id: `stock-${p.id}`,
+        type: 'stock',
+        title: p.title,
+        subtitle: `Low stock: only ${p.stock} left`,
+        time: stockTimeRef.current[p.id],
+        to: '/products',
+      };
+    });
     return [...orders, ...stock];
   }, [notifications]);
 
   const unreadCount = useMemo(() => {
-    const lastSeen = parseInt(localStorage.getItem(SEEN_KEY) || '0', 10);
-    return items.filter((n) => new Date(n.time).getTime() > lastSeen).length;
-  }, [items]);
+    return items.filter((n) => new Date(n.time).getTime() > seenAt).length;
+  }, [items, seenAt]);
+
+  const markAllRead = () => {
+    const now = Date.now();
+    localStorage.setItem(SEEN_KEY, String(now));
+    setSeenAt(now);
+  };
 
   const handleOpen = () => {
     const next = !open;
     setOpen(next);
     if (next) {
-      localStorage.setItem(SEEN_KEY, String(Date.now()));
+      markAllRead();
     }
   };
 
@@ -91,7 +106,18 @@ export default function Header({ title, subtitle }) {
         {subtitle && <p className="text-xs text-gray-500 font-medium mt-0.5">{subtitle}</p>}
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        {/* Global POS Billing Button (Single Solid Theme Color) */}
+        <button
+          type="button"
+          onClick={openGlobalPosBilling}
+          className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#2A1A22] hover:bg-[#3D2631] px-3.5 py-1.5 rounded-lg transition shadow-sm cursor-pointer"
+          title="Open POS Billing Counter"
+        >
+          <Store className="w-3.5 h-3.5 text-pink-300" />
+          <span>POS Billing</span>
+        </button>
+
         {/* Quick Links & Status Badges */}
         <a
           href={import.meta.env.VITE_CLIENT_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5173' : 'https://jalyn.in')}
@@ -124,9 +150,7 @@ export default function Header({ title, subtitle }) {
                 <span className="text-sm font-bold text-gray-900">Notifications</span>
                 {items.length > 0 && (
                   <button
-                    onClick={() => {
-                      localStorage.setItem(SEEN_KEY, String(Date.now()));
-                    }}
+                    onClick={markAllRead}
                     className="text-[11px] font-semibold text-brand-600 hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <CheckCheck className="w-3.5 h-3.5" /> Mark all read

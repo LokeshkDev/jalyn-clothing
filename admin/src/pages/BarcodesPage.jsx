@@ -86,6 +86,36 @@ export default function BarcodesPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Are you sure you want to permanently delete ${ids.length} selected barcode(s)?`)) return;
+    try {
+      await api.post('/barcodes/bulk-delete', { ids });
+      showToast(`Successfully deleted ${ids.length} barcode(s)`);
+      setSelectedIds(new Set());
+      loadBarcodes();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to delete barcodes', 'error');
+    }
+  };
+
+  const handleSingleDelete = async (barcodeId) => {
+    if (!window.confirm('Are you sure you want to delete this barcode?')) return;
+    try {
+      await api.delete(`/barcodes/${barcodeId}`);
+      showToast('Barcode deleted successfully');
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.delete(barcodeId);
+        return next;
+      });
+      loadBarcodes();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to delete barcode', 'error');
+    }
+  };
+
   const handleBulkPrint = () => {
     const selected = barcodes.filter(b => selectedIds.has(b.id));
     if (selected.length === 0) {
@@ -190,15 +220,24 @@ export default function BarcodesPage() {
             </button>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {selectedIds.size > 0 && (
-              <button
-                onClick={handleBulkPrint}
-                className="px-4 py-2 bg-brand-600 text-white rounded-xl shadow-sm hover:bg-brand-700 flex items-center gap-2 text-sm font-medium transition cursor-pointer"
-              >
-                <Printer className="w-4 h-4" />
-                Print Selected ({selectedIds.size})
-              </button>
+              <>
+                <button
+                  onClick={handleBulkPrint}
+                  className="px-3.5 py-2 bg-[#2A1A22] hover:bg-[#3D2631] text-white rounded-xl shadow-xs flex items-center gap-1.5 text-xs font-bold transition cursor-pointer"
+                >
+                  <Printer className="w-4 h-4 text-pink-300" />
+                  Print Selected ({selectedIds.size})
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-xs flex items-center gap-1.5 text-xs font-bold transition cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Bulk Delete ({selectedIds.size})
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -334,6 +373,13 @@ export default function BarcodesPage() {
                           >
                             <RotateCcw className="w-4 h-4" />
                           </button>
+                          <button
+                            onClick={() => handleSingleDelete(b.id)}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                            title="Delete Barcode"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -382,7 +428,7 @@ export default function BarcodesPage() {
               </button>
             </div>
             <div className="p-8 flex justify-center items-center bg-gray-100/50">
-              <div className="bg-white shadow-md border border-gray-200" style={{ width: '76.2mm', height: '50.8mm' }}>
+              <div className="bg-white shadow-md border border-gray-200" style={{ width: '50mm', height: '25mm' }}>
                 <BarcodeLabel
                   barcode={previewBarcode.barcode}
                   productName={previewBarcode.product_title || 'Product'}

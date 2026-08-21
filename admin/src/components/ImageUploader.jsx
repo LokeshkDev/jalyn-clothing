@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, X, Image as ImageIcon, Loader2, CheckCircle2 } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Loader2, CheckCircle2, Sparkles, Info } from 'lucide-react';
 import api from '../services/api';
 
 export default function ImageUploader({
@@ -8,8 +8,8 @@ export default function ImageUploader({
   label = 'Upload Image',
   fieldKey = 'banner_image',
   aspectRatio = 'aspect-video',
-  recommendedSize = '1920 × 800 px (Recommended)',
-  placeholderText = 'Upload high resolution image',
+  recommendedSize = '1440 × 720 px (2:1 Optimized)',
+  placeholderText = 'Upload high resolution optimized image',
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -21,7 +21,7 @@ export default function ImageUploader({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setError('Please select a valid image file (PNG, JPG, WEBP, GIF).');
+      setError('Please select a valid image file (PNG, JPG, WEBP, AVIF).');
       return;
     }
 
@@ -70,7 +70,8 @@ export default function ImageUploader({
       <div className="flex items-center justify-between gap-2 max-w-md">
         {label && <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700">{label}</label>}
         {recommendedSize && (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-[#FAF0E6] text-[#C28E5C] border border-[#EFE8E2]">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#FAF0E6] text-[#AD4A85] border border-[#EFE8E2]" title="Recommended image size for fastest loading and optimal display">
+            <Sparkles className="w-3 h-3 text-[#AD4A85]" />
             {recommendedSize}
           </span>
         )}
@@ -87,8 +88,8 @@ export default function ImageUploader({
             }}
           />
           <div className="absolute top-2 left-2 z-10">
-            <span className="bg-black/70 backdrop-blur-sm text-white text-[10px] font-mono px-2 py-1 rounded-md">
-              {recommendedSize}
+            <span className="bg-black/75 backdrop-blur-md text-white text-[10px] font-mono px-2.5 py-1 rounded-md shadow flex items-center gap-1">
+              <Info className="w-3 h-3 text-pink-300" /> Dimension: {recommendedSize}
             </span>
           </div>
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
@@ -100,7 +101,7 @@ export default function ImageUploader({
             <button
               type="button"
               onClick={handleClear}
-              className="bg-red-500 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow hover:bg-red-600 transition flex items-center gap-1.5"
+              className="bg-red-500 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow hover:bg-red-600 transition flex items-center gap-1.5 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
               Remove
@@ -118,12 +119,13 @@ export default function ImageUploader({
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
           </div>
           <span className="text-xs font-semibold text-gray-700">
-            {loading ? 'Uploading via Server...' : placeholderText}
+            {loading ? 'Uploading & Optimizing via Server...' : placeholderText}
           </span>
-          <span className="inline-block text-[11px] font-mono text-[#C28E5C] bg-[#FAF0E6] px-2 py-0.5 rounded mt-1.5">
-            Size placeholder: {recommendedSize}
+          <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-[#AD4A85] bg-[#FAF0E6] border border-[#EFE8E2] px-2.5 py-1 rounded-md mt-2">
+            <Sparkles className="w-3 h-3 text-[#AD4A85]" />
+            Optimized Size: {recommendedSize}
           </span>
-          <span className="text-[10px] text-gray-400 mt-1">Formats: PNG, JPG, WEBP (Max 5MB)</span>
+          <span className="text-[10px] text-gray-400 mt-1">Formats: WEBP, JPG, PNG (Auto-compressed for fast loading)</span>
           <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={loading} />
         </label>
       )}
@@ -131,7 +133,7 @@ export default function ImageUploader({
       {/* Status Messages */}
       {success && (
         <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium mt-1">
-          <CheckCircle2 className="w-3.5 h-3.5" /> Image uploaded successfully & reflects on website!
+          <CheckCircle2 className="w-3.5 h-3.5" /> Image uploaded &amp; live on website!
         </div>
       )}
       {error && <p className="text-xs text-red-500 font-medium mt-1">{error}</p>}

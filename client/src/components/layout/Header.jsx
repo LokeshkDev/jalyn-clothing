@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, lazy, Suspense } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Search, User, ShoppingBag, ChevronDown, Menu, X, ChevronRight, MapPin } from 'lucide-react'
 import logo from '@/assets/jalyn-logo.png'
@@ -6,7 +6,9 @@ import { NAV_LINKS } from '@/constants/data'
 import { cn } from '@/lib/utils'
 import { useCartStore, useUIStore } from '@/store'
 import { useCmsData } from '@/hooks/useCmsData'
-import LocationModal, { getSavedLocation, saveLocation } from '@/components/location/LocationModal'
+import { getSavedLocation } from '@/lib/locationUtils'
+
+const LocationModal = lazy(() => import('@/components/location/LocationModal'))
 
 function IconBtn({ children, label, onClick, as = 'button', to, badge }) {
   const Comp = as
@@ -171,8 +173,9 @@ export default function Header() {
                 src={logo}
                 alt="JALYN — Style meets comfort"
                 className={cn('object-contain transition-all duration-300', scrolled ? 'h-7 sm:h-8 lg:h-10' : 'h-8 sm:h-10 lg:h-20')}
-                width={180}
-                height={44}
+                width={160}
+                height={80}
+                style={{ aspectRatio: '2 / 1' }}
               />
             </Link>
           </div>
@@ -512,12 +515,16 @@ export default function Header() {
         </div>
       )}
 
-      {/* Delivery Location & Pincode Modal */}
-      <LocationModal
-        isOpen={locationModalOpen}
-        onClose={() => setLocationModalOpen(false)}
-        onLocationSelect={(loc) => setCurrentLocation(loc)}
-      />
+      {/* Delivery Location & Pincode Modal (Lazy loaded on demand) */}
+      {locationModalOpen && (
+        <Suspense fallback={null}>
+          <LocationModal
+            isOpen={locationModalOpen}
+            onClose={() => setLocationModalOpen(false)}
+            onLocationSelect={(loc) => setCurrentLocation(loc)}
+          />
+        </Suspense>
+      )}
     </>
   )
 }

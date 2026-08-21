@@ -7,11 +7,20 @@ export const ensureNewsletterTable = async () => {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS newsletter_subscribers (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        email VARCHAR(150) NOT NULL UNIQUE,
+        phone VARCHAR(50) NULL,
+        email VARCHAR(150) NULL,
         source VARCHAR(50) DEFAULT 'homepage',
         subscribed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    
+    // In case table existed with old schema, ensure phone column and nullable email
+    try {
+      await pool.query(`ALTER TABLE newsletter_subscribers ADD COLUMN phone VARCHAR(50) NULL AFTER id`);
+    } catch (e) {}
+    try {
+      await pool.query(`ALTER TABLE newsletter_subscribers MODIFY COLUMN email VARCHAR(150) NULL`);
+    } catch (e) {}
   } catch (err) {
     console.log('ℹ️ newsletter_subscribers table check:', err.message);
   }
@@ -20,29 +29,62 @@ export const ensureNewsletterTable = async () => {
 ensureNewsletterTable();
 
 export const subscribeNewsletter = async (req, res) => {
+  const phone = String(req.body?.phone || req.body?.whatsapp || req.body?.whatsapp_number || '').trim();
   const email = String(req.body?.email || '').trim().toLowerCase();
-  if (!EMAIL_REGEX.test(email)) {
-    return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
+  const source = req.body?.source || 'homepage';
+
+  if (phone) {
+    const cleanPhone = phone.replace(/[^0-9+]/g, '');
+    if (cleanPhone.length < 10) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit WhatsApp number.' });
+    }
+
+    try {
+      await pool.query(
+        'INSERT INTO newsletter_subscribers (phone, email, source) VALUES (?, ?, ?)',
+        [cleanPhone, email || null, source]
+      );
+      return res.json({
+        success: true,
+        message: 'Welcome to the JALYN WhatsApp VIP Club!',
+      });
+    } catch (error) {
+      return res.json({
+        success: true,
+        message: 'You are already subscribed to JALYN WhatsApp VIP updates!',
+      });
+    }
   }
 
-  try {
-    await pool.query(
-      'INSERT IGNORE INTO newsletter_subscribers (email, source) VALUES (?, ?)',
-      [email, req.body?.source || 'homepage']
-    );
-    return res.json({
-      success: true,
-      message: 'You are in! Welcome to the JALYN inner circle.',
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Something went wrong. Please try again.' });
+  if (email) {
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
+    }
+
+    try {
+      await pool.query(
+        'INSERT INTO newsletter_subscribers (phone, email, source) VALUES (?, ?, ?)',
+        [null, email, source]
+      );
+      return res.json({
+        success: true,
+        message: 'You are in! Welcome to the JALYN inner circle.',
+      });
+    } catch (error) {
+      return res.json({
+        success: true,
+        message: 'You are already subscribed!',
+      });
+    }
   }
+
+  return res.status(400).json({ success: false, message: 'Please enter your WhatsApp number.' });
 };
 
 export const getNewsletterSubscribers = async (req, res) => {
   try {
     const [rows] = await pool.query(
-      'SELECT id, email, source, subscribed_at FROM newsletter_subscribers ORDER BY subscribed_at DESC'
+      'SELECT id, phone, email, source, subscribed_at FROM newsletter_subscribers ORDER BY subscribed_at DESC'
     );
     return res.json({ success: true, subscribers: rows });
   } catch (error) {

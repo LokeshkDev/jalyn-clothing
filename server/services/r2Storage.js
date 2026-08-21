@@ -47,6 +47,7 @@ export const uploadToR2 = async (fileBuffer, originalName, mimeType, extOverride
     Key: uniqueFilename,
     Body: fileBuffer,
     ContentType: mimeType,
+    CacheControl: 'public, max-age=31536000, immutable',
   });
 
   await s3Client.send(command);

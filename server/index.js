@@ -19,6 +19,9 @@ import barcodeRoutes from './routes/barcodeRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import filterOptionRoutes from './routes/filterOptionRoutes.js';
 import newsletterRoutes from './routes/newsletterRoutes.js';
+import vendorRoutes from './routes/vendorRoutes.js';
+import rackRoutes from './routes/rackRoutes.js';
+import godownRoutes from './routes/godownRoutes.js';
 
 dotenv.config();
 
@@ -64,7 +67,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static directory for uploaded images
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  maxAge: '365d',
+  immutable: true,
+}));
 
 // Health Check API
 app.get('/api/health', (req, res) => {
@@ -88,6 +94,9 @@ app.use('/api/barcodes', barcodeRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/filter-options', filterOptionRoutes);
 app.use('/api/newsletter', newsletterRoutes);
+app.use('/api/vendors', vendorRoutes);
+app.use('/api/racks', rackRoutes);
+app.use('/api/godowns', godownRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

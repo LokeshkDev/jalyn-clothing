@@ -18,8 +18,8 @@ export default function BarcodeLabel({
   const barcodeSvg = useMemo(() => {
     if (!barcode) return '';
     return generateBarcodeSVG(barcode, {
-      width: '90%',
-      height: 40,
+      width: '100%',
+      height: 42,
       showText: false,
       moduleWidth: 2,
       quietZone: 5,
@@ -34,34 +34,35 @@ export default function BarcodeLabel({
         forPrint ? '' : 'border border-gray-200 shadow-sm'
       }`}
       style={{
-        width: '76.2mm',
-        height: '50.8mm',
-        padding: '3mm'
+        width: '50mm',
+        height: '25mm',
+        padding: '1mm 1.5mm'
       }}
     >
       <div className="w-full text-center flex-1 flex flex-col justify-start items-center overflow-hidden">
         {/* Company Name */}
-        <div 
-          style={{ fontSize: '8pt', letterSpacing: '2px' }} 
+        <div
+          style={{ fontSize: '6pt', letterSpacing: '1.5px', lineHeight: '1.25' }}
           className="font-sans font-bold uppercase text-black"
         >
           {companyName}
         </div>
-        
+
         {/* Product Name */}
         {showProductName && productName && (
-          <div 
-            style={{ fontSize: '10pt', lineHeight: '1.2' }} 
-            className="font-sans font-semibold text-black mt-0.5 line-clamp-2 w-full text-center px-1"
+          <div
+            style={{ fontSize: '6.5pt', lineHeight: '1.15' }}
+            className="font-sans font-semibold text-black mt-0.5 line-clamp-1 w-full text-center px-0.5"
+            title={productName}
           >
             {productName}
           </div>
         )}
-        
+
         {/* Variant Info Line */}
-        <div 
-          style={{ fontSize: '8pt' }} 
-          className="font-sans text-black mt-1 flex items-center justify-center gap-1.5 flex-wrap w-full"
+        <div
+          style={{ fontSize: '5.5pt' }}
+          className="font-sans text-black mt-0.5 flex items-center justify-center gap-1 flex-wrap w-full"
         >
           {showColor && color && <span>{color}</span>}
           {showColor && color && showSize && size && <span>•</span>}
@@ -70,23 +71,23 @@ export default function BarcodeLabel({
           {showPrice && price && <span>₹{price}</span>}
         </div>
       </div>
-      
+
       {/* Barcode Area */}
-      <div className="w-full flex flex-col items-center justify-end mt-1 shrink-0" style={{ height: '35%' }}>
+      <div className="w-full flex flex-col items-center justify-end shrink-0" style={{ height: '42%' }}>
         {barcode ? (
           <>
-            <div 
+            <div
               className="w-full flex justify-center items-end"
               dangerouslySetInnerHTML={{ __html: barcodeSvg }}
             />
             {showBarcodeNumber && (
-              <div style={{ fontSize: '9pt', marginTop: '1mm' }} className="font-mono text-black font-semibold">
+              <div style={{ fontSize: '5.5pt', marginTop: '0.5mm', lineHeight: '1.2' }} className="font-mono text-black font-semibold tracking-tight">
                 {barcode}
               </div>
             )}
           </>
         ) : (
-          <div className="text-gray-400 text-xs italic pb-2">No barcode data</div>
+          <div className="text-gray-400 text-[5.5pt] italic pb-1">No barcode data</div>
         )}
       </div>
     </div>

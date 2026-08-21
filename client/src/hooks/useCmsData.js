@@ -23,20 +23,19 @@ export function useCmsData() {
   // --- Hero Slides ---
   const heroSlides = cmsData?.hero_banner?.slides?.length
     ? cmsData.hero_banner.slides
-    : cmsData?.hero_banner
+    : (cmsData?.hero_banner?.banner_image || cmsData?.hero_banner?.heading !== undefined)
       ? [
           {
             id: 'cms-hero-1',
             image: cmsData.hero_banner.banner_image || HERO_SLIDES[0].image,
             alt: cmsData.hero_banner.heading || HERO_SLIDES[0].alt,
-            eyebrow: 'New Collection',
-            title: cmsData.hero_banner.heading || 'Elegance Redefined',
-            highlight: 'For Every Occasion',
-            subtitle: cmsData.hero_banner.subheading || HERO_SLIDES[0].subtitle,
-            cta: cmsData.hero_banner.cta_text || 'Explore Collection',
+            eyebrow: cmsData.hero_banner.eyebrow ?? '',
+            title: cmsData.hero_banner.heading ?? '',
+            highlight: cmsData.hero_banner.highlight ?? '',
+            subtitle: cmsData.hero_banner.subheading ?? '',
+            cta: cmsData.hero_banner.cta_text ?? '',
             href: cmsData.hero_banner.cta_link || '/shop',
           },
-          ...HERO_SLIDES.slice(1),
         ]
       : HERO_SLIDES;
 

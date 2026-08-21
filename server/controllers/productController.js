@@ -189,15 +189,55 @@ export const SEED_PRODUCTS = [
 let inMemoryProductsStore = [...SEED_PRODUCTS];
 
 // Helper to safely parse JSON fields from DB rows
+function safeJsonParse(value, fallback) {
+  if (value === null || value === undefined || value === '') return fallback;
+  if (typeof value !== 'string') return value;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed === null || parsed === undefined ? fallback : parsed;
+  } catch (err) {
+    return fallback;
+  }
+}
+
+// Helper to safely parse JSON fields from DB rows
 function parseJsonFields(product) {
   return {
     ...product,
-    sizes: typeof product.sizes === 'string' ? JSON.parse(product.sizes) : (product.sizes || []),
-    colors: typeof product.colors === 'string' ? JSON.parse(product.colors) : (product.colors || []),
-    variants: typeof product.variants === 'string' ? JSON.parse(product.variants) : (product.variants || []),
-    color_images: typeof product.color_images === 'string' ? JSON.parse(product.color_images) : (product.color_images || {}),
-    size_guide: typeof product.size_guide === 'string' ? JSON.parse(product.size_guide) : (product.size_guide || null),
+    sizes: safeJsonParse(product.sizes, []),
+    colors: safeJsonParse(product.colors, []),
+    variants: safeJsonParse(product.variants, []),
+    color_images: safeJsonParse(product.color_images, {}),
+    size_guide: safeJsonParse(product.size_guide, null),
   };
+}
+
+// Dynamic stock resolution — the products.stock column alone can be stale/zeroed,
+// so the effective balance is computed live at read time from the richest source:
+//   1. Godown distribution sum (product_godown_stock) — authoritative when it exists
+//   2. Variant matrix stock sum — authoritative when variants carry the stock
+//   3. Fallback: the stored products.stock value
+function computeEffectiveStock(product) {
+  const godownTotal = parseInt(product.godown_total, 10) || 0;
+  if (godownTotal > 0) return godownTotal;
+
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  if (variants.length > 0) {
+    const variantTotal = variants.reduce((sum, v) => sum + (parseInt(v.stock, 10) || 0), 0);
+    if (variantTotal > 0) return variantTotal;
+  }
+
+  return parseInt(product.stock, 10) || 0;
+}
+
+// Apply computeEffectiveStock to a raw DB row (also injects godown totals for display)
+function withEffectiveStock(row) {
+  const product = parseJsonFields(row);
+  product.godown_total = parseInt(row.godown_total, 10) || 0;
+  product.godown_count = parseInt(row.godown_count, 10) || 0;
+  product.effective_stock = computeEffectiveStock(product);
+  product.stock = product.effective_stock;
+  return product;
 }
 
 // Auto seed table in MySQL if connected
@@ -398,36 +438,39 @@ export const getProducts = async (req, res) => {
   const isIncludeOffline = include_offline === '1' || include_offline === 'true';
 
   try {
-    let query = 'SELECT * FROM products WHERE is_active = 1';
+    let query = 'SELECT p.*, '
+      + '(SELECT COALESCE(SUM(stock), 0) FROM product_godown_stock WHERE product_id = p.id) as godown_total, '
+      + '(SELECT COUNT(*) FROM product_godown_stock WHERE product_id = p.id) as godown_count '
+      + 'FROM products p WHERE p.is_active = 1';
     const params = [];
 
     // Filter out products turned OFF for online website unless admin explicitly passes include_offline=1
     if (!isIncludeOffline) {
-      query += ' AND (is_online = 1 OR is_online IS NULL)';
+      query += ' AND (p.is_online = 1 OR p.is_online IS NULL)';
     }
 
     if (new_arrivals === '1') {
-      query += ' AND is_new_arrival = 1 AND new_arrival_published = 1';
+      query += ' AND p.is_new_arrival = 1 AND p.new_arrival_published = 1';
     }
     if (sales === '1' || sale === '1') {
-      query += ' AND is_sale = 1 AND sale_published = 1';
+      query += ' AND p.is_sale = 1 AND p.sale_published = 1';
     }
     if (category && category !== 'all') {
-      query += ' AND category_slug = ?';
+      query += ' AND p.category_slug = ?';
       params.push(category);
     }
     if (search) {
-      query += ' AND (title LIKE ? OR description LIKE ?)';
+      query += ' AND (p.title LIKE ? OR p.description LIKE ?)';
       params.push(`%${search}%`, `%${search}%`);
     }
-    if (sort === 'price-low' || sort === 'price_asc') query += ' ORDER BY price ASC';
-    else if (sort === 'price-high' || sort === 'price_desc') query += ' ORDER BY price DESC';
-    else if (sort === 'top-rated' || sort === 'rating') query += ' ORDER BY rating DESC';
-    else if (sort === 'popularity' || sort === 'reviews') query += ' ORDER BY reviews_count DESC';
-    else if (sort === 'discount') query += ' ORDER BY discount DESC';
-    else if (new_arrivals === '1') query += ' ORDER BY new_arrival_order ASC, created_at DESC';
-    else if (sales === '1' || sale === '1') query += ' ORDER BY sale_order ASC, created_at DESC';
-    else query += ' ORDER BY created_at DESC';
+    if (sort === 'price-low' || sort === 'price_asc') query += ' ORDER BY p.price ASC';
+    else if (sort === 'price-high' || sort === 'price_desc') query += ' ORDER BY p.price DESC';
+    else if (sort === 'top-rated' || sort === 'rating') query += ' ORDER BY p.rating DESC';
+    else if (sort === 'popularity' || sort === 'reviews') query += ' ORDER BY p.reviews_count DESC';
+    else if (sort === 'discount') query += ' ORDER BY p.discount DESC';
+    else if (new_arrivals === '1') query += ' ORDER BY p.new_arrival_order ASC, p.created_at DESC';
+    else if (sales === '1' || sale === '1') query += ' ORDER BY p.sale_order ASC, p.created_at DESC';
+    else query += ' ORDER BY p.created_at DESC';
 
     const [rows] = await pool.query(query, params);
     if (!rows || rows.length === 0) {
@@ -436,7 +479,7 @@ export const getProducts = async (req, res) => {
         products: filterAndSortMockProducts(inMemoryProductsStore, category, search, sort, isIncludeOffline),
       });
     }
-    const products = rows.map(parseJsonFields);
+    const products = rows.map(withEffectiveStock);
     return res.json({ success: true, products });
   } catch (error) {
     return res.json({
@@ -451,9 +494,15 @@ export const getProducts = async (req, res) => {
 export const getProductBySlug = async (req, res) => {
   const { slug } = req.params;
   try {
-    const [rows] = await pool.query('SELECT * FROM products WHERE (slug = ? OR id = ?) AND is_active = 1', [slug, slug]);
+    const [rows] = await pool.query(
+      `SELECT p.*,
+        (SELECT COALESCE(SUM(stock), 0) FROM product_godown_stock WHERE product_id = p.id) as godown_total,
+        (SELECT COUNT(*) FROM product_godown_stock WHERE product_id = p.id) as godown_count
+       FROM products p WHERE (p.slug = ? OR p.id = ?) AND p.is_active = 1`,
+      [slug, slug]
+    );
     if (rows && rows.length > 0) {
-      const prod = parseJsonFields(rows[0]);
+      const prod = withEffectiveStock(rows[0]);
       if (prod.is_online === 0 || prod.is_online === false) {
         return res.status(404).json({ success: false, message: 'Product is currently not available online.' });
       }
@@ -482,6 +531,7 @@ export const createProduct = async (req, res) => {
     is_featured, is_new_arrival, is_online, is_offline, low_stock_threshold,
     variants, color_images, size_guide,
     fabric, sleeve, occasion, fit, pattern, season,
+    vendor_id, rack_id, godown_stock,
   } = req.body;
 
   let primary_image = req.body.primary_image;
@@ -503,18 +553,28 @@ export const createProduct = async (req, res) => {
   const primaryImg = primary_image || 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80';
   const hoverImg = hover_image || primaryImg;
 
-  const parsedSizes = typeof sizes === 'string' ? JSON.parse(sizes) : sizes || ['S', 'M', 'L'];
-  const parsedColors = typeof colors === 'string' ? JSON.parse(colors) : colors || ['rose', 'cream'];
-  const parsedVariants = typeof variants === 'string' ? JSON.parse(variants) : variants || [];
-  const parsedColorImages = typeof color_images === 'string' ? JSON.parse(color_images) : color_images || {};
-  const parsedSizeGuide = typeof size_guide === 'string' ? JSON.parse(size_guide) : size_guide || null;
+  const parsedSizes = safeJsonParse(sizes, ['S', 'M', 'L']);
+  const parsedColors = safeJsonParse(colors, ['rose', 'cream']);
+  const parsedVariants = safeJsonParse(variants, []);
+  const parsedColorImages = safeJsonParse(color_images, {});
+  const parsedSizeGuide = safeJsonParse(size_guide, null);
 
   const disc = original_price > price ? Math.round(((original_price - price) / original_price) * 100) : 0;
 
   // Compute total stock from variants if present
-  const totalStock = parsedVariants.length > 0
+  let totalStock = parsedVariants.length > 0
     ? parsedVariants.reduce((sum, v) => sum + (parseInt(v.stock, 10) || 0), 0)
     : parseInt(stock, 10) || 10;
+
+  // Parse godown stock (array of { godown_id, stock })
+  const parsedGodownStock = Array.isArray(godown_stock)
+    ? godown_stock
+        .map((g) => ({ godown_id: parseInt(g.godown_id, 10), stock: Math.max(0, parseInt(g.stock, 10) || 0) }))
+        .filter((g) => g.godown_id && g.stock > 0)
+    : [];
+  if (parsedGodownStock.length > 0) {
+    totalStock = parsedGodownStock.reduce((sum, g) => sum + g.stock, 0);
+  }
 
   const newProd = {
     id: Date.now(), title, slug: productSlug,
@@ -551,8 +611,9 @@ export const createProduct = async (req, res) => {
       (title, slug, category_slug, price, original_price, discount, description, short_description,
        sizes, colors, primary_image, hover_image, stock, brand, product_code, base_sku,
        is_featured, is_new_arrival, is_online, is_offline, low_stock_threshold,
-       variants, color_images, size_guide, fabric, sleeve, occasion, fit, pattern, season)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       variants, color_images, size_guide, fabric, sleeve, occasion, fit, pattern, season,
+       vendor_id, rack_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         title, productSlug, category_slug || 'dresses',
         price, original_price || price, disc,
@@ -569,12 +630,25 @@ export const createProduct = async (req, res) => {
         parsedSizeGuide ? JSON.stringify(parsedSizeGuide) : null,
         fabric || '', sleeve || '', occasion || '',
         fit || '', pattern || '', season || '',
+        vendor_id ? parseInt(vendor_id, 10) : null,
+        rack_id ? parseInt(rack_id, 10) : null,
       ]
     );
 
+    const productId = result.insertId;
+
+    // Persist godown stock rows
+    if (parsedGodownStock.length > 0) {
+      for (const g of parsedGodownStock) {
+        await pool.query(
+          'INSERT INTO product_godown_stock (product_id, godown_id, stock) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE stock = VALUES(stock)',
+          [productId, g.godown_id, g.stock]
+        );
+      }
+    }
+
     // Auto-generate barcodes for new product
     try {
-      const productId = result.insertId;
       // Generate primary barcode
       const primaryBarcode = await generateUniqueBarcodeNumber();
       await pool.query(
@@ -626,6 +700,7 @@ export const updateProduct = async (req, res) => {
   if (typeof updates.variants === 'string') updates.variants = JSON.parse(updates.variants);
   if (typeof updates.color_images === 'string') updates.color_images = JSON.parse(updates.color_images);
   if (typeof updates.size_guide === 'string') updates.size_guide = JSON.parse(updates.size_guide);
+  if (updates.size_guide && typeof updates.size_guide !== 'object') updates.size_guide = null;
 
   // Recompute total stock from variants if provided
   if (updates.variants && updates.variants.length > 0) {
@@ -674,9 +749,54 @@ export const updateProduct = async (req, res) => {
       }
     }
 
+    // Vendor & Rack relationships
+    if (updates.vendor_id !== undefined) {
+      setClauses.push('vendor_id = ?');
+      params.push(updates.vendor_id ? parseInt(updates.vendor_id, 10) : null);
+    }
+    if (updates.rack_id !== undefined) {
+      setClauses.push('rack_id = ?');
+      params.push(updates.rack_id ? parseInt(updates.rack_id, 10) : null);
+    }
+
     if (setClauses.length > 0) {
       params.push(id, id);
       await pool.query(`UPDATE products SET ${setClauses.join(', ')} WHERE id = ? OR slug = ?`, params);
+    }
+
+    // Persist godown stock rows (replace strategy: sync table to submitted values)
+    // IMPORTANT: only sync when the admin actually entered a distribution (at least one
+    // godown with stock > 0). The product form pre-fills 0 for every godown, so an
+    // all-zero/empty payload must NOT wipe existing godown rows or zero out products.stock.
+    if (updates.godown_stock !== undefined && Array.isArray(updates.godown_stock)) {
+      const parsedGodownStock = updates.godown_stock
+        .map((g) => ({ godown_id: parseInt(g.godown_id, 10), stock: Math.max(0, parseInt(g.stock, 10) || 0) }))
+        .filter((g) => g.godown_id);
+
+      const hasPositiveStock = parsedGodownStock.some((g) => g.stock > 0);
+
+      if (hasPositiveStock) {
+        const [productRows] = await pool.query('SELECT id FROM products WHERE id = ? OR slug = ?', [id, id]);
+        const realId = productRows[0]?.id || id;
+
+        await pool.query('DELETE FROM product_godown_stock WHERE product_id = ?', [realId]);
+        for (const g of parsedGodownStock) {
+          if (g.stock > 0) {
+            await pool.query(
+              'INSERT INTO product_godown_stock (product_id, godown_id, stock) VALUES (?, ?, ?)',
+              [realId, g.godown_id, g.stock]
+            );
+          }
+        }
+
+        // Recompute product total stock from godown rows
+        const [totals] = await pool.query(
+          'SELECT COALESCE(SUM(stock), 0) as total FROM product_godown_stock WHERE product_id = ?',
+          [realId]
+        );
+        const godownTotal = parseInt(totals[0]?.total, 10) || 0;
+        await pool.query('UPDATE products SET stock = ? WHERE id = ?', [godownTotal, realId]);
+      }
     }
 
     return res.json({ success: true, message: 'Product updated successfully.' });

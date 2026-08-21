@@ -18,6 +18,7 @@ export default defineConfig({
     cssCodeSplit: true,
     minify: 'esbuild',
     rollupOptions: {
+      treeshake: true,
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
@@ -32,5 +33,6 @@ export default defineConfig({
   },
   esbuild: {
     drop: ['console', 'debugger'],
+    legalComments: 'none',
   },
 })

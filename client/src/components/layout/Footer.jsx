@@ -14,8 +14,15 @@ import {
 import logo from '@/assets/jalyn-logo.png'
 import { FOOTER_LINKS } from '@/constants/data'
 import { useCmsData } from '@/hooks/useCmsData'
-import { FaCcVisa, FaCcMastercard, FaCcAmex, FaCcPaypal, FaGooglePay, FaWhatsapp } from 'react-icons/fa'
-import { SiPhonepe, SiRazorpay } from 'react-icons/si'
+import {
+  WhatsAppIcon,
+  VisaIcon,
+  MastercardIcon,
+  AmexIcon,
+  GooglePayIcon,
+  PhonePeIcon,
+  RazorpayIcon,
+} from '@/components/ui/BrandIcons'
 
 const defaultColumns = [
   { title: 'Customer Care', links: FOOTER_LINKS.column1 },
@@ -52,7 +59,7 @@ export default function Footer() {
   const socialLinks = [
     { Icon: Instagram, label: 'Instagram', href: footerSettings?.instagram_link || 'https://www.instagram.com/jalyn.apparels/' },
     { Icon: Facebook, label: 'Facebook', href: footerSettings?.facebook_link || 'https://facebook.com/jalyn.apparels' },
-    { Icon: FaWhatsapp, label: 'WhatsApp', href: `https://wa.me/${cleanWhatsappNumber}` },
+    { Icon: WhatsAppIcon, label: 'WhatsApp', href: `https://wa.me/${cleanWhatsappNumber}` },
     { Icon: Twitter, label: 'Twitter', href: footerSettings?.twitter_link || '' },
     { Icon: Youtube, label: 'YouTube', href: footerSettings?.youtube_link || '' },
   ].filter((s) => s.href)
@@ -113,7 +120,7 @@ export default function Footer() {
             className="flex items-center gap-2.5 hover:text-[#E8C5A8] transition group"
           >
             <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#25D366]/20 text-[#25D366] group-hover:bg-[#25D366] group-hover:text-white transition">
-              <FaWhatsapp className="h-3 w-3" />
+              <MessageCircle className="h-3 w-3" />
             </div>
             <span>WhatsApp: {whatsapp}</span>
           </a>
@@ -223,12 +230,12 @@ export default function Footer() {
           <p>{footerSettings?.copyright_text || `© ${new Date().getFullYear()} JALYN Apparels. All rights reserved.`}</p>
           <div className="flex flex-wrap items-center gap-3 text-white/80 text-lg">
             <span className="text-[11px] font-semibold text-white/50 mr-1">100% SECURE PAYMENTS:</span>
-            <SiRazorpay title="Razorpay" className="hover:text-[#D4A373] transition" />
-            <SiPhonepe title="PhonePe" className="hover:text-[#D4A373] transition" />
-            <FaGooglePay title="Google Pay" className="text-xl hover:text-[#D4A373] transition" />
-            <FaCcVisa title="Visa" className="hover:text-[#D4A373] transition" />
-            <FaCcMastercard title="Mastercard" className="hover:text-[#D4A373] transition" />
-            <FaCcAmex title="American Express" className="hover:text-[#D4A373] transition" />
+            <RazorpayIcon className="w-6 h-6 hover:text-[#D4A373] transition cursor-pointer" title="Razorpay" />
+            <PhonePeIcon className="w-5 h-5 hover:text-[#D4A373] transition cursor-pointer" title="PhonePe" />
+            <GooglePayIcon className="w-6 h-6 hover:text-[#D4A373] transition cursor-pointer" title="Google Pay" />
+            <VisaIcon className="w-6 h-6 hover:text-[#D4A373] transition cursor-pointer" title="Visa" />
+            <MastercardIcon className="w-6 h-6 hover:text-[#D4A373] transition cursor-pointer" title="Mastercard" />
+            <AmexIcon className="w-6 h-6 hover:text-[#D4A373] transition cursor-pointer" title="American Express" />
           </div>
         </div>
       </div>

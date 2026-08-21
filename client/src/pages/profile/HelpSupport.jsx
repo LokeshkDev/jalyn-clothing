@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { MessageCircle, Mail, PhoneCall, ChevronDown, HelpCircle, Instagram, Facebook, Twitter, Youtube } from 'lucide-react'
-import { FaWhatsapp } from 'react-icons/fa'
+import { WhatsAppIcon } from '@/components/ui/BrandIcons'
 import { cn } from '@/lib/utils'
 import { useCmsData } from '@/hooks/useCmsData'
 
@@ -16,7 +16,7 @@ export default function HelpSupport() {
   const socialLinks = [
     { Icon: Instagram, label: 'Instagram', href: footerSettings?.instagram_link || 'https://www.instagram.com/jalyn.apparels/' },
     { Icon: Facebook, label: 'Facebook', href: footerSettings?.facebook_link || 'https://facebook.com/jalyn.apparels' },
-    { Icon: FaWhatsapp, label: 'WhatsApp', href: `https://wa.me/${cleanWhatsapp}` },
+    { Icon: WhatsAppIcon, label: 'WhatsApp', href: `https://wa.me/${cleanWhatsapp}` },
     { Icon: Twitter, label: 'Twitter', href: footerSettings?.twitter_link || '' },
     { Icon: Youtube, label: 'YouTube', href: footerSettings?.youtube_link || '' },
   ].filter((s) => s.href)

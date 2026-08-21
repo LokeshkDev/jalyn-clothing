@@ -739,21 +739,56 @@ export default function CmsPage() {
               </div>
             </div>
 
+            <div className="p-3.5 bg-amber-50/90 border border-amber-200 rounded-xl text-amber-900 text-xs flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <strong>Image-Only Banner Mode:</strong> If you leave the Eyebrow, Title, Highlight, Subtitle, and CTA Button empty (or click <em>"Clear All Text"</em> below), the banner automatically switches to <strong>Pure Image Mode</strong>: showing the original photo in 100% natural colors with zero overlays.
+              </div>
+            </div>
+
             <div className="space-y-4 text-xs">
               {cmsData.hero_banner?.slides?.map((slide, idx) => (
                 <div key={idx} className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
                   <div className="flex items-center justify-between border-b border-gray-200 pb-2">
-                    <span className="font-bold text-gray-900 text-sm">Slide #{idx + 1}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = cmsData.hero_banner.slides.filter((_, i) => i !== idx);
-                        updateSectionField('hero_banner', 'slides', next);
-                      }}
-                      className="p-1 text-gray-400 hover:text-red-600 transition flex items-center gap-1 text-xs font-semibold"
-                    >
-                      <Trash2 className="w-4 h-4 text-red-500" /> Delete Slide
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-900 text-sm">Slide #{idx + 1}</span>
+                      {!Boolean(slide.eyebrow?.trim() || slide.title?.trim() || slide.highlight?.trim() || slide.subtitle?.trim() || slide.cta?.trim()) && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          ✓ Pure Image Mode (No Overlay)
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = [...cmsData.hero_banner.slides];
+                          next[idx] = {
+                            ...next[idx],
+                            eyebrow: '',
+                            title: '',
+                            highlight: '',
+                            subtitle: '',
+                            cta: '',
+                          };
+                          updateSectionField('hero_banner', 'slides', next);
+                        }}
+                        className="px-2.5 py-1 text-amber-700 hover:bg-amber-100 bg-amber-50 border border-amber-200 rounded-lg text-xs font-semibold cursor-pointer"
+                        title="Clear all text fields to show pure banner image without overlay"
+                      >
+                        Clear All Text (Pure Image)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = cmsData.hero_banner.slides.filter((_, i) => i !== idx);
+                          updateSectionField('hero_banner', 'slides', next);
+                        }}
+                        className="p-1 text-gray-400 hover:text-red-600 transition flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" /> Delete Slide
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -851,6 +886,8 @@ export default function CmsPage() {
                       updateSectionField('hero_banner', 'slides', next);
                     }}
                     aspectRatio="aspect-[16/6]"
+                    recommendedSize="1440 × 720 px (2:1 Ratio)"
+                    placeholderText="Upload Desktop & Tablet Hero Banner (1440 × 720 px)"
                   />
                 </div>
               ))}
@@ -1030,7 +1067,9 @@ export default function CmsPage() {
                         next[idx].image = url;
                         updateSectionField('category_grid', 'categories', next);
                       }}
-                      aspectRatio="aspect-[16/9]"
+                      aspectRatio="aspect-[4/5]"
+                      recommendedSize="800 × 1000 px (4:5 Ratio)"
+                      placeholderText="Upload Category Card Image (800 × 1000 px)"
                     />
                   </div>
                 ))}
@@ -1292,6 +1331,8 @@ export default function CmsPage() {
                 value={cmsData.promo_banner?.bg_image}
                 onChange={(url) => updateSectionField('promo_banner', 'bg_image', url)}
                 aspectRatio="aspect-[16/6]"
+                recommendedSize="1600 × 600 px (8:3 Ratio)"
+                placeholderText="Upload Promotional Banner (1600 × 600 px)"
               />
             </div>
           </div>
@@ -1382,6 +1423,8 @@ export default function CmsPage() {
                         updateSectionField('instagram_feed', 'posts', nextPosts);
                       }}
                       aspectRatio="aspect-square"
+                      recommendedSize="600 × 600 px (1:1 Ratio)"
+                      placeholderText="Upload Instagram Post Image (600 × 600 px)"
                     />
                   </div>
                 ))}
@@ -1476,7 +1519,9 @@ export default function CmsPage() {
                 const women = { ...(cmsData.featured_edits?.women || {}), image: url };
                 updateSectionField('featured_edits', 'women', women);
               }}
-              aspectRatio="aspect-[3/4]"
+              aspectRatio="aspect-[4/5]"
+              recommendedSize="800 × 1000 px (4:5 Ratio)"
+              placeholderText="Upload Women Megamenu Card (800 × 1000 px)"
             />
           </div>
         </div>
@@ -1546,7 +1591,9 @@ export default function CmsPage() {
                 const kids = { ...(cmsData.featured_edits?.kids || {}), image: url };
                 updateSectionField('featured_edits', 'kids', kids);
               }}
-              aspectRatio="aspect-[3/4]"
+              aspectRatio="aspect-[4/5]"
+              recommendedSize="800 × 1000 px (4:5 Ratio)"
+              placeholderText="Upload Kids Megamenu Card (800 × 1000 px)"
             />
           </div>
         </div>

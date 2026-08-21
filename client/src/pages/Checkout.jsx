@@ -189,16 +189,32 @@ export default function Checkout() {
     setTimeout(() => setToastMessage(null), 3000)
   }
 
-  // Load Cashfree JS SDK v3 dynamically
-  const loadCashfreeSdk = () => {
+  // Load Cashfree JS SDK v3 dynamically and return a checkout instance.
+  const loadCashfreeSdk = (mode = 'sandbox') => {
     return new Promise((resolve, reject) => {
+      const createCashfreeInstance = () => {
+        if (typeof window.Cashfree !== 'function') {
+          reject(new Error('Cashfree SDK loaded, but checkout is unavailable.'))
+          return
+        }
+
+        const cashfree = window.Cashfree({ mode })
+        if (!cashfree || typeof cashfree.checkout !== 'function') {
+          reject(new Error('Cashfree checkout could not be initialized.'))
+          return
+        }
+
+        resolve(cashfree)
+      }
+
       if (window.Cashfree) {
-        resolve(window.Cashfree)
+        createCashfreeInstance()
         return
       }
       const script = document.createElement('script')
       script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js'
-      script.onload = () => resolve(window.Cashfree)
+      script.async = true
+      script.onload = createCashfreeInstance
       script.onerror = () => reject(new Error('Failed to load Cashfree SDK'))
       document.body.appendChild(script)
     })
@@ -249,7 +265,50 @@ export default function Checkout() {
         })
 
         if (res.data?.payment_session_id) {
-          const cashfree = await loadCashfreeSdk()
+          if (res.data?.isSimulated) {
+            const newOrder = addOrder({
+              customer_email: user?.email,
+              address: { ...selectedAddressObj, phone: cleanPhone },
+              shippingMethod,
+              shippingCost,
+              paymentMethod: 'Online Payment (Cashfree)',
+              paymentStatus: 'paid',
+              orderNotes,
+              items: cartItems,
+              subtotal,
+              discount: discountAmount,
+              tax: taxAmount,
+              total: grandTotal,
+            })
+
+            await api.post('/orders', {
+              order_number: newOrder.id,
+              customer_name: selectedAddressObj.name || user?.firstName || 'Valued Customer',
+              customer_email: user?.email || 'customer@jalyn.in',
+              customer_phone: cleanPhone,
+              shipping_address: `${selectedAddressObj.addressLine1 || ''}, ${selectedAddressObj.city || ''}, ${selectedAddressObj.state || ''} ${selectedAddressObj.pincode || ''}`,
+              total_amount: grandTotal,
+              payment_status: 'paid',
+              order_status: 'Processing',
+              payment_method: 'Online Payment (Cashfree Simulated)',
+              items: cartItems.map((i) => ({
+                product_name: i.name || i.title || 'Jalyn Product',
+                price: i.price,
+                quantity: i.qty || 1,
+                size: i.size || 'M',
+                color: i.color || 'Default',
+                image_url: i.image || i.primary_image || '',
+              })),
+            })
+
+            clearCart()
+            setIsSubmitting(false)
+            navigate(`/order-success/${newOrder.id}`)
+            return
+          }
+
+          const cashfreeMode = String(res.data.environment || '').toUpperCase() === 'PRODUCTION' ? 'production' : 'sandbox'
+          const cashfree = await loadCashfreeSdk(cashfreeMode)
           const checkoutOptions = {
             paymentSessionId: res.data.payment_session_id,
             redirectTarget: '_modal',
@@ -265,7 +324,7 @@ export default function Checkout() {
           }
 
           // Verify order status on backend
-          const verifyRes = await api.get(`/payment/cashfree/verify-order/${orderId}`)
+          const verifyRes = await api.post('/payment/cashfree/verify', { order_id: orderId })
 
           const newOrder = addOrder({
             customer_email: user?.email,

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Swiper, SwiperSlide } from 'swiper/react'
@@ -9,8 +10,43 @@ import { useProductsApi } from '@/hooks/useProductsApi'
 import 'swiper/css'
 
 export default function Collections() {
-  const { categories } = useProductsApi()
-  const items = categories && categories.length > 0 ? categories : COLLECTIONS
+  const { categories, products } = useProductsApi()
+
+  // Calculate live dynamic product count per category
+  const productCountBySlug = useMemo(() => {
+    const counts = {}
+    if (Array.isArray(products) && products.length > 0) {
+      products.forEach((p) => {
+        const catSlug = String(p.category_slug || p.category || '').toLowerCase().trim()
+        if (catSlug) {
+          counts[catSlug] = (counts[catSlug] || 0) + 1
+        }
+      })
+    }
+    return counts
+  }, [products])
+
+  const items = useMemo(() => {
+    const rawItems = categories && categories.length > 0 ? categories : COLLECTIONS
+    return rawItems.map((col) => {
+      const slug = String(col.slug || col.id || '').toLowerCase().trim()
+      let count = 0
+
+      if (productCountBySlug[slug] !== undefined) {
+        count = productCountBySlug[slug]
+      } else if (col.item_count !== undefined && col.item_count !== null && !isNaN(Number(col.item_count))) {
+        count = Number(col.item_count)
+      }
+
+      const countText = count === 1 ? '1 Item' : `${count} Items`
+
+      return {
+        ...col,
+        dynamicCount: count,
+        countText,
+      }
+    })
+  }, [categories, productCountBySlug])
 
   return (
     <motion.section
@@ -61,7 +97,7 @@ export default function Collections() {
                         decoding="async"
                         width="320"
                         height="426"
-                        className="img-zoom h-full w-full object-cover duration-700 group-hover:scale-110"
+                        className="img-zoom h-full w-full object-cover duration-700 group-hover:scale-110 will-change-transform"
                         onError={(e) => {
                           e.currentTarget.src = '/images/home/categories/dresses.webp'
                         }}
@@ -72,8 +108,8 @@ export default function Collections() {
                       <h3 className="font-display text-base font-medium text-white sm:text-lg">
                         {collection.title || collection.name}
                       </h3>
-                      <p className="mt-0.5 text-xs text-white/80">
-                        {collection.subtitle || `${collection.item_count || 10}+ Items`}
+                      <p className="mt-0.5 text-xs text-white/80 font-medium">
+                        {collection.countText}
                       </p>
                     </div>
                   </Link>

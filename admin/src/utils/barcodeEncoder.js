@@ -80,22 +80,22 @@ export function generateBarcodePNG(labelData, config = BARCODE_LABEL_CONFIG) {
   canvas.width = config.pxWidth;
   canvas.height = config.pxHeight;
   const ctx = canvas.getContext('2d');
-  
+
   // Background
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
-  const marginX = 40;
-  const marginY = 40;
-  
+
+  const marginX = 26;
+  const marginY = 14;
+
   // Company Name
   ctx.fillStyle = '#000000';
   ctx.textAlign = 'center';
-  ctx.font = 'bold 48px sans-serif';
-  ctx.fillText(labelData.companyName || config.label.companyName, canvas.width / 2, marginY + 40);
-  
+  ctx.font = 'bold 26px sans-serif';
+  ctx.fillText(labelData.companyName || config.label.companyName, canvas.width / 2, marginY + 26);
+
   // Product Name
-  ctx.font = '36px sans-serif';
+  ctx.font = '20px sans-serif';
   const maxWidth = canvas.width - (marginX * 2);
   let productName = labelData.productName || 'Unknown Product';
   // Simple truncation
@@ -105,46 +105,46 @@ export function generateBarcodePNG(labelData, config = BARCODE_LABEL_CONFIG) {
     }
     productName += '...';
   }
-  ctx.fillText(productName, canvas.width / 2, marginY + 110);
-  
+  ctx.fillText(productName, canvas.width / 2, marginY + 62);
+
   // Color • Size • Price
-  ctx.font = '32px sans-serif';
+  ctx.font = '17px sans-serif';
   const details = [];
   if (labelData.color && config.label.showColor) details.push(labelData.color);
   if (labelData.size && config.label.showSize) details.push(`Size: ${labelData.size}`);
   if (labelData.price && config.label.showPrice) details.push(`₹${labelData.price}`);
-  
-  ctx.fillText(details.join(' • '), canvas.width / 2, marginY + 170);
-  
+
+  ctx.fillText(details.join(' • '), canvas.width / 2, marginY + 96);
+
   // Barcode
-  const barcodeY = marginY + 220;
-  const barcodeHeight = 180;
+  const barcodeY = marginY + 118;
+  const barcodeHeight = 112;
   const barcodeText = labelData.barcode || '';
-  
+
   if (barcodeText) {
     const encoding = encodeCode128(barcodeText);
-    const moduleWidth = 6;
-    const quietZone = 10;
+    const moduleWidth = 2.5;
+    const quietZone = 6;
     const totalBarcodeWidth = (encoding.length + (quietZone * 2)) * moduleWidth;
     const startX = (canvas.width - totalBarcodeWidth) / 2 + (quietZone * moduleWidth);
-    
+
     ctx.fillStyle = '#000000';
     let currentX = startX;
-    
+
     for (let i = 0; i < encoding.length; i++) {
       if (encoding[i] === '1') {
         ctx.fillRect(currentX, barcodeY, moduleWidth, barcodeHeight);
       }
       currentX += moduleWidth;
     }
-    
+
     // Barcode Number
     if (config.label.showBarcodeNumber) {
-      ctx.font = '32px monospace';
+      ctx.font = '17px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(barcodeText, canvas.width / 2, barcodeY + barcodeHeight + 40);
+      ctx.fillText(barcodeText, canvas.width / 2, barcodeY + barcodeHeight + 24);
     }
   }
-  
+
   return canvas.toDataURL('image/png');
 }

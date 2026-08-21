@@ -15,7 +15,7 @@ import {
 import { useOrderStore, useUserStore } from '@/store'
 import { formatINR, cn } from '@/lib/utils'
 import api from '@/services/api'
-import logo from '@/assets/jalyn-logo.png'
+import logo from '@/assets/jalyn-logo-login.png'
 
 export default function OrderDetails() {
   const { id } = useParams()
@@ -346,7 +346,7 @@ export default function OrderDetails() {
         {/* Invoice Header */}
         <div className="flex justify-between items-start border-b border-gray-300 pb-6">
           <div>
-            <img src={logo} alt="Jalyn Logo" className="h-10 object-contain mb-2" />
+            <img src={logo} alt="Jalyn Logo" className="h-16 object-contain mb-2" />
             <p className="font-bold text-lg text-[#AD4A85] font-display">JALYN</p>
             <p className="text-gray-500">Style Meets Comfort</p>
             <p className="text-gray-500">support@jalyn.in | www.jalyn.in</p>

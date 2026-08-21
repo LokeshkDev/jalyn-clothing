@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Swiper, SwiperSlide } from 'swiper/react'
@@ -6,9 +6,10 @@ import { Autoplay } from 'swiper/modules'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/services/api'
 import ProductCard from '@/components/ui/ProductCard'
-import QuickViewModal from '@/components/shop/QuickViewModal'
 import SectionHeader from '@/components/ui/SectionHeader'
 import { normalizeProduct } from '@/hooks/useProductsApi'
+
+const QuickViewModal = lazy(() => import('@/components/shop/QuickViewModal'))
 
 import 'swiper/css'
 
@@ -91,10 +92,14 @@ export function NewArrivalsCarousel() {
         </div>
       </div>
 
-      <QuickViewModal
-        product={quickViewProduct}
-        onClose={() => setQuickViewProduct(null)}
-      />
+      {quickViewProduct && (
+        <Suspense fallback={null}>
+          <QuickViewModal
+            product={quickViewProduct}
+            onClose={() => setQuickViewProduct(null)}
+          />
+        </Suspense>
+      )}
     </motion.section>
   )
 }
@@ -152,10 +157,14 @@ export function SaleCarousel() {
         </div>
       </div>
 
-      <QuickViewModal
-        product={quickViewProduct}
-        onClose={() => setQuickViewProduct(null)}
-      />
+      {quickViewProduct && (
+        <Suspense fallback={null}>
+          <QuickViewModal
+            product={quickViewProduct}
+            onClose={() => setQuickViewProduct(null)}
+          />
+        </Suspense>
+      )}
     </motion.section>
   )
 }
