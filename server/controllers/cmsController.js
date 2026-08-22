@@ -510,6 +510,50 @@ const DEFAULT_CMS_DATA = {
     title: 'You May Also Like',
     enabled: true
   },
+  thermal_settings: {
+    storeName: 'JALYN APPARELS',
+    tagline: 'Style Meets Comfort',
+    shopNo: 'Shop No : 6, Madambakkam Main Road',
+    addressLine2: 'Raghavendra Nagar, Rajakilpakkam, Chennai 73',
+    cityStatePin: 'Chennai, Tamil Nadu, 600073',
+    phone: '9790904504',
+    gstin: '33BPCPA4714D1ZP',
+    email: 'connect.jalyn@gmail.com',
+    invoiceTitle: 'TAX INVOICE',
+    placeOfSupply: 'Tamil Nadu',
+    defaultShipTo: 'Business Name',
+    paperWidth: '80mm',
+    fontSize: 'large',
+    showLogo: true,
+    logoUrl: '',
+    showStoreHeader: true,
+    showAddress: true,
+    showPhone: true,
+    showGstin: true,
+    showEmail: true,
+    showInvoiceTitle: true,
+    showCustomerInfo: true,
+    showCustomerPhone: true,
+    showPlaceOfSupply: false,
+    showShipTo: false,
+    showItemSku: false,
+    showItemRate: true,
+    showItemGstRate: false,
+    showTaxBreakdown: true,
+    showYouSaved: true,
+    showReceivedBalance: true,
+    showBarcode: false,
+    showFooterMessage: true,
+    showTermsAndConditions: true,
+    footerMessage: 'Thank you for your purchase',
+    termsNote: 'Exchanges accepted within 7 days with original tags intact.',
+    termsAndConditions: [
+      'Exchanges accepted within 7 days with original tags intact.',
+      'Original invoice copy required for all exchanges.'
+    ],
+    defaultGstRate: 5,
+    isGstInclusive: true
+  }
 };
 
 const inMemoryCmsStore = { ...DEFAULT_CMS_DATA };

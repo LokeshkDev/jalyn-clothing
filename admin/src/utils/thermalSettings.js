@@ -30,19 +30,25 @@ export const DEFAULT_THERMAL_SETTINGS = {
   showInvoiceTitle: true,
   showCustomerInfo: true,
   showCustomerPhone: true,
-  showPlaceOfSupply: true,
-  showShipTo: true,
+  showPlaceOfSupply: false, // Clean layout - disabled by default
+  showShipTo: false, // Clean layout - disabled by default
+  showItemSku: false, // Clean layout - hides JLN-XX codes under item
   showItemRate: true, // Shows taxable unit rate column
-  showItemGstRate: true, // Shows "GST: 5%" under item name
+  showItemGstRate: false, // Clean layout - hides individual GST % line under item (already in totals breakdown)
   showTaxBreakdown: true, // Shows Taxable Amount, CGST, SGST breakdown
   showYouSaved: true, // Shows "You Saved - ₹ XX" line
   showReceivedBalance: true, // Shows Received and Balance Amount lines
   showBarcode: false, // Optional bottom barcode
   showFooterMessage: true,
+  showTermsAndConditions: true,
 
-  // Footer & Policy Notes
+  // Footer & Terms and Conditions (Array for full CRUD)
   footerMessage: 'Thank you for your purchase',
   termsNote: 'Exchanges accepted within 7 days with original tags intact.',
+  termsAndConditions: [
+    'Exchanges accepted within 7 days with original tags intact.',
+    'Original invoice copy required for all exchanges.'
+  ],
 
   // Default Tax Settings
   defaultGstRate: 5, // 5%
@@ -51,6 +57,11 @@ export const DEFAULT_THERMAL_SETTINGS = {
 
 const STORAGE_KEY = 'jalyn_thermal_settings_v1';
 
+import api from '../services/api';
+
+/**
+ * Synchronous local retrieval (instant fallback for offline/modals)
+ */
 export function getThermalSettings() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -63,28 +74,59 @@ export function getThermalSettings() {
   }
 }
 
-export function saveThermalSettings(settings) {
+/**
+ * Fetch thermal settings directly from MySQL Database via CMS API
+ */
+export async function fetchThermalSettingsFromDB() {
   try {
-    const updated = { ...DEFAULT_THERMAL_SETTINGS, ...settings };
+    const res = await api.get('/cms/sections');
+    const dbSettings = res.data?.data?.thermal_settings;
+    if (dbSettings && typeof dbSettings === 'object') {
+      const merged = { ...DEFAULT_THERMAL_SETTINGS, ...dbSettings };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('thermal-settings-updated', { detail: merged }));
+      }
+      return merged;
+    }
+  } catch (err) {
+    console.warn('Could not fetch thermal settings from DB, using cached:', err.message);
+  }
+  return getThermalSettings();
+}
+
+/**
+ * Persist thermal settings to both LocalStorage and MySQL Database
+ */
+export async function saveThermalSettings(settings) {
+  const updated = { ...DEFAULT_THERMAL_SETTINGS, ...settings };
+  try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('thermal-settings-updated', { detail: updated }));
     }
+    // Async DB update via CMS Sections endpoint
+    await api.put('/cms/sections/thermal_settings', updated);
     return updated;
   } catch (e) {
-    console.error('Error saving thermal settings to localStorage:', e);
-    return settings;
+    console.error('Error saving thermal settings to DB/localStorage:', e);
+    return updated;
   }
 }
 
-export function resetThermalSettings() {
+/**
+ * Reset thermal settings to defaults in LocalStorage and MySQL Database
+ */
+export async function resetThermalSettings() {
   try {
     localStorage.removeItem(STORAGE_KEY);
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('thermal-settings-updated', { detail: DEFAULT_THERMAL_SETTINGS }));
     }
+    await api.put('/cms/sections/thermal_settings', DEFAULT_THERMAL_SETTINGS);
     return { ...DEFAULT_THERMAL_SETTINGS };
   } catch (e) {
+    console.error('Error resetting thermal settings in DB:', e);
     return { ...DEFAULT_THERMAL_SETTINGS };
   }
 }

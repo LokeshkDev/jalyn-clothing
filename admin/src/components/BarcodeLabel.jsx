@@ -50,7 +50,7 @@ export default function BarcodeLabel({
       <div className="w-full text-center flex flex-col justify-start items-center overflow-hidden shrink-0">
         {/* Company / Brand Name - Extra Bold Uppercase */}
         <div
-          style={{ fontSize: '8.5pt', letterSpacing: '1.5px', lineHeight: '1.1', fontWeight: 900, color: '#000000' }}
+          style={{ fontSize: '9.5pt', letterSpacing: '2px', lineHeight: '1.05', fontWeight: 900, color: '#000000' }}
           className="font-sans uppercase text-black"
         >
           {companyName}
@@ -59,7 +59,7 @@ export default function BarcodeLabel({
         {/* Product Name - Bold High-Contrast */}
         {showProductName && productName && (
           <div
-            style={{ fontSize: '8pt', lineHeight: '1.15', fontWeight: 800, color: '#000000' }}
+            style={{ fontSize: '8.5pt', lineHeight: '1.15', fontWeight: 900, color: '#000000' }}
             className="font-sans text-black mt-0.5 truncate w-full text-center px-0.5 tracking-tight"
             title={productName}
           >
@@ -69,8 +69,8 @@ export default function BarcodeLabel({
 
         {/* Variant Info Line: Color • Size • Price */}
         <div
-          style={{ fontSize: '7.5pt', lineHeight: '1.15', fontWeight: 800, color: '#000000' }}
-          className="font-sans text-black mt-0.5 flex items-center justify-center gap-1 flex-nowrap w-full overflow-hidden truncate"
+          style={{ fontSize: '8pt', lineHeight: '1.15', fontWeight: 900, color: '#000000' }}
+          className="font-sans text-black mt-0.5 flex items-center justify-center gap-1.5 flex-nowrap w-full overflow-hidden truncate"
         >
           {showColor && color && <span>{color}</span>}
           {showColor && color && showSize && size && <span className="font-black">•</span>}
@@ -86,12 +86,12 @@ export default function BarcodeLabel({
           <>
             <div
               className="w-full flex justify-center items-center overflow-hidden"
-              style={{ maxHeight: '32px', height: '32px' }}
+              style={{ maxHeight: '33px', height: '33px' }}
               dangerouslySetInnerHTML={{ __html: barcodeSvg }}
             />
             {showBarcodeNumber && (
               <div
-                style={{ fontSize: '8pt', marginTop: '0.2mm', lineHeight: '1.05', letterSpacing: '1.2px', fontWeight: 900, color: '#000000' }}
+                style={{ fontSize: '8.5pt', marginTop: '0.2mm', lineHeight: '1.05', letterSpacing: '1.5px', fontWeight: 900, color: '#000000' }}
                 className="font-mono text-black text-center w-full"
               >
                 {barcode}

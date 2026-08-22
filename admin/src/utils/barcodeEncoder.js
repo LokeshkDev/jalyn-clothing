@@ -75,12 +75,27 @@ export function generateBarcodeSVG(text, options = {}) {
   
   let rects = '';
   let currentX = quietZone * moduleWidth;
+  let inBar = false;
+  let barStart = 0;
   
   for (let i = 0; i < encoding.length; i++) {
     if (encoding[i] === '1') {
-      rects += `<rect x="${currentX}" y="0" width="${moduleWidth}" height="${barcodeHeight}" fill="${barColor}" shape-rendering="crispEdges" />`;
+      if (!inBar) {
+        inBar = true;
+        barStart = currentX;
+      }
+    } else {
+      if (inBar) {
+        const barW = currentX - barStart;
+        rects += `<rect x="${barStart}" y="0" width="${barW}" height="${barcodeHeight}" fill="${barColor}" />`;
+        inBar = false;
+      }
     }
     currentX += moduleWidth;
+  }
+  if (inBar) {
+    const barW = currentX - barStart;
+    rects += `<rect x="${barStart}" y="0" width="${barW}" height="${barcodeHeight}" fill="${barColor}" />`;
   }
   
   let textSvg = '';

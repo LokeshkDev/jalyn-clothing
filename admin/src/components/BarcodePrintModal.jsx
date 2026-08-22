@@ -161,16 +161,16 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     justify-content: flex-start;
   }
   .brand-title {
-    font-size: 8.5pt;
+    font-size: 9.5pt;
     font-weight: 900;
-    letter-spacing: 1.5px;
-    line-height: 1.1;
+    letter-spacing: 2px;
+    line-height: 1.05;
     text-transform: uppercase;
     color: #000000;
   }
   .product-title {
-    font-size: 8pt;
-    font-weight: 800;
+    font-size: 8.5pt;
+    font-weight: 900;
     line-height: 1.15;
     color: #000000;
     white-space: nowrap;
@@ -180,8 +180,8 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     margin-top: 0.2mm;
   }
   .variant-info {
-    font-size: 7.5pt;
-    font-weight: 800;
+    font-size: 8pt;
+    font-weight: 900;
     line-height: 1.15;
     color: #000000;
     white-space: nowrap;
@@ -199,16 +199,16 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     margin-top: 0.3mm;
   }
   .barcode-box svg {
-    max-height: 32px;
-    height: 32px;
+    max-height: 33px;
+    height: 33px;
     width: 100%;
     shape-rendering: crispEdges;
   }
   .barcode-num {
     font-family: monospace;
-    font-size: 8pt;
+    font-size: 8.5pt;
     font-weight: 900;
-    letter-spacing: 1.2px;
+    letter-spacing: 1.5px;
     line-height: 1.05;
     color: #000000;
     margin-top: 0.2mm;

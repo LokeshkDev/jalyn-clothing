@@ -433,7 +433,16 @@ export const buildThermalHtml = (order, customSettings = {}) => {
       const itemGst = Number(it.gst_rate !== undefined ? it.gst_rate : gstRate);
       const itemTaxableRate = (price / (1 + itemGst / 100)).toFixed(2);
 
-      const variantParts = [it.sku, it.size, it.color].filter(Boolean);
+      const variantParts = [];
+      if (cfg.showItemSku && it.sku) {
+        variantParts.push(it.sku);
+      }
+      if (it.size) {
+        variantParts.push(it.size.toLowerCase().startsWith('size') ? it.size : `Size: ${it.size}`);
+      }
+      if (it.color) {
+        variantParts.push(it.color.toLowerCase().startsWith('color') ? it.color : `Color: ${it.color}`);
+      }
       const variantText = variantParts.join(', ');
 
       return `
@@ -472,53 +481,56 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   body {
     width: ${paperWidth};
     margin: 0 auto;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Courier New', monospace;
-    font-size: 12px;
-    line-height: 1.4;
-    font-weight: 800;
+    font-family: 'Segoe UI', Arial, -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif;
+    font-size: 11.5px;
+    line-height: 1.35;
+    font-weight: 600;
     color: #000000;
     background: #FFFFFF;
     padding: 3mm 3.5mm 5mm;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'tnum' 1;
+    font-variant-numeric: tabular-nums;
   }
   .center { text-align: center; }
   .right { text-align: right; }
-  .bold { font-weight: 900; }
+  .bold { font-weight: 800; }
 
   /* Store Header */
   .store-header {
     text-align: center;
-    margin-bottom: 2.5mm;
+    margin-bottom: 2mm;
   }
   .store-logo {
-    max-height: 46px;
+    max-height: 44px;
     width: auto;
     object-fit: contain;
-    margin: 0 auto 2mm;
+    margin: 0 auto 1.5mm;
     display: block;
-    filter: contrast(150%);
+    filter: contrast(140%);
   }
   .store-title {
-    font-size: 16px;
-    font-weight: 900;
-    letter-spacing: 1.5px;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 1px;
     text-transform: uppercase;
     color: #000000;
   }
   .store-sub {
-    font-size: 11px;
-    font-weight: 800;
+    font-size: 10.5px;
+    font-weight: 600;
     line-height: 1.35;
     color: #000000;
   }
   .inv-heading {
-    font-size: 13.5px;
-    font-weight: 900;
+    font-size: 13px;
+    font-weight: 800;
     letter-spacing: 1.5px;
     text-transform: uppercase;
     text-align: center;
-    margin: 2mm 0 1.5mm;
+    margin: 1.5mm 0 1.2mm;
     color: #000000;
   }
 
@@ -560,59 +572,62 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   }
   .table-header {
     display: flex;
-    font-weight: 900;
-    font-size: 11.5px;
+    font-weight: 800;
+    font-size: 11px;
     padding-bottom: 1mm;
     border-bottom: 1.5px solid #000000;
     color: #000000;
+    letter-spacing: 0.3px;
   }
   .item-line {
     display: flex;
     font-size: 11.5px;
-    font-weight: 800;
+    font-weight: 600;
     padding: 1.5mm 0;
     border-bottom: 1px dashed #888888;
     align-items: flex-start;
     color: #000000;
   }
-  .col-num { width: 16px; font-weight: 900; }
+  .col-num { width: 16px; font-weight: 700; }
   .col-desc { flex: 1; padding: 0 4px; }
-  .item-title { font-weight: 900; text-transform: uppercase; font-size: 11.5px; color: #000000; }
-  .item-sub { font-size: 10px; font-weight: 800; color: #111111; margin-top: 1px; }
-  .col-qty { width: 44px; text-align: center; font-weight: 800; font-size: 11px; }
-  .col-rate { width: 52px; text-align: right; font-weight: 800; font-size: 11px; }
-  .col-amt { width: 48px; text-align: right; font-weight: 900; font-size: 11.5px; }
+  .item-title { font-weight: 700; text-transform: uppercase; font-size: 11.5px; color: #000000; }
+  .item-sub { font-size: 10px; font-weight: 600; color: #111111; margin-top: 1px; }
+  .col-qty { width: 44px; text-align: center; font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums; }
+  .col-rate { width: 52px; text-align: right; font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums; }
+  .col-amt { width: 48px; text-align: right; font-weight: 800; font-size: 11.5px; font-variant-numeric: tabular-nums; }
 
   /* Calculations & Totals */
   .totals-section {
     font-size: 11.5px;
     line-height: 1.55;
-    font-weight: 800;
+    font-weight: 700;
     color: #000000;
   }
   .calc-row {
     display: flex;
     justify-content: space-between;
-    font-weight: 800;
+    font-weight: 700;
     color: #000000;
+    font-variant-numeric: tabular-nums;
   }
   .grand-row {
     display: flex;
     justify-content: space-between;
-    font-size: 15px;
-    font-weight: 900;
+    font-size: 14.5px;
+    font-weight: 800;
     padding: 1.5mm 0;
     border-top: 1.5px solid #000000;
     border-bottom: 1.5px solid #000000;
     margin: 1.5mm 0;
     color: #000000;
+    font-variant-numeric: tabular-nums;
   }
 
   /* Footer */
   .footer-box {
     text-align: center;
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 700;
     margin-top: 3mm;
     line-height: 1.4;
     color: #000000;
@@ -736,8 +751,14 @@ export const buildThermalHtml = (order, customSettings = {}) => {
 
   ${cfg.showFooterMessage ? `
   <div class="footer-box">
-    <div class="bold">${escapeHtml(cfg.footerMessage)}</div>
-    ${cfg.termsNote ? `<div style="font-size: 8.5px; color: #444; margin-top: 1mm;">${escapeHtml(cfg.termsNote)}</div>` : ''}
+    ${cfg.footerMessage ? `<div class="bold" style="font-size: 11px; margin-bottom: 1.5mm;">${escapeHtml(cfg.footerMessage)}</div>` : ''}
+    ${cfg.showTermsAndConditions !== false ? `
+      ${Array.isArray(cfg.termsAndConditions) && cfg.termsAndConditions.length > 0 ? `
+        <div style="font-size: 9px; line-height: 1.35; color: #000; text-align: center; margin-top: 1mm; font-weight: 700;">
+          ${cfg.termsAndConditions.filter(Boolean).map((term) => `<div>${escapeHtml(term)}</div>`).join('')}
+        </div>
+      ` : (cfg.termsNote ? `<div style="font-size: 9px; color: #000; margin-top: 1mm; font-weight: 700;">${escapeHtml(cfg.termsNote)}</div>` : '')}
+    ` : ''}
   </div>` : ''}
 </body>
 </html>`;

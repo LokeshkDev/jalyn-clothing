@@ -14,15 +14,18 @@ import {
   Store,
   Layers,
   FileSpreadsheet,
-  Plus
+  Plus,
+  Settings
 } from 'lucide-react';
 import Header from '../components/Header';
 import BiTaxReport from '../components/BiTaxReport';
+import ThermalSettingsModal from '../components/ThermalSettingsModal';
 import api from '../services/api';
 import { openGlobalPosBilling } from '../utils/billingEvents';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'bi_report'
+  const [showThermalSettings, setShowThermalSettings] = useState(false);
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState({
     productsCount: 0,
@@ -102,15 +105,27 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={openGlobalPosBilling}
-            className="bg-[#2A1A22] hover:bg-[#3D2631] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center gap-2 cursor-pointer"
-            title="Open Walk-in Billing Counter"
-          >
-            <Store className="w-4 h-4 text-pink-300" />
-            <span>POS Billing / New Bill</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowThermalSettings(true)}
+              className="bg-white hover:bg-gray-100 text-gray-700 text-xs font-bold px-3.5 py-2.5 rounded-xl border border-gray-300 shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+              title="Configure Thermal Bill Format & Terms"
+            >
+              <Settings className="w-4 h-4 text-[#AD4A85]" />
+              <span>Thermal Bill Settings</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={openGlobalPosBilling}
+              className="bg-[#2A1A22] hover:bg-[#3D2631] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center gap-2 cursor-pointer"
+              title="Open Walk-in Billing Counter"
+            >
+              <Store className="w-4 h-4 text-pink-300" />
+              <span>POS Billing / New Bill</span>
+            </button>
+          </div>
         </div>
 
         {/* Tab 1: BI & Tally Tax/GST Reporting View */}
@@ -274,6 +289,12 @@ export default function DashboardPage() {
         </div>
         )}
       </main>
+
+      {/* Global Thermal Receipt & Terms CRUD Settings Modal */}
+      <ThermalSettingsModal
+        isOpen={showThermalSettings}
+        onClose={() => setShowThermalSettings(false)}
+      />
     </div>
   );
 }
