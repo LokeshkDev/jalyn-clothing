@@ -127,6 +127,7 @@ export default function BarcodesPage() {
       barcodes: selected.map(b => ({
         barcode: b.barcode,
         productName: b.product_title || b.productName || 'Product',
+        barcodeShortName: b.barcode_short_name || b.product_title || b.productName || 'Product',
         color: b.color,
         size: b.size,
         price: b.product_price || null,
@@ -142,6 +143,7 @@ export default function BarcodesPage() {
       barcodes: [{
         barcode: b.barcode,
         productName: b.product_title || 'Product',
+        barcodeShortName: b.barcode_short_name || b.product_title || 'Product',
         color: b.color,
         size: b.size,
         price: b.product_price || null,
@@ -434,7 +436,7 @@ export default function BarcodesPage() {
                 <BarcodeLabel
                   barcode={previewBarcode.barcode}
                   productName={previewBarcode.product_title || 'Product'}
-                  color={previewBarcode.color}
+                  barcodeShortName={previewBarcode.barcode_short_name || previewBarcode.product_title || 'Product'}
                   size={previewBarcode.size}
                   price={previewBarcode.product_price || null}
                   mrp={previewBarcode.mrp || previewBarcode.original_price || previewBarcode.compare_price || previewBarcode.product_price || null}

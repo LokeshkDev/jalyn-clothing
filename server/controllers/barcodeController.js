@@ -326,7 +326,7 @@ export const getBarcodes = async (req, res) => {
 
   try {
     let query = `
-      SELECT pb.*, p.title as product_title, p.primary_image, p.price as product_price, p.original_price, COALESCE(p.original_price, p.price) as mrp 
+      SELECT pb.*, p.title as product_title, p.barcode_short_name, p.primary_image, p.price as product_price, p.original_price, COALESCE(p.original_price, p.price) as mrp 
       FROM product_barcodes pb 
       JOIN products p ON pb.product_id = p.id 
       WHERE 1=1
@@ -334,8 +334,8 @@ export const getBarcodes = async (req, res) => {
     const queryParams = [];
 
     if (search) {
-      query += ` AND (pb.barcode LIKE ? OR p.title LIKE ?)`;
-      queryParams.push(`%${search}%`, `%${search}%`);
+      query += ` AND (pb.barcode LIKE ? OR p.title LIKE ? OR p.barcode_short_name LIKE ?)`;
+      queryParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
     if (status) {
       query += ` AND pb.status = ?`;
@@ -346,7 +346,7 @@ export const getBarcodes = async (req, res) => {
       queryParams.push(product_id);
     }
 
-    const countQuery = query.replace('SELECT pb.*, p.title as product_title, p.primary_image, p.price as product_price, p.original_price, COALESCE(p.original_price, p.price) as mrp', 'SELECT COUNT(*) as total');
+    const countQuery = query.replace('SELECT pb.*, p.title as product_title, p.barcode_short_name, p.primary_image, p.price as product_price, p.original_price, COALESCE(p.original_price, p.price) as mrp', 'SELECT COUNT(*) as total');
     
     query += ` ORDER BY pb.generated_at DESC LIMIT ? OFFSET ?`;
     queryParams.push(Number(limit), Number(offset));
@@ -376,7 +376,11 @@ export const getBarcodesByProduct = async (req, res) => {
 
   try {
     const [rows] = await pool.query(
-      'SELECT * FROM product_barcodes WHERE product_id = ? ORDER BY is_primary DESC, color ASC, size ASC',
+      `SELECT pb.*, p.title as product_title, p.barcode_short_name, p.primary_image, p.price as product_price, p.original_price, COALESCE(p.original_price, p.price) as mrp 
+       FROM product_barcodes pb 
+       JOIN products p ON pb.product_id = p.id 
+       WHERE pb.product_id = ? 
+       ORDER BY pb.is_primary DESC, pb.color ASC, pb.size ASC`,
       [productId]
     );
 

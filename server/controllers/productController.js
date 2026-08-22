@@ -526,7 +526,7 @@ export const getProductBySlug = async (req, res) => {
 // ─── POST /products ───
 export const createProduct = async (req, res) => {
   const {
-    title, slug, category_slug, price, original_price, description, short_description,
+    title, barcode_short_name, slug, category_slug, price, original_price, description, short_description,
     sizes, colors, stock, brand, product_code, base_sku,
     is_featured, is_new_arrival, is_online, is_offline, low_stock_threshold,
     variants, color_images, size_guide,
@@ -577,7 +577,7 @@ export const createProduct = async (req, res) => {
   }
 
   const newProd = {
-    id: Date.now(), title, slug: productSlug,
+    id: Date.now(), title, barcode_short_name: barcode_short_name || '', slug: productSlug,
     category_slug: category_slug || 'dresses',
     price: parseFloat(price) || 0,
     original_price: parseFloat(original_price) || parseFloat(price) || 0,
@@ -608,14 +608,14 @@ export const createProduct = async (req, res) => {
   try {
     const [result] = await pool.query(
       `INSERT INTO products 
-      (title, slug, category_slug, price, original_price, discount, description, short_description,
+      (title, barcode_short_name, slug, category_slug, price, original_price, discount, description, short_description,
        sizes, colors, primary_image, hover_image, stock, brand, product_code, base_sku,
        is_featured, is_new_arrival, is_online, is_offline, low_stock_threshold,
        variants, color_images, size_guide, fabric, sleeve, occasion, fit, pattern, season,
        vendor_id, rack_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        title, productSlug, category_slug || 'dresses',
+        title, barcode_short_name || null, productSlug, category_slug || 'dresses',
         price, original_price || price, disc,
         description || '', short_description || '',
         JSON.stringify(parsedSizes), JSON.stringify(parsedColors),
@@ -721,7 +721,7 @@ export const updateProduct = async (req, res) => {
     const setClauses = [];
     const params = [];
     const fieldMap = {
-      title: 'title', price: 'price', original_price: 'original_price',
+      title: 'title', barcode_short_name: 'barcode_short_name', price: 'price', original_price: 'original_price',
       discount: 'discount', stock: 'stock', category_slug: 'category_slug',
       brand: 'brand', product_code: 'product_code', base_sku: 'base_sku',
       description: 'description', short_description: 'short_description',

@@ -63,32 +63,38 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
       const labelsHtml = row.map((item) => {
         const barcodeSvg = generateBarcodeSVG(item.barcode, {
           width: '100%',
-          height: 42,
+          height: 30,
           showText: false,
           moduleWidth: 2,
-          quietZone: 8,
+          quietZone: 6,
           barColor: '#000000',
           backgroundColor: '#ffffff'
         });
 
         const displayPrice = item.mrp !== undefined && item.mrp !== null && item.mrp !== '' ? item.mrp : (item.original_price || item.compare_price || item.price);
-        const variantParts = [
-          showColor && item.color ? item.color : '',
-          showSize && item.size ? item.size : '',
-          showPrice && displayPrice ? `MRP: ₹${Number(displayPrice).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : ''
-        ].filter(Boolean);
+        const clothName = (item.barcodeShortName && item.barcodeShortName.trim()) || (item.barcode_short_name && item.barcode_short_name.trim()) || item.productName || '';
+        const formattedSize = item.size ? `(${String(item.size).replace(/^\(|\)$/g, '').trim()})` : '';
+
+        const barcodeRowParts = [];
+        if (showBarcodeNumber && item.barcode) {
+          barcodeRowParts.push(item.barcode);
+        }
+        if (showSize && formattedSize) {
+          barcodeRowParts.push(formattedSize);
+        }
+        if (showProductName && clothName) {
+          barcodeRowParts.push(clothName.toUpperCase());
+        }
+        const combinedBarcodeInfo = barcodeRowParts.join(' ');
 
         return `
           <div class="sticker-label">
-            <div class="top-content">
-              <div class="brand-title">${String(companyName || 'JALYN').replace(/[&<>"']/g, '')}</div>
-              ${showProductName && item.productName ? `<div class="product-title">${String(item.productName).replace(/[&<>"']/g, '')}</div>` : ''}
-              ${variantParts.length > 0 ? `<div class="variant-info">${variantParts.join(' • ')}</div>` : ''}
-            </div>
+            <div class="brand-title">${String(companyName || 'JALYN APPARELS').replace(/[&<>"']/g, '')}</div>
             <div class="barcode-box">
               ${barcodeSvg}
-              ${showBarcodeNumber ? `<div class="barcode-num">${String(item.barcode)}</div>` : ''}
             </div>
+            ${combinedBarcodeInfo ? `<div class="barcode-num">${String(combinedBarcodeInfo).replace(/[&<>"']/g, '')}</div>` : ''}
+            ${showPrice && displayPrice ? `<div class="price-line">₹${Number(displayPrice).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>` : ''}
           </div>
         `;
       }).join('');
@@ -143,7 +149,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     max-width: ${labelWidth} !important;
     max-height: ${labelHeight} !important;
     box-sizing: border-box !important;
-    padding: 0.6mm 1.2mm 0.4mm !important;
+    padding: 0.4mm 1mm 0.3mm !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
@@ -154,54 +160,29 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     box-shadow: none !important;
     overflow: hidden !important;
   }
-  .top-content {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-  }
   .brand-title {
-    font-size: 9.5pt;
+    font-size: 8.5pt;
     font-weight: 900;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     line-height: 1.05;
     text-transform: uppercase;
     color: #000000;
-  }
-  .product-title {
-    font-size: 8.5pt;
-    font-weight: 900;
-    line-height: 1.15;
-    color: #000000;
+    width: 100%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    width: 100%;
-    margin-top: 0.2mm;
-  }
-  .variant-info {
-    font-size: 8pt;
-    font-weight: 900;
-    line-height: 1.15;
-    color: #000000;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    width: 100%;
-    margin-top: 0.2mm;
   }
   .barcode-box {
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-end;
-    margin-top: 0.3mm;
+    justify-content: center;
+    margin: 0.2mm 0;
   }
   .barcode-box svg {
-    max-height: 33px;
-    height: 33px;
+    max-height: 28px;
+    height: 28px;
     width: 100%;
     shape-rendering: crispEdges;
   }
@@ -209,10 +190,24 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     font-family: monospace;
     font-size: 8.5pt;
     font-weight: 900;
-    letter-spacing: 1.5px;
+    letter-spacing: 0.5px;
+    line-height: 1.1;
+    color: #000000;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+  }
+  .price-line {
+    font-size: 13pt;
+    font-weight: 900;
     line-height: 1.05;
     color: #000000;
-    margin-top: 0.2mm;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    letter-spacing: -0.3px;
   }
   @media print {
     html, body {
@@ -408,7 +403,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
                               <BarcodeLabel
                                 barcode={item.barcode}
                                 productName={item.productName}
-                                color={item.color}
+                                barcodeShortName={item.barcodeShortName || item.barcode_short_name}
                                 size={item.size}
                                 price={item.price}
                                 mrp={item.mrp || item.original_price || item.compare_price || item.price}

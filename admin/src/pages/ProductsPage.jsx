@@ -104,6 +104,7 @@ export default function ProductsPage() {
   // Form State for Product Add/Edit
   const [formData, setFormData] = useState({
     title: '',
+    barcode_short_name: '',
     slug: '',
     product_code: '',
     base_sku: '',
@@ -195,6 +196,7 @@ export default function ProductsPage() {
     setActiveTab('basic');
     setFormData({
       title: '',
+      barcode_short_name: '',
       slug: '',
       product_code: 'JAL-' + Math.floor(1000 + Math.random() * 9000),
       base_sku: generateAlphanumericSku(),
@@ -251,6 +253,7 @@ export default function ProductsPage() {
 
     setFormData({
       title: p.title || '',
+      barcode_short_name: p.barcode_short_name || '',
       slug: p.slug || '',
       product_code: p.product_code || 'JAL-' + p.id,
       base_sku: p.base_sku || 'JLN-' + p.id,
@@ -1039,8 +1042,8 @@ export default function ProductsPage() {
                 </div>
                 <div className="h-[1.5px] bg-brand-600/20 my-2" />
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="sm:col-span-2">
                       <label className="block font-semibold text-gray-700 mb-1">Product Title *</label>
                       <input
                         type="text"
@@ -1052,6 +1055,21 @@ export default function ProductsPage() {
                       />
                     </div>
 
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1">
+                        Barcode Short Name <span className="text-[10px] text-brand-600 font-bold">(On Barcode)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.barcode_short_name || ''}
+                        onChange={(e) => setFormData({ ...formData, barcode_short_name: e.target.value })}
+                        placeholder="e.g. SHORT TOPS"
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-bold focus:ring-2 focus:ring-brand-500 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1">Slug (URL identifier)</label>
                       <input
@@ -1920,7 +1938,23 @@ export default function ProductsPage() {
                                 <button type="button" onClick={() => setBarcodePreview(b)} className="p-1 text-gray-400 hover:text-brand-600 rounded hover:bg-brand-50" title="Preview">
                                   <Eye className="w-3.5 h-3.5" />
                                 </button>
-                                <button type="button" onClick={() => setBarcodePrintModal({ open: true, barcodes: [{ barcode: b.barcode, productName: formData.title, color: b.color, size: b.size, price: formData.price }] })} className="p-1 text-gray-400 hover:text-brand-600 rounded hover:bg-brand-50" title="Print">
+                                <button
+                                  type="button"
+                                  onClick={() => setBarcodePrintModal({
+                                    open: true,
+                                    barcodes: [{
+                                      barcode: b.barcode,
+                                      productName: formData.title,
+                                      barcodeShortName: formData.barcode_short_name || formData.title,
+                                      color: b.color,
+                                      size: b.size,
+                                      price: formData.price,
+                                      mrp: formData.original_price || formData.price,
+                                    }]
+                                  })}
+                                  className="p-1 text-gray-400 hover:text-brand-600 rounded hover:bg-brand-50"
+                                  title="Print"
+                                >
                                   <Printer className="w-3.5 h-3.5" />
                                 </button>
                                 <button type="button" onClick={async () => {
@@ -1971,7 +2005,23 @@ export default function ProductsPage() {
                                         <button type="button" onClick={() => setBarcodePreview(b)} className="p-1 text-gray-400 hover:text-brand-600 rounded hover:bg-brand-50" title="Preview">
                                           <Eye className="w-3.5 h-3.5" />
                                         </button>
-                                        <button type="button" onClick={() => setBarcodePrintModal({ open: true, barcodes: [{ barcode: b.barcode, productName: formData.title, color: b.color, size: b.size, price: formData.price }] })} className="p-1 text-gray-400 hover:text-brand-600 rounded hover:bg-brand-50" title="Print">
+                                        <button
+                                          type="button"
+                                          onClick={() => setBarcodePrintModal({
+                                            open: true,
+                                            barcodes: [{
+                                              barcode: b.barcode,
+                                              productName: formData.title,
+                                              barcodeShortName: formData.barcode_short_name || formData.title,
+                                              color: b.color,
+                                              size: b.size,
+                                              price: formData.price,
+                                              mrp: formData.original_price || formData.price,
+                                            }]
+                                          })}
+                                          className="p-1 text-gray-400 hover:text-brand-600 rounded hover:bg-brand-50"
+                                          title="Print"
+                                        >
                                           <Printer className="w-3.5 h-3.5" />
                                         </button>
                                         <button type="button" onClick={async () => {
@@ -2004,9 +2054,11 @@ export default function ProductsPage() {
                             barcodes: productBarcodes.filter(b => b.status === 'active').map(b => ({
                               barcode: b.barcode,
                               productName: formData.title,
+                              barcodeShortName: formData.barcode_short_name || formData.title,
                               color: b.color,
                               size: b.size,
-                              price: formData.price
+                              price: formData.price,
+                              mrp: formData.original_price || formData.price,
                             }))
                           })}
                           className="w-full py-2 rounded-xl border border-brand-200 bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
@@ -2254,9 +2306,10 @@ export default function ProductsPage() {
               <BarcodeLabel
                 barcode={barcodePreview.barcode}
                 productName={formData.title}
-                color={barcodePreview.color}
+                barcodeShortName={formData.barcode_short_name || formData.title}
                 size={barcodePreview.size}
                 price={formData.price}
+                mrp={formData.original_price || formData.price}
               />
             </div>
             <p className="text-center text-[10px] text-gray-400 mt-3">
