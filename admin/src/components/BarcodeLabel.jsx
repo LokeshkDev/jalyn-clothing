@@ -19,10 +19,10 @@ export default function BarcodeLabel({
     if (!barcode) return '';
     return generateBarcodeSVG(barcode, {
       width: '100%',
-      height: 38,
+      height: 36,
       showText: false,
-      moduleWidth: 2.2,
-      quietZone: 6,
+      moduleWidth: 2,
+      quietZone: 8,
       barColor: '#000000',
       backgroundColor: '#ffffff'
     });
@@ -34,21 +34,24 @@ export default function BarcodeLabel({
         forPrint ? '' : 'border border-gray-300 shadow-xs rounded-sm'
       }`}
       style={{
-        width: '50mm',
-        height: '25mm',
-        maxWidth: '50mm',
-        maxHeight: '25mm',
-        padding: '1.5mm 2.5mm',
+        width: forPrint ? '48.5mm' : '50mm',
+        height: forPrint ? '24mm' : '25mm',
+        maxWidth: forPrint ? '48.5mm' : '50mm',
+        maxHeight: forPrint ? '24mm' : '25mm',
+        padding: '1mm 1.5mm',
         boxSizing: 'border-box',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        background: '#ffffff',
+        border: 'none',
+        boxShadow: 'none'
       }}
     >
       {/* Top Text Content Area */}
       <div className="w-full text-center flex-1 flex flex-col justify-start items-center overflow-hidden">
         {/* Company / Brand Name - Bold Uppercase */}
         <div
-          style={{ fontSize: '6.5pt', letterSpacing: '1.5px', lineHeight: '1.2' }}
-          className="font-sans font-black uppercase text-black"
+          style={{ fontSize: '7.5pt', letterSpacing: '1.5px', lineHeight: '1.2', fontWeight: 900, color: '#000000' }}
+          className="font-sans uppercase text-black"
         >
           {companyName}
         </div>
@@ -56,8 +59,8 @@ export default function BarcodeLabel({
         {/* Product Name - Bold High-Contrast */}
         {showProductName && productName && (
           <div
-            style={{ fontSize: '6.5pt', lineHeight: '1.2' }}
-            className="font-sans font-extrabold text-black mt-0.5 truncate w-full text-center px-0.5 tracking-tight"
+            style={{ fontSize: '7pt', lineHeight: '1.2', fontWeight: 800, color: '#000000' }}
+            className="font-sans text-black mt-0.5 truncate w-full text-center px-0.5 tracking-tight"
             title={productName}
           >
             {productName}
@@ -66,8 +69,8 @@ export default function BarcodeLabel({
 
         {/* Variant Info Line: Color • Size • Price */}
         <div
-          style={{ fontSize: '6pt', lineHeight: '1.2' }}
-          className="font-sans font-bold text-black mt-0.5 flex items-center justify-center gap-1 flex-nowrap w-full overflow-hidden truncate"
+          style={{ fontSize: '6.5pt', lineHeight: '1.2', fontWeight: 700, color: '#000000' }}
+          className="font-sans text-black mt-0.5 flex items-center justify-center gap-1 flex-nowrap w-full overflow-hidden truncate"
         >
           {showColor && color && <span>{color}</span>}
           {showColor && color && showSize && size && <span className="font-extrabold">•</span>}
@@ -78,7 +81,7 @@ export default function BarcodeLabel({
       </div>
 
       {/* Barcode Area - Bold Sharp SVG & Monospace Number */}
-      <div className="w-full flex flex-col items-center justify-end shrink-0" style={{ height: '46%' }}>
+      <div className="w-full flex flex-col items-center justify-end shrink-0" style={{ height: '50%' }}>
         {barcode ? (
           <>
             <div
@@ -88,8 +91,8 @@ export default function BarcodeLabel({
             />
             {showBarcodeNumber && (
               <div
-                style={{ fontSize: '6pt', marginTop: '0.4mm', lineHeight: '1.1', letterSpacing: '1px' }}
-                className="font-mono text-black font-extrabold text-center w-full"
+                style={{ fontSize: '6.5pt', marginTop: '0.4mm', lineHeight: '1.1', letterSpacing: '1px', fontWeight: 900, color: '#000000' }}
+                className="font-mono text-black text-center w-full"
               >
                 {barcode}
               </div>

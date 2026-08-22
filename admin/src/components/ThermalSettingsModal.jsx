@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   X, Settings, Save, RotateCcw, Printer, Check, Store, FileText,
-  Sliders, Eye, Phone, Mail, MapPin, Tag, ShieldCheck, HelpCircle
+  Sliders, Eye, Phone, Mail, MapPin, Tag, ShieldCheck, HelpCircle, Image
 } from 'lucide-react';
 import {
   getThermalSettings, saveThermalSettings, resetThermalSettings, DEFAULT_THERMAL_SETTINGS
 } from '../utils/thermalSettings';
+import jalynLogoSmallUrl from '../assets/jalyn-logo-small.jpg';
 
 export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
   const [settings, setSettings] = useState(DEFAULT_THERMAL_SETTINGS);
@@ -121,6 +122,36 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {activeTab === 'fields' && (
                 <div className="space-y-3.5 text-xs">
+                  {/* Top Logo Controls */}
+                  <div className="p-3 bg-pink-50/50 rounded-xl border border-pink-200/70 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-gray-900 flex items-center gap-1.5">
+                        <Image className="w-4 h-4 text-[#AD4A85]" /> Thermal Receipt Top Logo
+                      </span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settings.showLogo}
+                          onChange={(e) => handleChange('showLogo', e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#AD4A85]"></div>
+                      </label>
+                    </div>
+                    {settings.showLogo && (
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-gray-500 mb-0.5">Custom Logo Image URL (Optional)</label>
+                        <input
+                          type="text"
+                          value={settings.logoUrl || ''}
+                          onChange={(e) => handleChange('logoUrl', e.target.value)}
+                          placeholder="Leave empty for standard JALYN brand logo"
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-900 focus:ring-1 focus:ring-[#AD4A85] outline-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+
                   <div>
                     <label className="block font-bold text-gray-700 mb-1">Store / Business Name *</label>
                     <input
@@ -328,11 +359,8 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
                         onChange={(e) => handleChange('defaultGstRate', Number(e.target.value))}
                         className="w-full px-3 py-2 rounded-xl border border-gray-200 font-bold bg-white text-gray-900 focus:ring-2 focus:ring-[#AD4A85] outline-none"
                       >
-                        <option value={0}>0% GST (Nil Rated)</option>
-                        <option value={5}>5% GST (Standard Apparel &lt; ₹1000)</option>
-                        <option value={12}>12% GST (Apparel &gt; ₹1000)</option>
-                        <option value={18}>18% GST (Fabrics / Accessories)</option>
-                        <option value={28}>28% GST (Luxury Items)</option>
+                        <option value={5}>5% GST (Apparel Standard &le; ₹2,500)</option>
+                        <option value={18}>18% GST (Apparel Standard &gt; ₹2,500)</option>
                       </select>
                     </div>
 
@@ -394,46 +422,53 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
             <div className="flex-1 overflow-y-auto p-4 flex items-start justify-center">
               {/* Receipt Paper Simulation */}
               <div
-                className="bg-white shadow-xl border border-gray-300 text-black font-mono p-4 text-[11px] leading-tight space-y-2 rounded-sm"
-                style={{ width: settings.paperWidth === '58mm' ? '220px' : '290px' }}
+                className="bg-white shadow-xl border border-gray-300 text-black font-mono p-4 text-[12px] leading-tight space-y-2 rounded-sm"
+                style={{ width: settings.paperWidth === '58mm' ? '230px' : '310px' }}
               >
                 {/* Store Header */}
                 {settings.showStoreHeader && (
-                  <div className="text-center space-y-0.5">
-                    <div className="font-extrabold text-sm uppercase tracking-wide">{settings.storeName}</div>
+                  <div className="text-center space-y-1">
+                    {settings.showLogo && (
+                      <img
+                        src={settings.logoUrl || jalynLogoSmallUrl}
+                        alt="Logo"
+                        className="max-h-11 mx-auto mb-1 block object-contain"
+                      />
+                    )}
+                    <div className="font-black text-base uppercase tracking-wider text-black">{settings.storeName}</div>
                     {settings.showAddress && (
                       <>
-                        <div className="text-[9.5px]">{settings.shopNo}</div>
-                        <div className="text-[9.5px]">{settings.addressLine2}</div>
-                        <div className="text-[9.5px]">{settings.cityStatePin}</div>
+                        <div className="text-[11px] font-bold text-black">{settings.shopNo}</div>
+                        <div className="text-[11px] font-bold text-black">{settings.addressLine2}</div>
+                        <div className="text-[11px] font-bold text-black">{settings.cityStatePin}</div>
                       </>
                     )}
                     {settings.showPhone && settings.phone && (
-                      <div className="text-[9.5px]">Phone No : {settings.phone}</div>
+                      <div className="text-[11px] font-bold text-black">Phone No : {settings.phone}</div>
                     )}
                     {settings.showGstin && settings.gstin && (
-                      <div className="text-[9.5px] font-bold">GST : {settings.gstin}</div>
+                      <div className="text-[11px] font-black text-black">GST : {settings.gstin}</div>
                     )}
                     {settings.showEmail && settings.email && (
-                      <div className="text-[9.5px]">Email : {settings.email}</div>
+                      <div className="text-[11px] font-bold text-black">Email : {settings.email}</div>
                     )}
                   </div>
                 )}
 
                 {settings.showInvoiceTitle && (
-                  <div className="text-center font-extrabold text-xs tracking-wider border-t border-dashed border-black pt-1 mt-1">
+                  <div className="text-center font-black text-sm tracking-widest border-t-2 border-dashed border-black pt-1.5 mt-1.5 uppercase text-black">
                     {settings.invoiceTitle}
                   </div>
                 )}
 
                 {/* Meta Block */}
                 {settings.showCustomerInfo && (
-                  <div className="border-t border-dashed border-black pt-1 space-y-0.5 text-[10px]">
+                  <div className="border-t-1.5 border-dashed border-black pt-1.5 space-y-0.5 text-[11px] font-bold text-black">
                     <div className="flex justify-between">
-                      <span>Invoice No : <strong>1833</strong></span>
+                      <span>Invoice No : <strong className="font-black">1833</strong></span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Date : <strong>21/08/2026</strong></span>
+                      <span>Date : <strong className="font-black">21/08/2026</strong></span>
                     </div>
                     <div>Bill To : Cash Sale</div>
                     {settings.showPhone && <div>Ph. : 9790904504</div>}
@@ -443,8 +478,8 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
                 )}
 
                 {/* Items Table */}
-                <div className="border-t border-dashed border-black pt-1">
-                  <div className="flex justify-between font-bold text-[10px] pb-1 border-b border-black">
+                <div className="border-t-1.5 border-dashed border-black pt-1.5">
+                  <div className="flex justify-between font-black text-[11.5px] pb-1 border-b-1.5 border-black text-black">
                     <span className="w-4">#</span>
                     <span className="flex-1 px-1">Item</span>
                     <span className="w-10 text-center">Qty</span>
@@ -453,38 +488,38 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
                   </div>
 
                   {/* Sample Row 1 */}
-                  <div className="py-1 border-b border-gray-200 space-y-0.5 text-[10px]">
+                  <div className="py-1.5 border-b border-gray-300 space-y-0.5 text-[11px]">
                     <div className="flex justify-between items-start">
-                      <span className="w-4 font-bold">1</span>
-                      <div className="flex-1 px-1 font-bold">
+                      <span className="w-4 font-black">1</span>
+                      <div className="flex-1 px-1 font-black">
                         <div>REY</div>
-                        <div className="text-[8.5px] text-gray-700">UMB(XL,2XL)</div>
-                        {settings.showItemGstRate && <div className="text-[8.5px] font-normal">GST: 5%</div>}
+                        <div className="text-[9.5px] text-gray-800 font-bold">UMB(XL,2XL)</div>
+                        {settings.showItemGstRate && <div className="text-[9.5px] font-bold">GST: 5%</div>}
                       </div>
-                      <span className="w-10 text-center">1 Qty</span>
-                      {settings.showItemRate && <span className="w-14 text-right">522.86</span>}
-                      <span className="w-12 text-right font-bold">549</span>
+                      <span className="w-10 text-center font-bold">1 Qty</span>
+                      {settings.showItemRate && <span className="w-14 text-right font-bold">522.86</span>}
+                      <span className="w-12 text-right font-black">549</span>
                     </div>
                   </div>
 
                   {/* Sample Row 2 */}
-                  <div className="py-1 space-y-0.5 text-[10px]">
+                  <div className="py-1.5 space-y-0.5 text-[11px]">
                     <div className="flex justify-between items-start">
-                      <span className="w-4 font-bold">2</span>
-                      <div className="flex-1 px-1 font-bold">
+                      <span className="w-4 font-black">2</span>
+                      <div className="flex-1 px-1 font-black">
                         <div>REG TOPS</div>
-                        {settings.showItemGstRate && <div className="text-[8.5px] font-normal">GST: 5%</div>}
+                        {settings.showItemGstRate && <div className="text-[9.5px] font-bold">GST: 5%</div>}
                       </div>
-                      <span className="w-10 text-center">1 Pcs</span>
-                      {settings.showItemRate && <span className="w-14 text-right">760.95</span>}
-                      <span className="w-12 text-right font-bold">799</span>
+                      <span className="w-10 text-center font-bold">1 Pcs</span>
+                      {settings.showItemRate && <span className="w-14 text-right font-bold">760.95</span>}
+                      <span className="w-12 text-right font-black">799</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Sub Total & Calculations */}
-                <div className="border-t border-dashed border-black pt-1 space-y-1 text-[10px]">
-                  <div className="flex justify-between font-bold">
+                <div className="border-t-1.5 border-dashed border-black pt-1.5 space-y-1 text-[11.5px] font-bold text-black">
+                  <div className="flex justify-between font-black">
                     <span>Sub Total</span>
                     <span>2</span>
                     <span>₹ 1,348</span>
@@ -507,13 +542,13 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
                     </>
                   )}
 
-                  <div className="border-t border-black pt-1 flex justify-between font-extrabold text-xs">
+                  <div className="border-t-1.5 border-black pt-1 flex justify-between font-black text-sm text-black">
                     <span>Total</span>
                     <span>₹ 1,300</span>
                   </div>
 
                   {settings.showYouSaved && (
-                    <div className="flex justify-between font-bold text-gray-800">
+                    <div className="flex justify-between font-black text-black">
                       <span>You Saved</span>
                       <span>- ₹ 48</span>
                     </div>
@@ -521,11 +556,11 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
 
                   {settings.showReceivedBalance && (
                     <>
-                      <div className="flex justify-between font-bold">
+                      <div className="flex justify-between font-black text-black">
                         <span>Received</span>
                         <span>₹ 1,300</span>
                       </div>
-                      <div className="flex justify-between font-bold">
+                      <div className="flex justify-between font-black text-black">
                         <span>Balance Amount</span>
                         <span>₹ 0</span>
                       </div>
@@ -535,10 +570,10 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
 
                 {/* Footer */}
                 {settings.showFooterMessage && (
-                  <div className="border-t border-dashed border-black pt-2 text-center text-[10px]">
-                    <div className="font-bold">{settings.footerMessage}</div>
+                  <div className="border-t-1.5 border-dashed border-black pt-2 text-center text-[11px] font-bold text-black">
+                    <div className="font-black">{settings.footerMessage}</div>
                     {settings.termsNote && (
-                      <div className="text-[8.5px] text-gray-600 mt-0.5">{settings.termsNote}</div>
+                      <div className="text-[9.5px] text-gray-800 mt-0.5 font-bold">{settings.termsNote}</div>
                     )}
                   </div>
                 )}

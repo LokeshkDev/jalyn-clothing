@@ -448,6 +448,7 @@ export const buildThermalHtml = (order, customSettings = {}) => {
     .join('');
 
   const paperWidth = cfg.paperWidth || '80mm';
+  const logoSource = cfg.logoUrl || jalynLogoSmallUrl;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -468,8 +469,9 @@ export const buildThermalHtml = (order, customSettings = {}) => {
     width: ${paperWidth};
     margin: 0 auto;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Courier New', monospace;
-    font-size: 11px;
-    line-height: 1.35;
+    font-size: 12px;
+    line-height: 1.4;
+    font-weight: 800;
     color: #000000;
     background: #FFFFFF;
     padding: 3mm 3.5mm 5mm;
@@ -478,59 +480,74 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   }
   .center { text-align: center; }
   .right { text-align: right; }
-  .bold { font-weight: 800; }
+  .bold { font-weight: 900; }
 
   /* Store Header */
   .store-header {
     text-align: center;
-    margin-bottom: 2mm;
+    margin-bottom: 2.5mm;
+  }
+  .store-logo {
+    max-height: 46px;
+    width: auto;
+    object-fit: contain;
+    margin: 0 auto 2mm;
+    display: block;
+    filter: contrast(150%);
   }
   .store-title {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 900;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
+    color: #000000;
   }
   .store-sub {
-    font-size: 9.5px;
+    font-size: 11px;
+    font-weight: 800;
     line-height: 1.35;
-    color: #111;
+    color: #000000;
   }
   .inv-heading {
-    font-size: 12px;
+    font-size: 13.5px;
     font-weight: 900;
     letter-spacing: 1.5px;
     text-transform: uppercase;
     text-align: center;
     margin: 2mm 0 1.5mm;
+    color: #000000;
   }
 
   /* Divider */
   .divider {
     border: none;
-    border-top: 1px dashed #000000;
+    border-top: 1.5px dashed #000000;
     margin: 2mm 0;
   }
   .solid-divider {
     border: none;
-    border-top: 1px solid #000000;
+    border-top: 1.5px solid #000000;
     margin: 1.5mm 0;
   }
 
   /* Meta Section */
   .meta-grid {
-    font-size: 10px;
-    line-height: 1.45;
+    font-size: 11.5px;
+    line-height: 1.5;
+    font-weight: 800;
+    color: #000000;
   }
   .meta-row {
     display: flex;
     justify-content: space-between;
   }
   .meta-label {
-    font-weight: 500;
+    font-weight: 800;
+    color: #000000;
   }
   .meta-val {
-    font-weight: 700;
+    font-weight: 900;
+    color: #000000;
   }
 
   /* Items Table */
@@ -539,52 +556,62 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   }
   .table-header {
     display: flex;
-    font-weight: 800;
-    font-size: 9.5px;
+    font-weight: 900;
+    font-size: 11.5px;
     padding-bottom: 1mm;
-    border-bottom: 1px solid #000;
+    border-bottom: 1.5px solid #000000;
+    color: #000000;
   }
   .item-line {
     display: flex;
-    font-size: 10px;
+    font-size: 11.5px;
+    font-weight: 800;
     padding: 1.5mm 0;
-    border-bottom: 1px dashed #e0e0e0;
+    border-bottom: 1px dashed #888888;
     align-items: flex-start;
+    color: #000000;
   }
-  .col-num { width: 14px; font-weight: 700; }
+  .col-num { width: 16px; font-weight: 900; }
   .col-desc { flex: 1; padding: 0 4px; }
-  .item-title { font-weight: 800; text-transform: uppercase; font-size: 10px; }
-  .item-sub { font-size: 8.5px; color: #333; margin-top: 1px; }
-  .col-qty { width: 44px; text-align: center; font-weight: 600; font-size: 9.5px; }
-  .col-rate { width: 52px; text-align: right; font-weight: 600; font-size: 9.5px; }
-  .col-amt { width: 44px; text-align: right; font-weight: 800; font-size: 10px; }
+  .item-title { font-weight: 900; text-transform: uppercase; font-size: 11.5px; color: #000000; }
+  .item-sub { font-size: 10px; font-weight: 800; color: #111111; margin-top: 1px; }
+  .col-qty { width: 44px; text-align: center; font-weight: 800; font-size: 11px; }
+  .col-rate { width: 52px; text-align: right; font-weight: 800; font-size: 11px; }
+  .col-amt { width: 48px; text-align: right; font-weight: 900; font-size: 11.5px; }
 
   /* Calculations & Totals */
   .totals-section {
-    font-size: 10.5px;
-    line-height: 1.5;
+    font-size: 11.5px;
+    line-height: 1.55;
+    font-weight: 800;
+    color: #000000;
   }
   .calc-row {
     display: flex;
     justify-content: space-between;
+    font-weight: 800;
+    color: #000000;
   }
   .grand-row {
     display: flex;
     justify-content: space-between;
-    font-size: 12px;
+    font-size: 15px;
     font-weight: 900;
-    padding: 1mm 0;
-    border-top: 1px solid #000;
-    border-bottom: 1px solid #000;
-    margin: 1mm 0;
+    padding: 1.5mm 0;
+    border-top: 1.5px solid #000000;
+    border-bottom: 1.5px solid #000000;
+    margin: 1.5mm 0;
+    color: #000000;
   }
 
   /* Footer */
   .footer-box {
     text-align: center;
-    font-size: 9.5px;
+    font-size: 11px;
+    font-weight: 800;
     margin-top: 3mm;
     line-height: 1.4;
+    color: #000000;
   }
 
   @media print {
@@ -598,6 +625,7 @@ export const buildThermalHtml = (order, customSettings = {}) => {
 <body>
   ${cfg.showStoreHeader ? `
   <div class="store-header">
+    ${cfg.showLogo && logoSource ? `<img src="${logoSource}" alt="JALYN" class="store-logo" />` : ''}
     <div class="store-title">${escapeHtml(cfg.storeName)}</div>
     ${cfg.showAddress ? `
       ${cfg.shopNo ? `<div class="store-sub">${escapeHtml(cfg.shopNo)}</div>` : ''}
@@ -605,7 +633,7 @@ export const buildThermalHtml = (order, customSettings = {}) => {
       ${cfg.cityStatePin ? `<div class="store-sub">${escapeHtml(cfg.cityStatePin)}</div>` : ''}
     ` : ''}
     ${cfg.showPhone && cfg.phone ? `<div class="store-sub">Phone No : ${escapeHtml(cfg.phone)}</div>` : ''}
-    ${cfg.showGstin && cfg.gstin ? `<div class="store-sub" style="font-weight: 800;">GST : ${escapeHtml(cfg.gstin)}</div>` : ''}
+    ${cfg.showGstin && cfg.gstin ? `<div class="store-sub" style="font-weight: 900;">GST : ${escapeHtml(cfg.gstin)}</div>` : ''}
     ${cfg.showEmail && cfg.email ? `<div class="store-sub">Email : ${escapeHtml(cfg.email)}</div>` : ''}
   </div>` : ''}
 

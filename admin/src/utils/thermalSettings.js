@@ -17,8 +17,9 @@ export const DEFAULT_THERMAL_SETTINGS = {
 
   // Print Configuration
   paperWidth: '80mm', // '80mm' or '58mm'
-  fontSize: 'normal', // 'compact', 'normal', 'large'
-  showLogo: false, // In screenshot 1, text header is used
+  fontSize: 'large', // 'compact', 'normal', 'large'
+  showLogo: true, // Show store logo at the top
+  logoUrl: '',
 
   // Visibility Toggles
   showStoreHeader: true,

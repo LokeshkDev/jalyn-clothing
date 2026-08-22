@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Printer, Download, Plus, Minus, Info } from 'lucide-react';
 import BarcodeLabel from './BarcodeLabel';
-import { generateBarcodePNG } from '../utils/barcodeEncoder';
+import { generateBarcodeSVG, generateBarcodePNG } from '../utils/barcodeEncoder';
 import { BARCODE_LABEL_CONFIG } from '../utils/barcodeLabelConfig';
 
 const LABEL_WIDTH_MM = 50;
@@ -53,7 +53,193 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
   };
 
   const handlePrint = () => {
-    window.print();
+    const isTwoPerRow = layoutMode === '2_per_row';
+    const rowWidth = isTwoPerRow ? '100mm' : '50mm';
+    const labelWidth = '48mm';
+    const labelHeight = '24mm';
+    const rowHeight = '25mm';
+
+    const rowsHtml = printRows.map((row) => {
+      const labelsHtml = row.map((item) => {
+        const barcodeSvg = generateBarcodeSVG(item.barcode, {
+          width: '100%',
+          height: 36,
+          showText: false,
+          moduleWidth: 2,
+          quietZone: 8,
+          barColor: '#000000',
+          backgroundColor: '#ffffff'
+        });
+
+        const variantParts = [
+          showColor && item.color ? item.color : '',
+          showSize && item.size ? item.size : '',
+          showPrice && item.price ? `₹${Number(item.price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
+        ].filter(Boolean);
+
+        return `
+          <div class="sticker-label">
+            <div class="brand-title">${String(companyName || 'JALYN').replace(/[&<>"']/g, '')}</div>
+            ${showProductName && item.productName ? `<div class="product-title">${String(item.productName).replace(/[&<>"']/g, '')}</div>` : ''}
+            ${variantParts.length > 0 ? `<div class="variant-info">${variantParts.join(' • ')}</div>` : ''}
+            <div class="barcode-box">
+              ${barcodeSvg}
+              ${showBarcodeNumber ? `<div class="barcode-num">${String(item.barcode)}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `<div class="sticker-row">${labelsHtml}</div>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Zebra Barcode Labels</title>
+<style>
+  @page {
+    size: ${rowWidth} ${rowHeight};
+    margin: 0;
+  }
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    width: ${rowWidth} !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .sticker-row {
+    width: ${rowWidth} !important;
+    height: ${rowHeight} !important;
+    max-height: ${rowHeight} !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: ${isTwoPerRow ? 'space-between' : 'center'} !important;
+    align-items: center !important;
+    padding: 0.5mm 1mm !important;
+    box-sizing: border-box !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+  }
+  .sticker-label {
+    width: ${labelWidth} !important;
+    height: ${labelHeight} !important;
+    max-width: ${labelWidth} !important;
+    max-height: ${labelHeight} !important;
+    box-sizing: border-box !important;
+    padding: 1mm 1.5mm 0.8mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    text-align: center !important;
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+  }
+  .brand-title {
+    font-size: 7.5pt;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    line-height: 1.15;
+    text-transform: uppercase;
+    color: #000000;
+  }
+  .product-title {
+    font-size: 7pt;
+    font-weight: 800;
+    line-height: 1.15;
+    color: #000000;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    margin-top: 0.3mm;
+  }
+  .variant-info {
+    font-size: 6.5pt;
+    font-weight: 700;
+    line-height: 1.15;
+    color: #000000;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    margin-top: 0.3mm;
+  }
+  .barcode-box {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: 0.5mm;
+  }
+  .barcode-box svg {
+    max-height: 28px;
+    width: 100%;
+    shape-rendering: crispEdges;
+  }
+  .barcode-num {
+    font-family: monospace;
+    font-size: 6.5pt;
+    font-weight: 900;
+    letter-spacing: 1px;
+    line-height: 1.1;
+    color: #000000;
+    margin-top: 0.3mm;
+  }
+  @media print {
+    html, body {
+      width: ${rowWidth} !important;
+      height: ${rowHeight} !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #ffffff !important;
+    }
+  }
+</style>
+</head>
+<body>
+  ${rowsHtml}
+</body>
+</html>`;
+
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'fixed';
+    printFrame.style.right = '0';
+    printFrame.style.bottom = '0';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    printFrame.style.border = '0';
+    document.body.appendChild(printFrame);
+
+    const doc = printFrame.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    setTimeout(() => {
+      printFrame.contentWindow.focus();
+      printFrame.contentWindow.print();
+      setTimeout(() => {
+        document.body.removeChild(printFrame);
+      }, 2000);
+    }, 350);
   };
 
   const downloadBarcodePNG = (item) => {

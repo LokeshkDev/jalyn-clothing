@@ -129,24 +129,26 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
   const handleAddProduct = (product, selectedSize = null, selectedColor = null) => {
     const defaultSize = selectedSize || (Array.isArray(product.sizes) && product.sizes.length > 0 ? product.sizes[0] : (product.size || 'Free Size'));
     const defaultColor = selectedColor || (Array.isArray(product.colors) && product.colors.length > 0 ? product.colors[0] : (product.color || ''));
-    const price = Number(product.price) || 0;
     const mrp = Number(product.original_price) || Number(product.compare_price) || Number(product.price) || 0;
     const imageUrl = product.primary_image || product.image || product.image_url || (Array.isArray(product.images) && product.images[0]) || '';
     const sku = product.base_sku || product.sku || (product.id ? `SKU-${product.id}` : '');
 
-    // Check if item with same SKU & Size is already in cart
-    const existingIndex = billItems.findIndex(
-      (it) => (it.product_id === product.id || (it.sku && it.sku === sku)) && it.size === defaultSize
-    );
+    setBillItems((prev) => {
+      const existingIndex = prev.findIndex(
+        (it) => (it.product_id === product.id || (it.sku && it.sku === sku)) && it.size === defaultSize
+      );
 
-    if (existingIndex >= 0) {
-      // Increment quantity
-      const updated = [...billItems];
-      updated[existingIndex].quantity = (Number(updated[existingIndex].quantity) || 1) + 1;
-      setBillItems(updated);
-    } else {
-      // Add new line item with MRP as price
-      setBillItems((prev) => [
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        const prevQty = Number(updated[existingIndex].quantity) || 1;
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: prevQty + 1,
+        };
+        return updated;
+      }
+
+      return [
         ...prev,
         {
           product_id: product.id,
@@ -161,8 +163,8 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
           available_sizes: Array.isArray(product.sizes) ? product.sizes : [],
           available_colors: Array.isArray(product.colors) ? product.colors : [],
         },
-      ]);
-    }
+      ];
+    });
 
     setSearchQuery('');
     setSearchFocused(false);
@@ -229,20 +231,26 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
       if (matchedProduct) {
         playSuccessBeep();
         handleAddProduct(matchedProduct, selectedSize, selectedColor);
+        const feedbackMsg = `✓ Scanned: "${matchedProduct.title || matchedProduct.name}" ${selectedSize ? `(${selectedSize}${selectedColor ? ` / ${selectedColor}` : ''})` : ''} added to bill`;
         setScanFeedback({
           type: 'success',
-          text: `✓ Auto-populated "${matchedProduct.title || matchedProduct.name}" ${selectedSize ? `(${selectedSize}${selectedColor ? ` / ${selectedColor}` : ''})` : ''} from Barcode ${code.trim().toUpperCase()}`
+          text: feedbackMsg
         });
+        showToast?.(feedbackMsg);
+        setSearchQuery('');
+        setScanInputText('');
         setTimeout(() => setScanFeedback(null), 3500);
         return true;
       } else {
         playErrorBeep();
-        setScanFeedback({ type: 'error', text: `✕ No product found matching barcode "${code.trim()}"` });
+        const errFeedback = `✕ No product found matching barcode "${code.trim().toUpperCase()}"`;
+        setScanFeedback({ type: 'error', text: errFeedback });
+        showToast?.(errFeedback, 'error');
         setTimeout(() => setScanFeedback(null), 4000);
         return false;
       }
     },
-    [products, barcodesList, isOpen, billItems]
+    [products, barcodesList, isOpen]
   );
 
   // Hook hardware scanner listener
@@ -325,6 +333,15 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     }, 0);
   }, [billItems]);
 
+  // Auto-apply 18% GST if Bill Amount > 2500, else 5% GST
+  useEffect(() => {
+    if (subtotal > 2500) {
+      setGstRate(18);
+    } else {
+      setGstRate(5);
+    }
+  }, [subtotal]);
+
   const discountAmount = useMemo(() => {
     const val = Number(discountValue) || 0;
     if (val <= 0) return 0;
@@ -381,14 +398,18 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     }
 
     const cleanName = (customerName || 'Walk-in Customer').trim();
-    const cleanPhone = (customerPhone || '').replace(/[^0-9+]/g, '');
-    const cleanEmail = (customerEmail || '').trim() || (cleanPhone ? `${cleanPhone.replace('+', '')}@jalyn.in` : 'pos-counter@jalyn.in');
+    const cleanPhone = (customerPhone || '').replace(/[^0-9]/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) {
+      showToast?.('Customer Phone Number is mandatory (minimum 10 digits required for billing).', 'error');
+      return;
+    }
+    const cleanEmail = (customerEmail || '').trim() || `${cleanPhone}@jalyn.in`;
     const cleanAddress = (shippingAddress || 'In-Store Counter Pickup').trim();
 
     const payload = {
       customer_name: cleanName,
       customer_email: cleanEmail,
-      customer_phone: cleanPhone || null,
+      customer_phone: cleanPhone,
       shipping_address: cleanAddress,
       total_amount: grandTotal,
       discount_amount: discountAmount,
@@ -466,8 +487,8 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/65 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[96vh] overflow-hidden shadow-2xl flex flex-col border border-gray-200 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-2 md:p-3 overflow-hidden">
+      <div className="bg-white rounded-none sm:rounded-2xl w-full max-w-[98vw] 2xl:max-w-[1850px] h-full sm:h-[97vh] overflow-hidden shadow-2xl flex flex-col border border-gray-200 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Top Header Bar (Solid Theme Color) */}
         <div className="px-5 py-3.5 bg-[#2A1A22] text-white flex items-center justify-between border-b border-[#3D2631] shrink-0">
@@ -479,7 +500,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
               <h3 className="font-bold text-sm sm:text-base tracking-wide flex items-center gap-2">
                 JALYN POS &amp; Billing Counter
                 <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 bg-white/15 rounded-full text-pink-200 tracking-wider border border-white/10">
-                  Live Counter
+                  Full Workstation
                 </span>
               </h3>
               <p className="text-[11px] text-gray-300">Auto-populate by SKU/name, scan QR/barcode, and print thermal receipt instantly.</p>
@@ -532,8 +553,8 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
         {/* Modal Body - 2 Columns on Desktop */}
         <div className="flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 bg-[#FDFBFD]">
           
-          {/* Left Column: Product Search & Bill Items Table (7 Cols) */}
-          <div className="lg:col-span-7 p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto">
+          {/* Left Column: Product Search & Bill Items Table (8 Cols on xl) */}
+          <div className="lg:col-span-7 xl:col-span-8 p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto">
             
             {/* Live Product / SKU Auto-Populate Search Bar with Scanner Trigger */}
             <div className="relative space-y-1.5">
@@ -572,15 +593,18 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                   </div>
                   <div className="flex items-center gap-2">
                     <input
+                      ref={scanInputRef}
                       type="text"
                       autoFocus
+                      id="pos-barcode-scanner-input"
+                      data-scan-capture="true"
                       value={scanInputText}
                       onChange={(e) => {
                         const val = e.target.value;
                         setScanInputText(val);
                         const trimmed = val.trim();
                         // Auto populate if user types or pastes full barcode format e.g. JN-12345
-                        if (trimmed.length >= 7 && (trimmed.startsWith('JN-') || trimmed.startsWith('jn-') || trimmed.startsWith('SKU-') || trimmed.startsWith('sku-'))) {
+                        if (trimmed.length >= 4 && (trimmed.startsWith('JN-') || trimmed.startsWith('jn-') || trimmed.startsWith('SKU-') || trimmed.startsWith('sku-'))) {
                           handleBarcodeOrQrScanned(trimmed);
                           setScanInputText('');
                         }
@@ -616,6 +640,8 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                 <input
                   ref={searchInputRef}
                   type="text"
+                  id="pos-main-search-input"
+                  data-scan-capture="true"
                   value={searchQuery}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -623,7 +649,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                     setSearchFocused(true);
                     // Quick auto-add if a full barcode was scanned directly into main search input
                     const trimmed = val.trim();
-                    if (trimmed.length >= 8 && (trimmed.startsWith('JN-') || trimmed.startsWith('jn-'))) {
+                    if (trimmed.length >= 4 && (trimmed.startsWith('JN-') || trimmed.startsWith('jn-') || trimmed.startsWith('SKU-') || trimmed.startsWith('sku-'))) {
                       handleBarcodeOrQrScanned(trimmed);
                       setSearchQuery('');
                       setSearchFocused(false);
@@ -644,7 +670,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                     }
                   }}
                   onFocus={() => setSearchFocused(true)}
-                  placeholder="Type product name, SKU # (e.g. SKU-0U02) or barcode (JN-00000)..."
+                  placeholder="Scan barcode gun or type product name, SKU # (e.g. SKU-0U02) or barcode (JN-00000)..."
                   className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold focus:ring-2 focus:ring-[#AD4A85] focus:border-[#AD4A85] bg-white shadow-xs"
                 />
                 {searchQuery && (
@@ -937,25 +963,18 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
             </div>
           </div>
 
-          {/* Right Column: Customer Info, Payment & Fulfillment, Bill Actions (5 Cols) */}
-          <div className="lg:col-span-5 p-4 sm:p-5 flex flex-col gap-4 bg-white overflow-y-auto">
+          {/* Right Column: Customer Info, Payment & Fulfillment, Bill Actions (4 Cols on xl) */}
+          <div className="lg:col-span-5 xl:col-span-4 p-4 sm:p-6 flex flex-col gap-4 bg-white overflow-y-auto">
             
-            {/* Customer Details (All Optional) */}
+            {/* Customer Details */}
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-[#AD4A85]" /> Customer Details (Optional)
+                  <User className="w-3.5 h-3.5 text-[#AD4A85]" /> Customer Details
                 </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCustomerName('Walk-in Customer');
-                    setCustomerPhone('');
-                  }}
-                  className="text-[10px] font-bold text-[#AD4A85] hover:underline"
-                >
-                  Quick Walk-in
-                </button>
+                <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
+                  Phone * Required
+                </span>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -964,7 +983,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                     type="text"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Customer Name (Optional)"
+                    placeholder="Customer Name"
                     className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold focus:ring-2 focus:ring-[#AD4A85] outline-none"
                   />
                 </div>
@@ -972,10 +991,15 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                   <div className="relative flex items-center">
                     <input
                       type="tel"
+                      required
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
-                      placeholder="Mobile / WhatsApp (Optional)"
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold focus:ring-2 focus:ring-[#AD4A85] outline-none"
+                      placeholder="Mobile No. * (Mandatory)"
+                      className={`w-full px-3 py-2 rounded-xl text-xs font-bold outline-none transition ${
+                        customerPhone && customerPhone.replace(/[^0-9]/g, '').length >= 10
+                          ? 'border border-emerald-400 focus:ring-2 focus:ring-emerald-500 bg-white'
+                          : 'border-2 border-red-300 focus:ring-2 focus:ring-red-400 bg-red-50/20'
+                      }`}
                     />
                   </div>
                 </div>
@@ -1084,7 +1108,11 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                 <span className="font-bold text-gray-800 flex items-center gap-1.5">
                   <Percent className="w-3.5 h-3.5 text-[#AD4A85]" /> GST Calculation Option
                 </span>
-                <span className="text-[10px] text-gray-500 font-semibold">Indian Tax Slabs</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                  subtotal > 2500 ? 'bg-amber-50 text-amber-900 border-amber-300' : 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                }`}>
+                  {subtotal > 2500 ? '⚡ Auto 18% GST (> ₹2,500)' : '✓ Auto 5% GST (≤ ₹2,500)'}
+                </span>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -1095,11 +1123,8 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                     onChange={(e) => setGstRate(Number(e.target.value))}
                     className="w-full px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs font-bold bg-white text-gray-900 focus:ring-1 focus:ring-[#AD4A85] outline-none"
                   >
-                    <option value={0}>0% GST (Nil)</option>
-                    <option value={5}>5% GST (Apparel Standard - Default)</option>
-                    <option value={12}>12% GST (Apparel &gt; ₹1000)</option>
-                    <option value={18}>18% GST (Standard Goods)</option>
-                    <option value={28}>28% GST (Luxury Items)</option>
+                    <option value={5}>5% GST (Bill &le; ₹2,500)</option>
+                    <option value={18}>18% GST (Bill &gt; ₹2,500)</option>
                   </select>
                 </div>
 

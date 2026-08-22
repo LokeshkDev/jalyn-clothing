@@ -1,6 +1,19 @@
-import { BARCODE_LABEL_CONFIG } from './barcodeLabelConfig';
+import { BARCODE_LABEL_CONFIG } from './barcodeLabelConfig.js';
 
-const CODE128_ENCODINGS = '11011001100 11001101100 11001100110 10010011000 10010001100 10001001100 10011001000 10011000100 10001100100 11001001000 11001000100 11000100100 10110011100 10011011100 10011001110 10111001100 10011101100 10011100110 11001110010 11001011100 11001001110 11011100100 11001110100 11101101110 11101001100 11100101100 11100100110 11101100100 11100110100 11100110010 11011011000 11011000110 11000110110 10100011000 10001011000 10001000110 10110001000 10001101000 10001100010 11010001000 11000101000 11000100010 10110111000 10110001110 10001101110 10111011000 10111000110 10001110110 11101011000 11101000110 11100010110 11011101000 11011100010 11001110100 11110100010 11010111000 11010001110 11000101110 11011101110 11110101000 11110100010 10100110000 10100001100 10010110000 10010000110 10000101100 10000100110 10110010000 10110000100 10011010000 10011000010 10000110100 10000110010 11000010010 11001010000 11110111010 11000010100 10001111010 10100111100 10010111100 10010011110 10111100100 10011110100 10011110010 11110100100 11110010100 11110010010 11011011110 11011110110 11110110110 10101111000 10100011110 10001011110 10111101000 10111100010 11110101000 11110100010 10111011110 10111101110 11101011110 11110101110 11010000100 11010010000 11010011100 1100011101011'.split(' ');
+// Standard 107 Code 128 Patterns (ISO/IEC 15417) — indices 0 to 106
+const CODE128_PATTERNS = [
+  '11011001100', '11001101100', '11001100110', '10010011000', '10010001100', '10001001100', '10011001000', '10011000100', '10001100100', '11001001000',
+  '11001000100', '11000100100', '10110011100', '10011011100', '10011001110', '10111001100', '10011101100', '10011100110', '11001110010', '11001011100',
+  '11001001110', '11011100100', '11001110100', '11101101110', '11101001100', '11100101100', '11100100110', '11101100100', '11100110100', '11100110010',
+  '11011011000', '11011000110', '11000110110', '10100011000', '10001011000', '10001000110', '10110001000', '10001101000', '10001100010', '11010001000',
+  '11000101000', '11000100010', '10110111000', '10110001110', '10001101110', '10111011000', '10111000110', '10001110110', '11101011000', '11101000110',
+  '11100010110', '11011101000', '11011100010', '11001110100', '11110100010', '11010111000', '11010001110', '11000101110', '11011101110', '11110101000',
+  '11110100010', '10100110000', '10100001100', '10010110000', '10010000110', '10000101100', '10000100110', '10110010000', '10110000100', '10011010000',
+  '10011000010', '10000110100', '10000110010', '11000010010', '11001010000', '11110111010', '11000010100', '10001111010', '10100111100', '10010111100',
+  '10010011110', '10111100100', '10011110100', '10011110010', '11110100100', '11110010100', '11110010010', '11011011110', '11011110110', '11110100110',
+  '10101111000', '10100011110', '10001011110', '10111101000', '10111100010', '11110101000', '11110100010', '10111011110', '10111101110', '11101011110',
+  '11110101110', '11010000100', '11010010000', '11010011100', '11010010000', '11010011100', '1100011101011'
+];
 
 export function encodeCode128(text) {
   if (!text) return '';
@@ -9,7 +22,7 @@ export function encodeCode128(text) {
   const STOP = 106;
   
   let checkDigit = START_B;
-  let encoding = CODE128_ENCODINGS[START_B];
+  let encoding = CODE128_PATTERNS[START_B];
   
   for (let i = 0; i < text.length; i++) {
     const charCode = text.charCodeAt(i);
@@ -19,12 +32,12 @@ export function encodeCode128(text) {
       continue;
     }
     
-    encoding += CODE128_ENCODINGS[value];
+    encoding += CODE128_PATTERNS[value];
     checkDigit = (checkDigit + (i + 1) * value) % 103;
   }
   
-  encoding += CODE128_ENCODINGS[checkDigit];
-  encoding += CODE128_ENCODINGS[STOP];
+  encoding += CODE128_PATTERNS[checkDigit];
+  encoding += CODE128_PATTERNS[STOP];
   
   return encoding;
 }
@@ -33,8 +46,8 @@ export function generateBarcodeSVG(text, options = {}) {
   const {
     width = '100%',
     height = 50,
-    moduleWidth = 2.2,
-    quietZone = 8,
+    moduleWidth = 2,
+    quietZone = 10,
     showText = false,
     fontSize = 14,
     textMargin = 2,
@@ -54,7 +67,7 @@ export function generateBarcodeSVG(text, options = {}) {
   
   for (let i = 0; i < encoding.length; i++) {
     if (encoding[i] === '1') {
-      rects += `<rect x="${currentX}" y="0" width="${moduleWidth}" height="${barcodeHeight}" fill="${barColor}" />`;
+      rects += `<rect x="${currentX}" y="0" width="${moduleWidth}" height="${barcodeHeight}" fill="${barColor}" shape-rendering="crispEdges" />`;
     }
     currentX += moduleWidth;
   }
@@ -63,11 +76,11 @@ export function generateBarcodeSVG(text, options = {}) {
   if (showText) {
     const textY = barcodeHeight + textMargin + (fontSize * 0.8);
     const textX = calculatedWidth / 2;
-    textSvg = `<text x="${textX}" y="${textY}" font-family="monospace" font-weight="bold" font-size="${fontSize}" text-anchor="middle" fill="${barColor}">${text}</text>`;
+    textSvg = `<text x="${textX}" y="${textY}" font-family="monospace" font-weight="900" font-size="${fontSize}" text-anchor="middle" fill="${barColor}">${text}</text>`;
   }
   
   return `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${calculatedWidth} ${height}" preserveAspectRatio="xMidYMid meet">
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${calculatedWidth} ${height}" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges">
       <rect width="100%" height="100%" fill="${backgroundColor}" />
       ${rects}
       ${textSvg}
