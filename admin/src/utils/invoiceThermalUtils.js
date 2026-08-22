@@ -280,11 +280,12 @@ export const buildInvoiceHtml = (order) => {
     <div class="inv-meta-grid">
       <div class="meta-card">
         <div class="meta-card-title">Sold &amp; Dispatched By</div>
-        <strong>JALYN Apparels India Pvt. Ltd.</strong><br />
-        Fashion District, 42 Luxury Boulevard<br />
-        Mumbai, Maharashtra — 400001<br />
-        GSTIN: <strong>27AABCJ9876Q1Z2</strong> &middot; State: 27<br />
-        Support: care@jalyn.in &middot; +91 98765 43210
+        <strong>${escapeHtml(getThermalSettings().storeName || 'JALYN APPARELS')}</strong><br />
+        ${escapeHtml(getThermalSettings().shopNo || 'Shop No : 6, Madambakkam Main Road')}<br />
+        ${escapeHtml(getThermalSettings().addressLine2 || 'Raghavendra Nagar, Rajakilpakkam')}<br />
+        ${escapeHtml(getThermalSettings().cityStatePin || 'Chennai, Tamil Nadu, 600073')}<br />
+        GSTIN: <strong>${escapeHtml(getThermalSettings().gstin || '33BPCPA4714D1ZP')}</strong> &middot; State: Tamil Nadu<br />
+        Support: ${escapeHtml(getThermalSettings().email || 'connect.jalyn@gmail.com')} &middot; +91 ${escapeHtml(getThermalSettings().phone || '9790904504')}
       </div>
       <div class="meta-card">
         <div class="meta-card-title">Billed / Delivered To</div>
@@ -320,6 +321,8 @@ export const buildInvoiceHtml = (order) => {
         <div style="font-weight: 700; color: #AD4A85; margin-bottom: 4px; text-transform: uppercase; font-size: 10px; letter-spacing: 1px;">Payment &amp; Order Information</div>
         <div>Payment Method: <strong>${escapeHtml(paymentMethod)}</strong></div>
         <div>Payment Status: <strong>${paymentStatus.toUpperCase()}</strong></div>
+        ${order.received_amount !== undefined && order.received_amount !== '' ? `<div>Amount Received: <strong>₹ ${Number(order.received_amount).toLocaleString('en-IN')}</strong></div>` : ''}
+        ${order.balance_amount !== undefined && order.balance_amount !== '' ? `<div>Balance / Change: <strong>₹ ${Number(order.balance_amount).toLocaleString('en-IN')}</strong></div>` : ''}
         <div>Order Status: <strong>${escapeHtml((order.order_status || 'delivered').toUpperCase())}</strong></div>
         ${order.tracking_id ? `<div>Courier AWB: <strong>${escapeHtml(order.tracking_id)}</strong></div>` : ''}
         <div style="margin-top: 6px; font-size: 10.5px; color: #88747F;">* All prices are inclusive of applicable GST. Items eligible for exchange within 7 days with original invoice &amp; tags intact.</div>
@@ -413,6 +416,7 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   const shipTo = order.shipping_address && order.shipping_address !== 'In-Store Counter Pickup'
     ? order.shipping_address
     : (cfg.defaultShipTo || 'Business Name');
+  const paymentMethod = order.payment_method || 'Cash';
 
   let youSaved = discount;
   if (order.total_mrp && order.total_mrp > total) {
@@ -482,9 +486,9 @@ export const buildThermalHtml = (order, customSettings = {}) => {
     width: ${paperWidth};
     margin: 0 auto;
     font-family: 'Segoe UI', Arial, -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif;
-    font-size: 11.5px;
+    font-size: 12px;
     line-height: 1.35;
-    font-weight: 600;
+    font-weight: 800;
     color: #000000;
     background: #FFFFFF;
     padding: 3mm 3.5mm 5mm;
@@ -496,7 +500,7 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   }
   .center { text-align: center; }
   .right { text-align: right; }
-  .bold { font-weight: 800; }
+  .bold { font-weight: 900; }
 
   /* Store Header */
   .store-header {
@@ -504,29 +508,29 @@ export const buildThermalHtml = (order, customSettings = {}) => {
     margin-bottom: 2mm;
   }
   .store-logo {
-    max-height: 44px;
+    max-height: 46px;
     width: auto;
     object-fit: contain;
     margin: 0 auto 1.5mm;
     display: block;
-    filter: contrast(140%);
+    filter: contrast(150%);
   }
   .store-title {
-    font-size: 15px;
-    font-weight: 800;
+    font-size: 16px;
+    font-weight: 900;
     letter-spacing: 1px;
     text-transform: uppercase;
     color: #000000;
   }
   .store-sub {
-    font-size: 10.5px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 800;
     line-height: 1.35;
     color: #000000;
   }
   .inv-heading {
-    font-size: 13px;
-    font-weight: 800;
+    font-size: 14px;
+    font-weight: 900;
     letter-spacing: 1.5px;
     text-transform: uppercase;
     text-align: center;
@@ -572,8 +576,8 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   }
   .table-header {
     display: flex;
-    font-weight: 800;
-    font-size: 11px;
+    font-weight: 900;
+    font-size: 11.5px;
     padding-bottom: 1mm;
     border-bottom: 1.5px solid #000000;
     color: #000000;
@@ -582,39 +586,39 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   .item-line {
     display: flex;
     font-size: 11.5px;
-    font-weight: 600;
+    font-weight: 800;
     padding: 1.5mm 0;
     border-bottom: 1px dashed #888888;
     align-items: flex-start;
     color: #000000;
   }
-  .col-num { width: 16px; font-weight: 700; }
+  .col-num { width: 16px; font-weight: 900; }
   .col-desc { flex: 1; padding: 0 4px; }
-  .item-title { font-weight: 700; text-transform: uppercase; font-size: 11.5px; color: #000000; }
-  .item-sub { font-size: 10px; font-weight: 600; color: #111111; margin-top: 1px; }
-  .col-qty { width: 44px; text-align: center; font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums; }
-  .col-rate { width: 52px; text-align: right; font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums; }
-  .col-amt { width: 48px; text-align: right; font-weight: 800; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .item-title { font-weight: 900; text-transform: uppercase; font-size: 11.5px; color: #000000; }
+  .item-sub { font-size: 10px; font-weight: 800; color: #000000; margin-top: 1px; }
+  .col-qty { width: 44px; text-align: center; font-weight: 800; font-size: 11px; font-variant-numeric: tabular-nums; }
+  .col-rate { width: 52px; text-align: right; font-weight: 800; font-size: 11px; font-variant-numeric: tabular-nums; }
+  .col-amt { width: 48px; text-align: right; font-weight: 900; font-size: 11.5px; font-variant-numeric: tabular-nums; }
 
   /* Calculations & Totals */
   .totals-section {
     font-size: 11.5px;
     line-height: 1.55;
-    font-weight: 700;
+    font-weight: 800;
     color: #000000;
   }
   .calc-row {
     display: flex;
     justify-content: space-between;
-    font-weight: 700;
+    font-weight: 800;
     color: #000000;
     font-variant-numeric: tabular-nums;
   }
   .grand-row {
     display: flex;
     justify-content: space-between;
-    font-size: 14.5px;
-    font-weight: 800;
+    font-size: 15px;
+    font-weight: 900;
     padding: 1.5mm 0;
     border-top: 1.5px solid #000000;
     border-bottom: 1.5px solid #000000;
@@ -626,8 +630,8 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   /* Footer */
   .footer-box {
     text-align: center;
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 11.5px;
+    font-weight: 800;
     margin-top: 3mm;
     line-height: 1.4;
     color: #000000;
@@ -738,93 +742,191 @@ export const buildThermalHtml = (order, customSettings = {}) => {
       <span>- ₹ ${youSaved.toLocaleString('en-IN')}</span>
     </div>` : ''}
 
-    ${cfg.showReceivedBalance ? `
+    ${(cfg.showReceivedBalance !== false) ? `
+    <div class="calc-row bold" style="margin-top: 1mm;">
+      <span>Payment Mode</span>
+      <span style="text-transform: uppercase;">${escapeHtml(paymentMethod || 'Cash')}</span>
+    </div>
     <div class="calc-row bold">
-      <span>Received</span>
+      <span>Received (₹)</span>
       <span>₹ ${receivedAmount.toLocaleString('en-IN')}</span>
     </div>
     <div class="calc-row bold">
-      <span>Balance Amount</span>
+      <span>Change / Balance</span>
       <span>₹ ${balanceAmount.toLocaleString('en-IN')}</span>
     </div>` : ''}
   </div>
 
   ${cfg.showFooterMessage ? `
   <div class="footer-box">
-    ${cfg.footerMessage ? `<div class="bold" style="font-size: 11px; margin-bottom: 1.5mm;">${escapeHtml(cfg.footerMessage)}</div>` : ''}
+    ${cfg.footerMessage ? `<div class="bold" style="font-size: 12px; font-weight: 900; margin-bottom: 1.5mm;">${escapeHtml(cfg.footerMessage)}</div>` : ''}
     ${cfg.showTermsAndConditions !== false ? `
       ${Array.isArray(cfg.termsAndConditions) && cfg.termsAndConditions.length > 0 ? `
-        <div style="font-size: 9px; line-height: 1.35; color: #000; text-align: center; margin-top: 1mm; font-weight: 700;">
+        <div style="font-size: 9.5px; line-height: 1.35; color: #000; text-align: center; margin-top: 1mm; font-weight: 800;">
           ${cfg.termsAndConditions.filter(Boolean).map((term) => `<div>${escapeHtml(term)}</div>`).join('')}
         </div>
-      ` : (cfg.termsNote ? `<div style="font-size: 9px; color: #000; margin-top: 1mm; font-weight: 700;">${escapeHtml(cfg.termsNote)}</div>` : '')}
+      ` : (cfg.termsNote ? `<div style="font-size: 9.5px; color: #000; margin-top: 1mm; font-weight: 800;">${escapeHtml(cfg.termsNote)}</div>` : '')}
     ` : ''}
   </div>` : ''}
+<script>
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      window.focus();
+      window.print();
+    }, 200);
+  });
+</script>
 </body>
 </html>`;
 };
 
 /**
- * Trigger Instant Thermal Bill Print
+ * Trigger Instant Thermal Bill Print (80mm / 58mm POS Format)
  */
 export const printThermalReceipt = (order, customSettings = {}) => {
-  const win = window.open('', '_blank', 'width=440,height=720');
-  if (!win) {
-    alert('Popup blocked. Please allow popups to print the thermal bill.');
-    return;
+  try {
+    const html = buildThermalHtml(order, customSettings);
+    const win = window.open('', '_blank', 'width=440,height=720');
+    if (win) {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      setTimeout(() => {
+        try {
+          win.print();
+        } catch (e) {
+          console.warn('win.print error:', e);
+        }
+      }, 250);
+      return;
+    }
+
+    // Fallback to hidden iframe if popups blocked
+    let iframe = document.getElementById('thermal-print-iframe');
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'thermal-print-iframe';
+      iframe.name = 'thermal-print-iframe';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
+    }
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      }, 250);
+    }
+  } catch (err) {
+    console.error('Thermal receipt print error:', err);
+    alert('Thermal print error: ' + err.message);
   }
-  win.document.write(buildThermalHtml(order, customSettings));
-  win.document.close();
-  win.focus();
-  setTimeout(() => {
-    win.print();
-  }, 250);
 };
 
 /**
- * Trigger Instant Luxury Tax Invoice Print
+ * Trigger Instant Luxury Tax Invoice Print (A4 Format)
  */
 export const printTaxInvoice = (order) => {
-  const win = window.open('', '_blank', 'width=880,height=960');
-  if (!win) {
-    alert('Popup blocked. Please allow popups to print the Tax Invoice.');
-    return;
+  try {
+    const html = buildInvoiceHtml(order);
+    const win = window.open('', '_blank', 'width=880,height=960');
+    if (win) {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      setTimeout(() => {
+        try {
+          win.print();
+        } catch (e) {
+          console.warn('win.print error:', e);
+        }
+      }, 250);
+      return;
+    }
+
+    // Fallback to hidden iframe if popups blocked
+    let iframe = document.getElementById('tax-invoice-print-iframe');
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'tax-invoice-print-iframe';
+      iframe.name = 'tax-invoice-print-iframe';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
+    }
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      }, 250);
+    }
+  } catch (err) {
+    console.error('Tax invoice print error:', err);
+    alert('Tax invoice print error: ' + err.message);
   }
-  win.document.write(buildInvoiceHtml(order));
-  win.document.close();
-  win.focus();
-  setTimeout(() => {
-    win.print();
-  }, 250);
 };
 
 /**
- * Format & Send Complete Luxury Tax Invoice over WhatsApp
+ * Format & Send Complete Luxury Tax Invoice PDF Bill over WhatsApp
+ * Works seamlessly for both Walk-in (POS) and Online Orders
  */
 export const formatLuxuryWhatsAppInvoice = (order, options = {}) => {
+  const cfg = getThermalSettings();
   const items = order.items || [];
   const subtotal = itemTotal(items);
   const discount = Number(order.discount_amount) || 0;
   const shipping = Number(order.shipping_amount) || 0;
   const total = Number(order.total_amount) || Math.max(subtotal + shipping - discount, 0);
-  const taxable = Math.round((total / 1.05) * 100) / 100;
+  
+  // Tax Slab: 18% if > 2500, else 5%
+  const gstRate = total > 2500 ? 18 : (Number(cfg.defaultGstRate) || 5);
+  const taxable = Math.round((total / (1 + gstRate / 100)) * 100) / 100;
   const totalGst = Math.round((total - taxable) * 100) / 100;
-  const cgst = Math.round((totalGst / 2) * 100) / 100;
-  const sgst = Math.round((totalGst / 2) * 100) / 100;
+  const halfGst = Math.round((totalGst / 2) * 100) / 100;
+
+  const paymentMethod = String(order.payment_method || 'Cash').toUpperCase();
+  const paymentStatus = String(order.payment_status || 'PAID').toUpperCase();
+  const receivedAmount = order.received_amount !== undefined && order.received_amount !== ''
+    ? Number(order.received_amount)
+    : total;
+  const balanceAmount = order.balance_amount !== undefined && order.balance_amount !== ''
+    ? Number(order.balance_amount)
+    : Math.max(0, receivedAmount - total);
 
   const lines = [
     `━━━━━━━━━━━━━━━━━━━━━━`,
-    `✨ *JALYN APPARELS* ✨`,
-    `*OFFICIAL TAX & RETAIL INVOICE*`,
+    `✨ *${cfg.storeName || 'JALYN APPARELS'}* ✨`,
+    `*OFFICIAL LUXURY TAX INVOICE*`,
     `━━━━━━━━━━━━━━━━━━━━━━`,
     `*Invoice No:* ${order.order_number || order.id}`,
-    `*Date & Time:* ${formatDate(order.created_at)}`,
-    `*GSTIN:* 27AABCJ9876Q1Z2`,
-    `*State / POS:* Maharashtra (27)`,
+    `*Date:* ${formatDate(order.created_at || new Date())}`,
+    `*GSTIN:* ${cfg.gstin || '33BPCPA4714D1ZP'}`,
+    `*Phone:* +91 ${cfg.phone || '9790904504'}`,
+    `*Store:* ${cfg.shopNo || ''}, ${cfg.addressLine2 || ''}, ${cfg.cityStatePin || 'Chennai 600073'}`,
     ``,
     `*Billed To:* ${order.customer_name || 'Walk-in Customer'}`,
-    ...(order.customer_phone ? [`*Phone:* ${order.customer_phone}`] : []),
-    ...(order.shipping_address && order.shipping_address !== 'In-Store Counter Pickup' ? [`*Delivery Address:* ${order.shipping_address}`] : []),
+    ...(order.customer_phone ? [`*Customer Phone:* ${order.customer_phone}`] : []),
+    ...(order.shipping_address && !order.shipping_address.toLowerCase().includes('in-store') && !order.shipping_address.toLowerCase().includes('counter') ? [`*Delivery Address:* ${order.shipping_address}`] : []),
     ``,
     `🛍️ *ITEMIZED PARTICULARS:*`,
     `──────────────────────`,
@@ -832,7 +934,7 @@ export const formatLuxuryWhatsAppInvoice = (order, options = {}) => {
       const qty = Number(it.quantity || it.qty) || 1;
       const price = Number(it.price) || 0;
       const lineTotal = price * qty;
-      const variantParts = [it.sku && `SKU: ${it.sku}`, it.size && `Size: ${it.size}`, it.color && `Color: ${it.color}`].filter(Boolean);
+      const variantParts = [it.size && `Size: ${it.size}`, it.color && `Color: ${it.color}`].filter(Boolean);
       const vText = variantParts.length > 0 ? ` (${variantParts.join(', ')})` : '';
       return `${idx + 1}. *${it.product_name || 'Item'}*${vText}\n   └ ${qty} pcs × ₹${price.toLocaleString('en-IN')} = *₹${lineTotal.toLocaleString('en-IN')}*`;
     }),
@@ -841,23 +943,36 @@ export const formatLuxuryWhatsAppInvoice = (order, options = {}) => {
     ...(discount > 0 ? [`*Special Discount:* −₹${discount.toLocaleString('en-IN')}`] : []),
     ...(shipping > 0 ? [`*Shipping Charges:* +₹${shipping.toLocaleString('en-IN')}`] : []),
     `*Taxable Value:* ₹${taxable.toLocaleString('en-IN')}`,
-    `*CGST (2.5%):* ₹${cgst.toLocaleString('en-IN')}`,
-    `*SGST (2.5%):* ₹${sgst.toLocaleString('en-IN')}`,
+    `*CGST (${gstRate / 2}%):* ₹${halfGst.toLocaleString('en-IN')}`,
+    `*SGST (${gstRate / 2}%):* ₹${halfGst.toLocaleString('en-IN')}`,
     `━━━━━━━━━━━━━━━━━━━━━━`,
-    `💰 *NET PAYABLE:* *₹${total.toLocaleString('en-IN')}*`,
+    `💰 *GRAND TOTAL:* *₹${total.toLocaleString('en-IN')}*`,
     `━━━━━━━━━━━━━━━━━━━━━━`,
-    `*Payment Mode:* ${order.payment_method || 'Cash'} · ${(order.payment_status || 'PAID').toUpperCase()}`,
-    `*Fulfillment:* ${(order.order_status || 'DELIVERED').toUpperCase()}`,
+    `*Payment Mode:* ${paymentMethod} · *${paymentStatus}*`,
+    ...(paymentMethod.includes('CASH') ? [
+      `*Amount Received:* ₹${receivedAmount.toLocaleString('en-IN')}`,
+      `*Balance / Change Returned:* ₹${balanceAmount.toLocaleString('en-IN')}`
+    ] : []),
+    `*Order Status:* ${(order.order_status || 'DELIVERED').toUpperCase()}`,
     ``,
-    `*Thank you for choosing JALYN Apparels!*`,
-    `_This is a computer-generated luxury tax invoice._`,
+    `📄 *Luxury PDF Tax Bill:*`,
+    `Your computer-generated official GST Invoice PDF is recorded under Invoice #${order.order_number || order.id}.`,
+    ``,
+    `*Exchange & Store Policy:*`,
+    ...(Array.isArray(cfg.termsAndConditions) && cfg.termsAndConditions.length > 0
+      ? cfg.termsAndConditions.map((t) => `• ${t}`)
+      : [`• ${cfg.termsNote || 'Exchanges accepted within 7 days with original tags intact.'}`]
+    ),
+    ``,
+    `*Thank you for shopping with ${cfg.storeName || 'JALYN'}!*`,
+    `_Style Meets Comfort_`
   ];
 
   if (options.includeSocial !== false) {
     lines.push(
       ``,
       `⭐ *Rate our Store on Google:* https://g.page/r/jalyn/review`,
-      `📸 *Instagram:* https://instagram.com/jalyn.in`,
+      `📸 *Instagram:* https://instagram.com/jalyn.apparels`,
       `🌐 *Website:* https://jalyn.in`
     );
   }
@@ -865,9 +980,20 @@ export const formatLuxuryWhatsAppInvoice = (order, options = {}) => {
   return lines.join('\n');
 };
 
+/**
+ * Send Luxury Invoice directly to customer WhatsApp
+ */
 export const sendLuxuryWhatsAppInvoice = (order, options = {}) => {
-  const rawPhone = String(order.customer_phone || '').replace(/\D/g, '');
-  if (!rawPhone) return false;
+  let rawPhone = String(order.customer_phone || '').replace(/\D/g, '');
+  if (!rawPhone || rawPhone.length < 10) {
+    const input = window.prompt('Enter customer 10-digit WhatsApp phone number:', '');
+    if (!input) return false;
+    rawPhone = String(input).replace(/\D/g, '');
+  }
+  if (!rawPhone || rawPhone.length < 10) {
+    alert('Please provide a valid 10-digit phone number to send the WhatsApp invoice.');
+    return false;
+  }
   const phone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
   const message = formatLuxuryWhatsAppInvoice(order, options);
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');

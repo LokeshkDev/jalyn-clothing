@@ -756,7 +756,43 @@ export default function OrdersPage() {
                     </div>
                     <div className="mt-3 pt-3 border-t border-gray-200 space-y-1.5 text-[11px]">
                       <p className="flex justify-between text-gray-500"><span>Subtotal (Items)</span><span className="font-semibold text-gray-800">{money(itemTotal(detailOrder.items))}</span></p>
-                      <p className="flex justify-between text-gray-500"><span>Order Total</span><span className="font-bold text-gray-900 text-xs">{money(detailOrder.total_amount)}</span></p>
+                      {detailOrder.discount_amount > 0 && (
+                        <p className="flex justify-between text-emerald-600"><span>Discount</span><span className="font-semibold">−{money(detailOrder.discount_amount)}</span></p>
+                      )}
+                      {detailOrder.shipping_amount > 0 && (
+                        <p className="flex justify-between text-gray-500"><span>Shipping</span><span className="font-semibold">{money(detailOrder.shipping_amount)}</span></p>
+                      )}
+                      <p className="flex justify-between text-gray-900 font-extrabold text-xs pt-1 border-t border-gray-200">
+                        <span>Order Total</span>
+                        <span className="text-[#AD4A85] text-sm">{money(detailOrder.total_amount)}</span>
+                      </p>
+
+                      {/* Cash Received and Change / Balance (As shown in screenshot) */}
+                      {(detailOrder.received_amount !== undefined && detailOrder.received_amount !== null && detailOrder.received_amount !== '') ? (
+                        <div className="pt-2 mt-2 border-t border-dashed border-gray-300 space-y-1.5">
+                          <p className="flex justify-between items-center text-gray-700 font-bold">
+                            <span>Received (₹)</span>
+                            <span className="font-mono bg-white px-2 py-0.5 rounded border border-gray-200">{money(detailOrder.received_amount)}</span>
+                          </p>
+                          <p className="flex justify-between items-center text-emerald-800 font-bold bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200 text-xs">
+                            <span>Change / Balance</span>
+                            <span className="font-mono">{money(detailOrder.balance_amount || 0)}</span>
+                          </p>
+                        </div>
+                      ) : (
+                        (detailOrder.payment_method?.toLowerCase().includes('cash') || isWalkinOrder(detailOrder)) && (
+                          <div className="pt-2 mt-2 border-t border-dashed border-gray-300 space-y-1.5">
+                            <p className="flex justify-between items-center text-gray-700 font-bold">
+                              <span>Received (₹)</span>
+                              <span className="font-mono bg-white px-2 py-0.5 rounded border border-gray-200">{money(detailOrder.total_amount)}</span>
+                            </p>
+                            <p className="flex justify-between items-center text-emerald-800 font-bold bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200 text-xs">
+                              <span>Change / Balance</span>
+                              <span className="font-mono">₹0.00</span>
+                            </p>
+                          </div>
+                        )
+                      )}
                     </div>
                   </div>
 
@@ -1046,17 +1082,41 @@ export default function OrdersPage() {
                 <span className="text-base">{money(detailOrder.total_amount)}</span>
                 <span className="text-[10px] font-medium text-gray-400">({itemTotal(detailOrder.items)} units)</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                <button
+                  type="button"
+                  onClick={() => printThermalBill(detailOrder)}
+                  className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-100 text-[#2A1A22] border border-gray-300 text-xs font-bold px-3 py-2 rounded-xl transition shadow-xs cursor-pointer"
+                  title="Print 80mm/58mm Thermal Bill"
+                >
+                  <ReceiptText className="w-3.5 h-3.5 text-blue-600" /> Thermal Bill
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePrintTaxInvoice(detailOrder)}
+                  className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-100 text-[#2A1A22] border border-gray-300 text-xs font-bold px-3 py-2 rounded-xl transition shadow-xs cursor-pointer"
+                  title="Print or Save as Luxury A4 Tax Invoice PDF"
+                >
+                  <Printer className="w-3.5 h-3.5 text-[#AD4A85]" /> Luxury PDF Bill
+                </button>
+                <button
+                  type="button"
+                  onClick={() => sendInvoiceWhatsApp(detailOrder)}
+                  className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs transition cursor-pointer"
+                  title="Send Luxury Tax Invoice directly to customer WhatsApp"
+                >
+                  <Send className="w-3.5 h-3.5" /> WhatsApp Invoice
+                </button>
                 <button
                   onClick={() => handleDelete(detailOrder.id)}
                   disabled={busy}
-                  className="inline-flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold px-3.5 py-2 rounded-lg transition disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold px-3 py-2 rounded-xl transition disabled:opacity-60 cursor-pointer"
                 >
-                  <Trash2 className="w-3.5 h-3.5" /> Delete Order
+                  <Trash2 className="w-3.5 h-3.5" /> Delete
                 </button>
                 <button
                   onClick={() => setDetailOrder(null)}
-                  className="inline-flex items-center gap-1.5 bg-gray-900 hover:bg-black text-white text-xs font-bold px-3.5 py-2 rounded-lg transition"
+                  className="inline-flex items-center gap-1.5 bg-gray-900 hover:bg-black text-white text-xs font-bold px-3.5 py-2 rounded-xl transition cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" /> Close
                 </button>

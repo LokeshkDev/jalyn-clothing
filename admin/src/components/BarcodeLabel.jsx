@@ -7,6 +7,7 @@ export default function BarcodeLabel({
   color,
   size,
   price,
+  mrp,
   companyName = 'JALYN',
   showProductName = true,
   showColor = true,
@@ -15,6 +16,7 @@ export default function BarcodeLabel({
   showBarcodeNumber = true,
   forPrint = false
 }) {
+  const displayPrice = mrp !== undefined && mrp !== null && mrp !== '' ? mrp : price;
   const barcodeSvg = useMemo(() => {
     if (!barcode) return '';
     return generateBarcodeSVG(barcode, {
@@ -67,7 +69,7 @@ export default function BarcodeLabel({
           </div>
         )}
 
-        {/* Variant Info Line: Color • Size • Price */}
+        {/* Variant Info Line: Color • Size • MRP */}
         <div
           style={{ fontSize: '8pt', lineHeight: '1.15', fontWeight: 900, color: '#000000' }}
           className="font-sans text-black mt-0.5 flex items-center justify-center gap-1.5 flex-nowrap w-full overflow-hidden truncate"
@@ -75,8 +77,8 @@ export default function BarcodeLabel({
           {showColor && color && <span>{color}</span>}
           {showColor && color && showSize && size && <span className="font-black">•</span>}
           {showSize && size && <span>{size}</span>}
-          {((showColor && color) || (showSize && size)) && showPrice && price && <span className="font-black">•</span>}
-          {showPrice && price && <span>₹{Number(price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+          {((showColor && color) || (showSize && size)) && showPrice && displayPrice && <span className="font-black">•</span>}
+          {showPrice && displayPrice && <span>MRP: ₹{Number(displayPrice).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>}
         </div>
       </div>
 

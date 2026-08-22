@@ -150,6 +150,14 @@ export const createOrder = async (req, res) => {
     total_amount,
     discount_amount = 0,
     shipping_amount = 0,
+    received_amount = null,
+    balance_amount = null,
+    gst_rate = null,
+    is_gst_inclusive = 1,
+    taxable_amount = null,
+    cgst_amount = null,
+    sgst_amount = null,
+    total_mrp = null,
     order_type,
     payment_status = 'pending',
     order_status = 'pending',
@@ -188,6 +196,14 @@ export const createOrder = async (req, res) => {
     total_amount: Number(total_amount) || 0,
     discount_amount: Number(discount_amount) || 0,
     shipping_amount: Number(shipping_amount) || 0,
+    received_amount: received_amount !== null && received_amount !== undefined ? Number(received_amount) : null,
+    balance_amount: balance_amount !== null && balance_amount !== undefined ? Number(balance_amount) : null,
+    gst_rate: gst_rate !== null && gst_rate !== undefined ? Number(gst_rate) : null,
+    is_gst_inclusive: is_gst_inclusive !== undefined ? (is_gst_inclusive ? 1 : 0) : 1,
+    taxable_amount: taxable_amount !== null && taxable_amount !== undefined ? Number(taxable_amount) : null,
+    cgst_amount: cgst_amount !== null && cgst_amount !== undefined ? Number(cgst_amount) : null,
+    sgst_amount: sgst_amount !== null && sgst_amount !== undefined ? Number(sgst_amount) : null,
+    total_mrp: total_mrp !== null && total_mrp !== undefined ? Number(total_mrp) : null,
     order_type: inferredOrderType,
     payment_status,
     order_status,
@@ -209,8 +225,8 @@ export const createOrder = async (req, res) => {
     try {
       const [result] = await pool.query(
         `INSERT INTO orders
-         (order_number, user_id, customer_name, customer_email, customer_phone, shipping_address, total_amount, discount_amount, shipping_amount, order_type, payment_method, payment_status, order_status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (order_number, user_id, customer_name, customer_email, customer_phone, shipping_address, total_amount, discount_amount, shipping_amount, received_amount, balance_amount, gst_rate, is_gst_inclusive, taxable_amount, cgst_amount, sgst_amount, total_mrp, order_type, payment_method, payment_status, order_status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           generatedOrderNum,
           orderUserId,
@@ -221,6 +237,14 @@ export const createOrder = async (req, res) => {
           Number(total_amount) || 0,
           Number(discount_amount) || 0,
           Number(shipping_amount) || 0,
+          received_amount !== null && received_amount !== undefined && received_amount !== '' ? Number(received_amount) : null,
+          balance_amount !== null && balance_amount !== undefined && balance_amount !== '' ? Number(balance_amount) : null,
+          gst_rate !== null && gst_rate !== undefined && gst_rate !== '' ? Number(gst_rate) : null,
+          is_gst_inclusive ? 1 : 0,
+          taxable_amount !== null && taxable_amount !== undefined && taxable_amount !== '' ? Number(taxable_amount) : null,
+          cgst_amount !== null && cgst_amount !== undefined && cgst_amount !== '' ? Number(cgst_amount) : null,
+          sgst_amount !== null && sgst_amount !== undefined && sgst_amount !== '' ? Number(sgst_amount) : null,
+          total_mrp !== null && total_mrp !== undefined && total_mrp !== '' ? Number(total_mrp) : null,
           inferredOrderType,
           payment_method || null,
           payment_status,
@@ -229,7 +253,7 @@ export const createOrder = async (req, res) => {
       );
       orderId = result.insertId;
     } catch (colErr) {
-      // Fallback in case optional columns are pending ALTER TABLE
+      // Fallback in case columns differ
       const [result] = await pool.query(
         `INSERT INTO orders
          (order_number, user_id, customer_name, customer_email, customer_phone, shipping_address, total_amount, payment_method, payment_status, order_status)

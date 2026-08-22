@@ -326,7 +326,7 @@ export const getBarcodes = async (req, res) => {
 
   try {
     let query = `
-      SELECT pb.*, p.title as product_title, p.primary_image 
+      SELECT pb.*, p.title as product_title, p.primary_image, p.price as product_price, p.original_price, COALESCE(p.original_price, p.price) as mrp 
       FROM product_barcodes pb 
       JOIN products p ON pb.product_id = p.id 
       WHERE 1=1
@@ -346,7 +346,7 @@ export const getBarcodes = async (req, res) => {
       queryParams.push(product_id);
     }
 
-    const countQuery = query.replace('SELECT pb.*, p.title as product_title, p.primary_image', 'SELECT COUNT(*) as total');
+    const countQuery = query.replace('SELECT pb.*, p.title as product_title, p.primary_image, p.price as product_price, p.original_price, COALESCE(p.original_price, p.price) as mrp', 'SELECT COUNT(*) as total');
     
     query += ` ORDER BY pb.generated_at DESC LIMIT ? OFFSET ?`;
     queryParams.push(Number(limit), Number(offset));

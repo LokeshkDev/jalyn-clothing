@@ -71,10 +71,11 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
           backgroundColor: '#ffffff'
         });
 
+        const displayPrice = item.mrp !== undefined && item.mrp !== null && item.mrp !== '' ? item.mrp : (item.original_price || item.compare_price || item.price);
         const variantParts = [
           showColor && item.color ? item.color : '',
           showSize && item.size ? item.size : '',
-          showPrice && item.price ? `₹${Number(item.price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
+          showPrice && displayPrice ? `MRP: ₹${Number(displayPrice).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : ''
         ].filter(Boolean);
 
         return `
@@ -410,6 +411,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
                                 color={item.color}
                                 size={item.size}
                                 price={item.price}
+                                mrp={item.mrp || item.original_price || item.compare_price || item.price}
                                 companyName={companyName}
                                 showProductName={showProductName}
                                 showColor={showColor}

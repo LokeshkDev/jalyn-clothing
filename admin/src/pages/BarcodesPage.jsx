@@ -130,6 +130,7 @@ export default function BarcodesPage() {
         color: b.color,
         size: b.size,
         price: b.product_price || null,
+        mrp: b.mrp || b.original_price || b.compare_price || b.product_price || null,
         productImage: b.primary_image || null
       }))
     });
@@ -144,6 +145,7 @@ export default function BarcodesPage() {
         color: b.color,
         size: b.size,
         price: b.product_price || null,
+        mrp: b.mrp || b.original_price || b.compare_price || b.product_price || null,
         productImage: b.primary_image || null
       }]
     });
@@ -435,6 +437,7 @@ export default function BarcodesPage() {
                   color={previewBarcode.color}
                   size={previewBarcode.size}
                   price={previewBarcode.product_price || null}
+                  mrp={previewBarcode.mrp || previewBarcode.original_price || previewBarcode.compare_price || previewBarcode.product_price || null}
                 />
               </div>
             </div>

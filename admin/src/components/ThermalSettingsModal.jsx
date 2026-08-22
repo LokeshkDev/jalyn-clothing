@@ -571,10 +571,11 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
 
               {/* Thermal Paper Container */}
               <div
-                className="bg-white shadow-xl border border-gray-300 text-black font-sans p-4 text-[11.5px] leading-snug space-y-2 rounded-sm"
+                className="bg-white shadow-xl border border-gray-300 text-black font-sans font-extrabold p-4 text-[11.5px] leading-snug space-y-2 rounded-sm"
                 style={{
                   width: settings.paperWidth === '58mm' ? '230px' : '310px',
-                  fontFamily: "'Segoe UI', Arial, -apple-system, BlinkMacSystemFont, Roboto, sans-serif"
+                  fontFamily: "'Segoe UI', Arial, -apple-system, BlinkMacSystemFont, Roboto, sans-serif",
+                  fontWeight: 800
                 }}
               >
                 {/* Store Header */}
@@ -714,12 +715,16 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
                   {settings.showReceivedBalance && (
                     <>
                       <div className="flex justify-between font-black text-black">
-                        <span>Received</span>
-                        <span>₹ 4,598</span>
+                        <span>Payment Mode</span>
+                        <span>CASH</span>
                       </div>
                       <div className="flex justify-between font-black text-black">
-                        <span>Balance Amount</span>
-                        <span>₹ 0</span>
+                        <span>Received (₹)</span>
+                        <span>₹ 12,000</span>
+                      </div>
+                      <div className="flex justify-between font-black text-black">
+                        <span>Change / Balance</span>
+                        <span>₹ 702</span>
                       </div>
                     </>
                   )}

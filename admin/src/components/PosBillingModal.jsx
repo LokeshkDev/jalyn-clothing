@@ -30,6 +30,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
   const [searchFocused, setSearchFocused] = useState(false);
   const searchInputRef = useRef(null);
   const scanInputRef = useRef(null);
+  const lastScannedRef = useRef({ code: '', timestamp: 0 });
 
   // Thermal format settings modal
   const [showThermalSettingsModal, setShowThermalSettingsModal] = useState(false);
@@ -177,6 +178,13 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
       if (!code || !isOpen) return false;
       const clean = String(code).trim().toLowerCase();
       if (!clean) return false;
+
+      // Prevent duplicate scan within 600ms for exact same barcode
+      const now = Date.now();
+      if (lastScannedRef.current.code === clean && (now - lastScannedRef.current.timestamp < 600)) {
+        return true;
+      }
+      lastScannedRef.current = { code: clean, timestamp: now };
 
       // 1. Check in barcodesList (exact barcode match e.g. JN-12345 or 12345)
       const matchedBarcode = barcodesList.find((b) => {
@@ -601,14 +609,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                       data-scan-capture="true"
                       value={scanInputText}
                       onChange={(e) => {
-                        const val = e.target.value;
-                        setScanInputText(val);
-                        const trimmed = val.trim();
-                        // Auto populate if user types or pastes full barcode format e.g. JN-12345
-                        if (trimmed.length >= 4 && (trimmed.startsWith('JN-') || trimmed.startsWith('jn-') || trimmed.startsWith('SKU-') || trimmed.startsWith('sku-'))) {
-                          handleBarcodeOrQrScanned(trimmed);
-                          setScanInputText('');
-                        }
+                        setScanInputText(e.target.value);
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && scanInputText.trim()) {
@@ -645,16 +646,8 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                   data-scan-capture="true"
                   value={searchQuery}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    setSearchQuery(val);
+                    setSearchQuery(e.target.value);
                     setSearchFocused(true);
-                    // Quick auto-add if a full barcode was scanned directly into main search input
-                    const trimmed = val.trim();
-                    if (trimmed.length >= 4 && (trimmed.startsWith('JN-') || trimmed.startsWith('jn-') || trimmed.startsWith('SKU-') || trimmed.startsWith('sku-'))) {
-                      handleBarcodeOrQrScanned(trimmed);
-                      setSearchQuery('');
-                      setSearchFocused(false);
-                    }
                   }}
                   onKeyDown={async (e) => {
                     if (e.key === 'Enter' && searchQuery.trim()) {

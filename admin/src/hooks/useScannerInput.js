@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 
 export default function useScannerInput(onScan, options = {}) {
   const {
-    debounceMs = 300,
+    debounceMs = 500,
     minLength = 3,
     maxLength = 50,
     charIntervalThreshold = 60, // ms between chars from hardware scanner
