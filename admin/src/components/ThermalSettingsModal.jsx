@@ -7,7 +7,7 @@ import {
 import {
   getThermalSettings, fetchThermalSettingsFromDB, saveThermalSettings, resetThermalSettings, DEFAULT_THERMAL_SETTINGS
 } from '../utils/thermalSettings';
-import jalynLogoSmallUrl from '../assets/jalyn-logo-small.jpg';
+import jalynLogoPngUrl from '../assets/jalyn-logo.png';
 
 export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
   const [settings, setSettings] = useState(DEFAULT_THERMAL_SETTINGS);
@@ -583,45 +583,46 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
                   <div className="text-center space-y-1">
                     {settings.showLogo && (
                       <img
-                        src={settings.logoUrl || jalynLogoSmallUrl}
+                        src={settings.logoUrl || jalynLogoPngUrl}
                         alt="Logo"
-                        className="max-h-11 mx-auto mb-1 block object-contain"
+                        className="max-h-11 max-w-[140px] mx-auto mb-1 block object-contain"
+                        style={{ background: 'transparent', mixBlendMode: 'multiply' }}
                       />
                     )}
                     <div className="font-black text-base uppercase tracking-wider text-black">{settings.storeName}</div>
                     {settings.showAddress && (
                       <>
-                        <div className="text-[11px] font-bold text-black">{settings.shopNo}</div>
-                        <div className="text-[11px] font-bold text-black">{settings.addressLine2}</div>
-                        <div className="text-[11px] font-bold text-black">{settings.cityStatePin}</div>
+                        <div className="text-[11px] font-semibold text-gray-600">{settings.shopNo}</div>
+                        <div className="text-[11px] font-semibold text-gray-600">{settings.addressLine2}</div>
+                        <div className="text-[11px] font-semibold text-gray-600">{settings.cityStatePin}</div>
                       </>
                     )}
                     {settings.showPhone && settings.phone && (
-                      <div className="text-[11px] font-bold text-black">Phone No : {settings.phone}</div>
+                      <div className="text-[11px] font-semibold text-gray-600">Phone No : {settings.phone}</div>
                     )}
                     {settings.showGstin && settings.gstin && (
-                      <div className="text-[11px] font-black text-black">GST : {settings.gstin}</div>
+                      <div className="text-[11px] font-bold text-gray-700">GST : {settings.gstin}</div>
                     )}
                     {settings.showEmail && settings.email && (
-                      <div className="text-[11px] font-bold text-black">Email : {settings.email}</div>
+                      <div className="text-[11px] font-semibold text-gray-600">Email : {settings.email}</div>
                     )}
                   </div>
                 )}
 
                 {settings.showInvoiceTitle && (
-                  <div className="text-center font-black text-sm tracking-widest border-t-2 border-dashed border-black pt-1.5 mt-1.5 uppercase text-black">
+                  <div className="text-center font-black text-sm tracking-widest border-t-2 border-dashed border-gray-400 pt-1.5 mt-1.5 uppercase text-black">
                     {settings.invoiceTitle}
                   </div>
                 )}
 
                 {/* Meta Block */}
                 {settings.showCustomerInfo && (
-                  <div className="border-t-1.5 border-dashed border-black pt-1.5 space-y-0.5 text-[11px] font-bold text-black">
+                  <div className="border-t border-dashed border-gray-400 pt-1.5 space-y-0.5 text-[11px] font-semibold text-gray-600">
                     <div className="flex justify-between">
-                      <span>Invoice No : <strong className="font-black">ORD-2026-5275126</strong></span>
+                      <span>Invoice No : <strong className="font-bold text-gray-800">ORD-2026-5275126</strong></span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Date : <strong className="font-black">22/08/2026</strong></span>
+                      <span>Date : <strong className="font-bold text-gray-800">22/08/2026</strong></span>
                     </div>
                     <div>Bill To : loktest</div>
                     {settings.showCustomerPhone && <div>Ph. : 7010558149</div>}
@@ -631,8 +632,8 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
                 )}
 
                 {/* Items Table */}
-                <div className="border-t-1.5 border-dashed border-black pt-1.5">
-                  <div className="flex justify-between font-black text-[11.5px] pb-1 border-b-1.5 border-black text-black">
+                <div className="border-t border-dashed border-gray-400 pt-1.5">
+                  <div className="flex justify-between font-bold text-[11.5px] pb-1 border-b border-gray-400 text-gray-700">
                     <span className="w-4">#</span>
                     <span className="flex-1 px-1">Item</span>
                     <span className="w-10 text-center">Qty</span>
@@ -641,43 +642,43 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
                   </div>
 
                   {/* Sample Row 1 */}
-                  <div className="py-1.5 border-b border-gray-300 space-y-0.5 text-[11px]">
+                  <div className="py-1.5 border-b border-dashed border-gray-300 space-y-0.5 text-[11px] text-gray-600 font-semibold">
                     <div className="flex justify-between items-start">
-                      <span className="w-4 font-black">1</span>
-                      <div className="flex-1 px-1 font-black">
-                        <div>LUCKNOWI CHIKANKARI COTTON KURTI</div>
-                        <div className="text-[9.5px] text-gray-900 font-bold">
-                          {[settings.showItemSku ? 'JLN-18' : '', 'M', 'cream'].filter(Boolean).join(', ')}
-                        </div>
-                        {settings.showItemGstRate && <div className="text-[9.5px] font-bold">GST: 18%</div>}
+                      <span className="w-4 font-bold text-gray-600">1</span>
+                      <div className="flex-1 px-1">
+                        <div className="font-bold text-gray-800">LUCKNOWI CHIKANKARI COTTON KURTI</div>
+                        {settings.showItemSku && (
+                          <div className="text-[9.5px] text-gray-500 font-semibold">SKU: JLN-18</div>
+                        )}
+                        {settings.showItemGstRate && <div className="text-[9.5px] text-gray-500 font-semibold">GST: 18%</div>}
                       </div>
-                      <span className="w-10 text-center font-bold">1 Qty</span>
-                      {settings.showItemRate && <span className="w-14 text-right font-bold">1948.31</span>}
-                      <span className="w-12 text-right font-black">2299</span>
+                      <span className="w-10 text-center font-semibold">1 Qty</span>
+                      {settings.showItemRate && <span className="w-14 text-right font-semibold">1948.31</span>}
+                      <span className="w-12 text-right font-bold text-gray-800">2299</span>
                     </div>
                   </div>
 
                   {/* Sample Row 2 */}
-                  <div className="py-1.5 space-y-0.5 text-[11px]">
+                  <div className="py-1.5 space-y-0.5 text-[11px] text-gray-600 font-semibold">
                     <div className="flex justify-between items-start">
-                      <span className="w-4 font-black">2</span>
-                      <div className="flex-1 px-1 font-black">
-                        <div>LUCKNOWI CHIKANKARI COTTON KURTI</div>
-                        <div className="text-[9.5px] text-gray-900 font-bold">
-                          {[settings.showItemSku ? 'JLN-18' : '', 'S', 'cream'].filter(Boolean).join(', ')}
-                        </div>
-                        {settings.showItemGstRate && <div className="text-[9.5px] font-bold">GST: 18%</div>}
+                      <span className="w-4 font-bold text-gray-600">2</span>
+                      <div className="flex-1 px-1">
+                        <div className="font-bold text-gray-800">LUCKNOWI CHIKANKARI COTTON KURTI</div>
+                        {settings.showItemSku && (
+                          <div className="text-[9.5px] text-gray-500 font-semibold">SKU: JLN-18</div>
+                        )}
+                        {settings.showItemGstRate && <div className="text-[9.5px] text-gray-500 font-semibold">GST: 18%</div>}
                       </div>
-                      <span className="w-10 text-center font-bold">1 Qty</span>
-                      {settings.showItemRate && <span className="w-14 text-right font-bold">1948.31</span>}
-                      <span className="w-12 text-right font-black">2299</span>
+                      <span className="w-10 text-center font-semibold">1 Qty</span>
+                      {settings.showItemRate && <span className="w-14 text-right font-semibold">1948.31</span>}
+                      <span className="w-12 text-right font-bold text-gray-800">2299</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Sub Total & Calculations */}
-                <div className="border-t-1.5 border-dashed border-black pt-1.5 space-y-1 text-[11.5px] font-bold text-black">
-                  <div className="flex justify-between font-black">
+                <div className="border-t border-dashed border-gray-400 pt-1.5 space-y-1 text-[11.5px] font-semibold text-gray-600">
+                  <div className="flex justify-between font-bold text-gray-800">
                     <span>Sub Total</span>
                     <span>2</span>
                     <span>₹ 4,598</span>
@@ -700,13 +701,13 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
                     </>
                   )}
 
-                  <div className="border-t-1.5 border-black pt-1 flex justify-between font-black text-sm text-black">
+                  <div className="border-t-2 border-black pt-1 flex justify-between font-black text-sm text-black">
                     <span>Total</span>
                     <span>₹ 4,598</span>
                   </div>
 
                   {settings.showYouSaved && (
-                    <div className="flex justify-between font-black text-black">
+                    <div className="flex justify-between font-semibold text-gray-600">
                       <span>You Saved</span>
                       <span>- ₹ 100</span>
                     </div>
@@ -714,15 +715,15 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
 
                   {settings.showReceivedBalance && (
                     <>
-                      <div className="flex justify-between font-black text-black">
+                      <div className="flex justify-between font-semibold text-gray-600">
                         <span>Payment Mode</span>
-                        <span>CASH</span>
+                        <span className="uppercase">CASH</span>
                       </div>
-                      <div className="flex justify-between font-black text-black">
+                      <div className="flex justify-between font-semibold text-gray-600">
                         <span>Received (₹)</span>
                         <span>₹ 12,000</span>
                       </div>
-                      <div className="flex justify-between font-black text-black">
+                      <div className="flex justify-between font-semibold text-gray-600">
                         <span>Change / Balance</span>
                         <span>₹ 702</span>
                       </div>
@@ -732,17 +733,17 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
 
                 {/* Footer */}
                 {settings.showFooterMessage && (
-                  <div className="border-t-1.5 border-dashed border-black pt-2 text-center text-[11px] font-bold text-black space-y-1">
-                    <div className="font-black">{settings.footerMessage}</div>
+                  <div className="border-t border-dashed border-gray-400 pt-2 text-center text-[11px] font-semibold text-gray-600 space-y-1">
+                    <div className="font-bold text-gray-700">{settings.footerMessage}</div>
                     {settings.showTermsAndConditions !== false && Array.isArray(settings.termsAndConditions) && settings.termsAndConditions.length > 0 ? (
-                      <div className="text-[9px] leading-tight text-gray-900 font-bold space-y-0.5 pt-0.5">
+                      <div className="text-[9px] leading-tight text-gray-500 font-semibold space-y-0.5 pt-0.5">
                         {settings.termsAndConditions.map((term, i) => (
                           <div key={i}>{term}</div>
                         ))}
                       </div>
                     ) : (
                       settings.termsNote && (
-                        <div className="text-[9.5px] text-gray-900 mt-0.5 font-bold">{settings.termsNote}</div>
+                        <div className="text-[9.5px] text-gray-500 mt-0.5 font-semibold">{settings.termsNote}</div>
                       )
                     )}
                   </div>

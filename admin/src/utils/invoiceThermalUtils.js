@@ -1,5 +1,5 @@
-import jalynLogoUrl from '../assets/jalyn-logo-login.png';
-import jalynLogoSmallUrl from '../assets/jalyn-logo-small.jpg';
+import jalynLogoUrl from '../assets/jalyn-logo.png';
+import jalynLogoPngUrl from '../assets/jalyn-logo.png';
 import { getThermalSettings } from './thermalSettings';
 
 const escapeHtml = (v) =>
@@ -441,12 +441,6 @@ export const buildThermalHtml = (order, customSettings = {}) => {
       if (cfg.showItemSku && it.sku) {
         variantParts.push(it.sku);
       }
-      if (it.size) {
-        variantParts.push(it.size.toLowerCase().startsWith('size') ? it.size : `Size: ${it.size}`);
-      }
-      if (it.color) {
-        variantParts.push(it.color.toLowerCase().startsWith('color') ? it.color : `Color: ${it.color}`);
-      }
       const variantText = variantParts.join(', ');
 
       return `
@@ -465,12 +459,18 @@ export const buildThermalHtml = (order, customSettings = {}) => {
     .join('');
 
   const paperWidth = cfg.paperWidth || '80mm';
-  const logoSource = cfg.logoUrl || jalynLogoSmallUrl;
+  let logoSource = (cfg.logoUrl && cfg.logoUrl.trim()) ? cfg.logoUrl : jalynLogoPngUrl;
+  if (logoSource && !logoSource.startsWith('http') && !logoSource.startsWith('data:') && typeof window !== 'undefined') {
+    logoSource = window.location.origin + (logoSource.startsWith('/') ? '' : '/') + logoSource;
+  }
+
+  const baseOrigin = typeof window !== 'undefined' ? window.location.origin : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+${baseOrigin ? `<base href="${baseOrigin}/" />` : ''}
 <title>Tax Invoice - ${escapeHtml(orderNum)}</title>
 <style>
   @page {
@@ -488,8 +488,8 @@ export const buildThermalHtml = (order, customSettings = {}) => {
     font-family: 'Segoe UI', Arial, -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif;
     font-size: 12px;
     line-height: 1.35;
-    font-weight: 800;
-    color: #000000;
+    font-weight: 600;
+    color: #444444;
     background: #FFFFFF;
     padding: 3mm 3.5mm 5mm;
     -webkit-print-color-adjust: exact;
@@ -500,7 +500,7 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   }
   .center { text-align: center; }
   .right { text-align: right; }
-  .bold { font-weight: 900; }
+  .bold { font-weight: 800; color: #111111; }
 
   /* Store Header */
   .store-header {
@@ -508,12 +508,17 @@ export const buildThermalHtml = (order, customSettings = {}) => {
     margin-bottom: 2mm;
   }
   .store-logo {
-    max-height: 46px;
+    max-height: 48px;
+    max-width: 140px;
     width: auto;
     object-fit: contain;
     margin: 0 auto 1.5mm;
     display: block;
-    filter: contrast(150%);
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    mix-blend-mode: multiply;
   }
   .store-title {
     font-size: 16px;
@@ -524,9 +529,9 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   }
   .store-sub {
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 600;
     line-height: 1.35;
-    color: #000000;
+    color: #555555;
   }
   .inv-heading {
     font-size: 14px;
@@ -541,12 +546,12 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   /* Divider */
   .divider {
     border: none;
-    border-top: 1.5px dashed #000000;
+    border-top: 1.5px dashed #888888;
     margin: 2mm 0;
   }
   .solid-divider {
     border: none;
-    border-top: 1.5px solid #000000;
+    border-top: 1.5px solid #555555;
     margin: 1.5mm 0;
   }
 
@@ -554,20 +559,20 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   .meta-grid {
     font-size: 11.5px;
     line-height: 1.5;
-    font-weight: 800;
-    color: #000000;
+    font-weight: 600;
+    color: #555555;
   }
   .meta-row {
     display: flex;
     justify-content: space-between;
   }
   .meta-label {
-    font-weight: 800;
-    color: #000000;
+    font-weight: 600;
+    color: #555555;
   }
   .meta-val {
-    font-weight: 900;
-    color: #000000;
+    font-weight: 700;
+    color: #333333;
   }
 
   /* Items Table */
@@ -576,42 +581,42 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   }
   .table-header {
     display: flex;
-    font-weight: 900;
+    font-weight: 700;
     font-size: 11.5px;
     padding-bottom: 1mm;
-    border-bottom: 1.5px solid #000000;
-    color: #000000;
+    border-bottom: 1.5px solid #666666;
+    color: #444444;
     letter-spacing: 0.3px;
   }
   .item-line {
     display: flex;
     font-size: 11.5px;
-    font-weight: 800;
+    font-weight: 600;
     padding: 1.5mm 0;
-    border-bottom: 1px dashed #888888;
+    border-bottom: 1px dashed #cccccc;
     align-items: flex-start;
-    color: #000000;
+    color: #555555;
   }
-  .col-num { width: 16px; font-weight: 900; }
+  .col-num { width: 16px; font-weight: 700; color: #555555; }
   .col-desc { flex: 1; padding: 0 4px; }
-  .item-title { font-weight: 900; text-transform: uppercase; font-size: 11.5px; color: #000000; }
-  .item-sub { font-size: 10px; font-weight: 800; color: #000000; margin-top: 1px; }
-  .col-qty { width: 44px; text-align: center; font-weight: 800; font-size: 11px; font-variant-numeric: tabular-nums; }
-  .col-rate { width: 52px; text-align: right; font-weight: 800; font-size: 11px; font-variant-numeric: tabular-nums; }
-  .col-amt { width: 48px; text-align: right; font-weight: 900; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .item-title { font-weight: 700; text-transform: uppercase; font-size: 11.5px; color: #333333; }
+  .item-sub { font-size: 10px; font-weight: 600; color: #666666; margin-top: 1px; }
+  .col-qty { width: 44px; text-align: center; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums; color: #555555; }
+  .col-rate { width: 52px; text-align: right; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums; color: #555555; }
+  .col-amt { width: 48px; text-align: right; font-weight: 700; font-size: 11.5px; font-variant-numeric: tabular-nums; color: #444444; }
 
   /* Calculations & Totals */
   .totals-section {
     font-size: 11.5px;
     line-height: 1.55;
-    font-weight: 800;
-    color: #000000;
+    font-weight: 600;
+    color: #555555;
   }
   .calc-row {
     display: flex;
     justify-content: space-between;
-    font-weight: 800;
-    color: #000000;
+    font-weight: 600;
+    color: #555555;
     font-variant-numeric: tabular-nums;
   }
   .grand-row {
@@ -626,15 +631,22 @@ export const buildThermalHtml = (order, customSettings = {}) => {
     color: #000000;
     font-variant-numeric: tabular-nums;
   }
+  .payment-row {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+    color: #555555;
+    font-variant-numeric: tabular-nums;
+  }
 
   /* Footer */
   .footer-box {
     text-align: center;
-    font-size: 11.5px;
-    font-weight: 800;
+    font-size: 11px;
+    font-weight: 600;
     margin-top: 3mm;
     line-height: 1.4;
-    color: #000000;
+    color: #666666;
   }
 
   @media print {
@@ -656,7 +668,7 @@ export const buildThermalHtml = (order, customSettings = {}) => {
       ${cfg.cityStatePin ? `<div class="store-sub">${escapeHtml(cfg.cityStatePin)}</div>` : ''}
     ` : ''}
     ${cfg.showPhone && cfg.phone ? `<div class="store-sub">Phone No : ${escapeHtml(cfg.phone)}</div>` : ''}
-    ${cfg.showGstin && cfg.gstin ? `<div class="store-sub" style="font-weight: 900;">GST : ${escapeHtml(cfg.gstin)}</div>` : ''}
+    ${cfg.showGstin && cfg.gstin ? `<div class="store-sub" style="font-weight: 700; color: #444;">GST : ${escapeHtml(cfg.gstin)}</div>` : ''}
     ${cfg.showEmail && cfg.email ? `<div class="store-sub">Email : ${escapeHtml(cfg.email)}</div>` : ''}
   </div>` : ''}
 
@@ -737,21 +749,21 @@ export const buildThermalHtml = (order, customSettings = {}) => {
     </div>
 
     ${cfg.showYouSaved && youSaved > 0 ? `
-    <div class="calc-row bold" style="color: #000;">
+    <div class="calc-row" style="color: #555555;">
       <span>You Saved</span>
       <span>- ₹ ${youSaved.toLocaleString('en-IN')}</span>
     </div>` : ''}
 
     ${(cfg.showReceivedBalance !== false) ? `
-    <div class="calc-row bold" style="margin-top: 1mm;">
+    <div class="payment-row" style="margin-top: 1mm;">
       <span>Payment Mode</span>
       <span style="text-transform: uppercase;">${escapeHtml(paymentMethod || 'Cash')}</span>
     </div>
-    <div class="calc-row bold">
+    <div class="payment-row">
       <span>Received (₹)</span>
       <span>₹ ${receivedAmount.toLocaleString('en-IN')}</span>
     </div>
-    <div class="calc-row bold">
+    <div class="payment-row">
       <span>Change / Balance</span>
       <span>₹ ${balanceAmount.toLocaleString('en-IN')}</span>
     </div>` : ''}
@@ -759,13 +771,13 @@ export const buildThermalHtml = (order, customSettings = {}) => {
 
   ${cfg.showFooterMessage ? `
   <div class="footer-box">
-    ${cfg.footerMessage ? `<div class="bold" style="font-size: 12px; font-weight: 900; margin-bottom: 1.5mm;">${escapeHtml(cfg.footerMessage)}</div>` : ''}
+    ${cfg.footerMessage ? `<div style="font-size: 11.5px; font-weight: 700; color: #444; margin-bottom: 1.5mm;">${escapeHtml(cfg.footerMessage)}</div>` : ''}
     ${cfg.showTermsAndConditions !== false ? `
       ${Array.isArray(cfg.termsAndConditions) && cfg.termsAndConditions.length > 0 ? `
-        <div style="font-size: 9.5px; line-height: 1.35; color: #000; text-align: center; margin-top: 1mm; font-weight: 800;">
+        <div style="font-size: 9.5px; line-height: 1.35; color: #666; text-align: center; margin-top: 1mm; font-weight: 600;">
           ${cfg.termsAndConditions.filter(Boolean).map((term) => `<div>${escapeHtml(term)}</div>`).join('')}
         </div>
-      ` : (cfg.termsNote ? `<div style="font-size: 9.5px; color: #000; margin-top: 1mm; font-weight: 800;">${escapeHtml(cfg.termsNote)}</div>` : '')}
+      ` : (cfg.termsNote ? `<div style="font-size: 9.5px; color: #666; margin-top: 1mm; font-weight: 600;">${escapeHtml(cfg.termsNote)}</div>` : '')}
     ` : ''}
   </div>` : ''}
 <script>
