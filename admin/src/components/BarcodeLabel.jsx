@@ -24,7 +24,7 @@ export default function BarcodeLabel({
     if (!barcode) return '';
     return generateBarcodeSVG(barcode, {
       width: '100%',
-      height: 32,
+      height: 28,
       showText: false,
       moduleWidth: 2,
       quietZone: 6,
@@ -33,7 +33,7 @@ export default function BarcodeLabel({
     });
   }, [barcode]);
 
-  // Combined code line: "JN-93928 (L) KURTIN"
+  // Combined code line: "JN-43320 (M) KURTIN"
   const barcodeRowParts = [];
   if (showBarcodeNumber && barcode) {
     barcodeRowParts.push(barcode);
@@ -56,7 +56,7 @@ export default function BarcodeLabel({
         height: forPrint ? '24mm' : '25mm',
         maxWidth: forPrint ? '48.5mm' : '50mm',
         maxHeight: forPrint ? '24mm' : '25mm',
-        padding: '0.4mm 1mm 0.3mm',
+        padding: '1.2mm 1mm 0.4mm',
         boxSizing: 'border-box',
         overflow: 'hidden',
         background: '#ffffff',
@@ -64,12 +64,19 @@ export default function BarcodeLabel({
         boxShadow: 'none'
       }}
     >
-      {/* 1. Shop / Company Name */}
+      {/* 1. Shop / Company Name (JALYN APPARELS in CAPS, increased 2px font size, spaced down from top edge) */}
       <div
-        style={{ fontSize: '8.5pt', letterSpacing: '1px', lineHeight: '1.05', fontWeight: 900, color: '#000000' }}
+        style={{
+          fontSize: '10.5pt',
+          letterSpacing: '1px',
+          lineHeight: '1.05',
+          fontWeight: 900,
+          color: '#000000',
+          marginBottom: '0.4mm'
+        }}
         className="font-sans uppercase text-black w-full text-center truncate shrink-0"
       >
-        {companyName || 'JALYN APPARELS'}
+        {String(companyName || 'JALYN APPARELS').toUpperCase()}
       </div>
 
       {/* 2. Barcode Visual */}
@@ -77,7 +84,7 @@ export default function BarcodeLabel({
         {barcode ? (
           <div
             className="w-full flex justify-center items-center overflow-hidden"
-            style={{ maxHeight: '28px', height: '28px' }}
+            style={{ maxHeight: '26px', height: '26px' }}
             dangerouslySetInnerHTML={{ __html: barcodeSvg }}
           />
         ) : (
@@ -88,7 +95,14 @@ export default function BarcodeLabel({
       {/* 3. Barcode Code + (Size) + Short Name in ONE Row */}
       {combinedBarcodeInfo && (
         <div
-          style={{ fontSize: '8.5pt', lineHeight: '1.1', letterSpacing: '0.5px', fontWeight: 900, color: '#000000' }}
+          style={{
+            fontSize: '8.5pt',
+            lineHeight: '1.1',
+            letterSpacing: '0.5px',
+            fontWeight: 900,
+            color: '#000000',
+            marginTop: '0.2mm'
+          }}
           className="font-mono text-black text-center w-full truncate shrink-0 px-0.5"
           title={combinedBarcodeInfo}
         >
@@ -99,7 +113,13 @@ export default function BarcodeLabel({
       {/* 4. Price (Extra Bold, Increased Font Size, Rupee symbol.00, No MRP) */}
       {showPrice && displayPrice && (
         <div
-          style={{ fontSize: '13pt', lineHeight: '1.05', fontWeight: 900, color: '#000000', letterSpacing: '-0.3px' }}
+          style={{
+            fontSize: '13pt',
+            lineHeight: '1.05',
+            fontWeight: 900,
+            color: '#000000',
+            letterSpacing: '-0.3px'
+          }}
           className="font-sans text-black text-center w-full shrink-0 tracking-tight"
         >
           ₹{Number(displayPrice).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

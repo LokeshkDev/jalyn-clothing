@@ -34,7 +34,7 @@ export const BARCODE_LABEL_CONFIG = {
 
   // Default label content settings
   label: {
-    companyName: 'JALYN',
+    companyName: 'JALYN APPARELS',
     showProductName: true,
     showColor: true,
     showSize: true,

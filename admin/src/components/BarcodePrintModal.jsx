@@ -89,7 +89,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
 
         return `
           <div class="sticker-label">
-            <div class="brand-title">${String(companyName || 'JALYN APPARELS').replace(/[&<>"']/g, '')}</div>
+            <div class="brand-title">${String(companyName || 'JALYN APPARELS').toUpperCase().replace(/[&<>"']/g, '')}</div>
             <div class="barcode-box">
               ${barcodeSvg}
             </div>
@@ -149,7 +149,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     max-width: ${labelWidth} !important;
     max-height: ${labelHeight} !important;
     box-sizing: border-box !important;
-    padding: 0.4mm 1mm 0.3mm !important;
+    padding: 1.2mm 1mm 0.4mm !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
@@ -161,7 +161,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     overflow: hidden !important;
   }
   .brand-title {
-    font-size: 8.5pt;
+    font-size: 10.5pt;
     font-weight: 900;
     letter-spacing: 1px;
     line-height: 1.05;
@@ -171,6 +171,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-bottom: 0.4mm;
   }
   .barcode-box {
     width: 100%;
@@ -181,8 +182,8 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     margin: 0.2mm 0;
   }
   .barcode-box svg {
-    max-height: 28px;
-    height: 28px;
+    max-height: 26px;
+    height: 26px;
     width: 100%;
     shape-rendering: crispEdges;
   }
