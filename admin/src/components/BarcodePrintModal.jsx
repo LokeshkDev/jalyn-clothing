@@ -63,7 +63,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
       const labelsHtml = row.map((item) => {
         const barcodeSvg = generateBarcodeSVG(item.barcode, {
           width: '100%',
-          height: 36,
+          height: 42,
           showText: false,
           moduleWidth: 2,
           quietZone: 8,
@@ -79,9 +79,11 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
 
         return `
           <div class="sticker-label">
-            <div class="brand-title">${String(companyName || 'JALYN').replace(/[&<>"']/g, '')}</div>
-            ${showProductName && item.productName ? `<div class="product-title">${String(item.productName).replace(/[&<>"']/g, '')}</div>` : ''}
-            ${variantParts.length > 0 ? `<div class="variant-info">${variantParts.join(' • ')}</div>` : ''}
+            <div class="top-content">
+              <div class="brand-title">${String(companyName || 'JALYN').replace(/[&<>"']/g, '')}</div>
+              ${showProductName && item.productName ? `<div class="product-title">${String(item.productName).replace(/[&<>"']/g, '')}</div>` : ''}
+              ${variantParts.length > 0 ? `<div class="variant-info">${variantParts.join(' • ')}</div>` : ''}
+            </div>
             <div class="barcode-box">
               ${barcodeSvg}
               ${showBarcodeNumber ? `<div class="barcode-num">${String(item.barcode)}</div>` : ''}
@@ -125,7 +127,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     flex-direction: row !important;
     justify-content: ${isTwoPerRow ? 'space-between' : 'center'} !important;
     align-items: center !important;
-    padding: 0.5mm 1mm !important;
+    padding: 0.4mm 0.8mm !important;
     box-sizing: border-box !important;
     page-break-after: always !important;
     break-after: page !important;
@@ -140,7 +142,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     max-width: ${labelWidth} !important;
     max-height: ${labelHeight} !important;
     box-sizing: border-box !important;
-    padding: 1mm 1.5mm 0.8mm !important;
+    padding: 0.6mm 1.2mm 0.4mm !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
@@ -151,16 +153,23 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     box-shadow: none !important;
     overflow: hidden !important;
   }
+  .top-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+  }
   .brand-title {
-    font-size: 7.5pt;
+    font-size: 8.5pt;
     font-weight: 900;
     letter-spacing: 1.5px;
-    line-height: 1.15;
+    line-height: 1.1;
     text-transform: uppercase;
     color: #000000;
   }
   .product-title {
-    font-size: 7pt;
+    font-size: 8pt;
     font-weight: 800;
     line-height: 1.15;
     color: #000000;
@@ -168,18 +177,18 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     overflow: hidden;
     text-overflow: ellipsis;
     width: 100%;
-    margin-top: 0.3mm;
+    margin-top: 0.2mm;
   }
   .variant-info {
-    font-size: 6.5pt;
-    font-weight: 700;
+    font-size: 7.5pt;
+    font-weight: 800;
     line-height: 1.15;
     color: #000000;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     width: 100%;
-    margin-top: 0.3mm;
+    margin-top: 0.2mm;
   }
   .barcode-box {
     width: 100%;
@@ -187,21 +196,22 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     flex-direction: column;
     align-items: center;
     justify-content: flex-end;
-    margin-top: 0.5mm;
+    margin-top: 0.3mm;
   }
   .barcode-box svg {
-    max-height: 28px;
+    max-height: 32px;
+    height: 32px;
     width: 100%;
     shape-rendering: crispEdges;
   }
   .barcode-num {
     font-family: monospace;
-    font-size: 6.5pt;
+    font-size: 8pt;
     font-weight: 900;
-    letter-spacing: 1px;
-    line-height: 1.1;
+    letter-spacing: 1.2px;
+    line-height: 1.05;
     color: #000000;
-    margin-top: 0.3mm;
+    margin-top: 0.2mm;
   }
   @media print {
     html, body {

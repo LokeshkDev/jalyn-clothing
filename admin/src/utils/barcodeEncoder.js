@@ -1,34 +1,45 @@
 import { BARCODE_LABEL_CONFIG } from './barcodeLabelConfig.js';
 
-// Standard 107 Code 128 Patterns (ISO/IEC 15417) — indices 0 to 106
-const CODE128_PATTERNS = [
-  '11011001100', '11001101100', '11001100110', '10010011000', '10010001100', '10001001100', '10011001000', '10011000100', '10001100100', '11001001000',
-  '11001000100', '11000100100', '10110011100', '10011011100', '10011001110', '10111001100', '10011101100', '10011100110', '11001110010', '11001011100',
-  '11001001110', '11011100100', '11001110100', '11101101110', '11101001100', '11100101100', '11100100110', '11101100100', '11100110100', '11100110010',
-  '11011011000', '11011000110', '11000110110', '10100011000', '10001011000', '10001000110', '10110001000', '10001101000', '10001100010', '11010001000',
-  '11000101000', '11000100010', '10110111000', '10110001110', '10001101110', '10111011000', '10111000110', '10001110110', '11101011000', '11101000110',
-  '11100010110', '11011101000', '11011100010', '11001110100', '11110100010', '11010111000', '11010001110', '11000101110', '11011101110', '11110101000',
-  '11110100010', '10100110000', '10100001100', '10010110000', '10010000110', '10000101100', '10000100110', '10110010000', '10110000100', '10011010000',
-  '10011000010', '10000110100', '10000110010', '11000010010', '11001010000', '11110111010', '11000010100', '10001111010', '10100111100', '10010111100',
-  '10010011110', '10111100100', '10011110100', '10011110010', '11110100100', '11110010100', '11110010010', '11011011110', '11011110110', '11110100110',
-  '10101111000', '10100011110', '10001011110', '10111101000', '10111100010', '11110101000', '11110100010', '10111011110', '10111101110', '11101011110',
-  '11110101110', '11010000100', '11010010000', '11010011100', '11010010000', '11010011100', '1100011101011'
+// Canonical ISO/IEC 15417 Code 128 Symbol Widths (Indices 0 to 106)
+const CODE128_WIDTHS = [
+  '212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312', '132212', '221213',
+  '221312', '231212', '112232', '122132', '122231', '113222', '123122', '123221', '223211', '221132',
+  '221231', '213212', '223112', '312131', '311222', '321122', '321221', '312212', '322112', '322211',
+  '212123', '212321', '232121', '111323', '131123', '131321', '112313', '132113', '132311', '211313',
+  '231113', '231311', '112133', '112331', '132131', '113123', '113321', '133121', '313121', '211331',
+  '231131', '213113', '213311', '213131', '311123', '311321', '331121', '312113', '312311', '332111',
+  '314111', '221411', '431111', '111224', '111422', '121124', '121421', '141122', '141221', '112214',
+  '112412', '122114', '122411', '142112', '142211', '241211', '221114', '413111', '241112', '134111',
+  '111242', '121142', '121241', '114212', '124112', '124211', '411212', '421112', '421211', '212141',
+  '214121', '412121', '111143', '111341', '131141', '114113', '114311', '411113', '411311', '113141',
+  '114131', '311141', '411131', '211412', '211214', '211232', '2331112'
 ];
+
+export const CODE128_PATTERNS = CODE128_WIDTHS.map((w) => {
+  let res = '';
+  let isBar = true;
+  for (const digit of w) {
+    res += (isBar ? '1' : '0').repeat(parseInt(digit, 10));
+    isBar = !isBar;
+  }
+  return res;
+});
 
 export function encodeCode128(text) {
   if (!text) return '';
   
+  const clean = String(text).trim();
   const START_B = 104;
   const STOP = 106;
   
   let checkDigit = START_B;
   let encoding = CODE128_PATTERNS[START_B];
   
-  for (let i = 0; i < text.length; i++) {
-    const charCode = text.charCodeAt(i);
+  for (let i = 0; i < clean.length; i++) {
+    const charCode = clean.charCodeAt(i);
     const value = charCode - 32;
     if (value < 0 || value > 95) {
-      console.warn(`Character '${text[i]}' not supported in Code 128B`);
+      console.warn(`Character '${clean[i]}' not supported in Code 128B, skipping`);
       continue;
     }
     
@@ -104,11 +115,11 @@ export function generateBarcodePNG(labelData, config = BARCODE_LABEL_CONFIG) {
   // Company Name
   ctx.fillStyle = '#000000';
   ctx.textAlign = 'center';
-  ctx.font = 'bold 26px sans-serif';
-  ctx.fillText(labelData.companyName || config.label.companyName, canvas.width / 2, marginY + 26);
+  ctx.font = '900 28px sans-serif';
+  ctx.fillText(labelData.companyName || config.label.companyName, canvas.width / 2, marginY + 28);
 
   // Product Name
-  ctx.font = '20px sans-serif';
+  ctx.font = '800 22px sans-serif';
   const maxWidth = canvas.width - (marginX * 2);
   let productName = labelData.productName || 'Unknown Product';
   // Simple truncation
@@ -118,26 +129,26 @@ export function generateBarcodePNG(labelData, config = BARCODE_LABEL_CONFIG) {
     }
     productName += '...';
   }
-  ctx.fillText(productName, canvas.width / 2, marginY + 62);
+  ctx.fillText(productName, canvas.width / 2, marginY + 64);
 
   // Color • Size • Price
-  ctx.font = '17px sans-serif';
+  ctx.font = 'bold 19px sans-serif';
   const details = [];
   if (labelData.color && config.label.showColor) details.push(labelData.color);
   if (labelData.size && config.label.showSize) details.push(`Size: ${labelData.size}`);
   if (labelData.price && config.label.showPrice) details.push(`₹${labelData.price}`);
 
-  ctx.fillText(details.join(' • '), canvas.width / 2, marginY + 96);
+  ctx.fillText(details.join(' • '), canvas.width / 2, marginY + 98);
 
   // Barcode
-  const barcodeY = marginY + 118;
-  const barcodeHeight = 112;
+  const barcodeY = marginY + 116;
+  const barcodeHeight = 116;
   const barcodeText = labelData.barcode || '';
 
   if (barcodeText) {
     const encoding = encodeCode128(barcodeText);
-    const moduleWidth = 2.5;
-    const quietZone = 6;
+    const moduleWidth = 2.6;
+    const quietZone = 8;
     const totalBarcodeWidth = (encoding.length + (quietZone * 2)) * moduleWidth;
     const startX = (canvas.width - totalBarcodeWidth) / 2 + (quietZone * moduleWidth);
 
@@ -153,7 +164,7 @@ export function generateBarcodePNG(labelData, config = BARCODE_LABEL_CONFIG) {
 
     // Barcode Number
     if (config.label.showBarcodeNumber) {
-      ctx.font = '17px monospace';
+      ctx.font = '900 20px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(barcodeText, canvas.width / 2, barcodeY + barcodeHeight + 24);
     }

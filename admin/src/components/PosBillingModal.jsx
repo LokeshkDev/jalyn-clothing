@@ -29,6 +29,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const searchInputRef = useRef(null);
+  const scanInputRef = useRef(null);
 
   // Thermal format settings modal
   const [showThermalSettingsModal, setShowThermalSettingsModal] = useState(false);

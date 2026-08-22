@@ -383,7 +383,11 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   const discount = Number(order.discount_amount) || 0;
   const shipping = Number(order.shipping_amount) || 0;
   const total = Number(order.total_amount) || Math.max(subtotal + shipping - discount, 0);
-  const gstRate = Number(order.gst_rate !== undefined ? order.gst_rate : (cfg.defaultGstRate !== undefined ? cfg.defaultGstRate : 5));
+  const gstRate = Number(
+    order.gst_rate !== undefined && order.gst_rate !== '' && order.gst_rate !== null
+      ? order.gst_rate
+      : (subtotal > 2500 || total > 2500 ? 18 : (cfg.defaultGstRate !== undefined ? cfg.defaultGstRate : 5))
+  );
   const isGstInclusive = order.is_gst_inclusive !== undefined ? !!order.is_gst_inclusive : cfg.isGstInclusive !== false;
 
   let taxableAmount = 0;
