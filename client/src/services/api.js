@@ -56,5 +56,19 @@ api.interceptors.response.use(
   }
 );
 
+export const authAPI = {
+  login: (data) => api.post('/auth/login', data),
+  register: (data) => api.post('/auth/register', data),
+  google: (data) => api.post('/auth/google', data),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
+  getMe: () => api.get('/auth/me'),
+  changePassword: (data) => api.post('/auth/change-password', data),
+  getAddresses: () => api.get('/auth/addresses'),
+  createAddress: (data) => api.post('/auth/addresses', data),
+  updateAddress: (id, data) => api.put(`/auth/addresses/${id}`, data),
+  deleteAddress: (id) => api.delete(`/auth/addresses/${id}`),
+};
+
 export default api;
 

@@ -8,7 +8,7 @@ import { BARCODE_LABEL_CONFIG } from '../utils/barcodeLabelConfig';
 import { PRODUCT_PLACEHOLDER } from '../utils/placeholder';
 import {
   Search, Filter, Printer, Download, RefreshCw, Loader2, Check, AlertCircle,
-  Eye, RotateCcw, X, ChevronLeft, ChevronRight, Package, Tag, Barcode
+  Eye, RotateCcw, X, ChevronLeft, ChevronRight, Package, Tag, Barcode, Trash2
 } from 'lucide-react';
 
 export default function BarcodesPage() {

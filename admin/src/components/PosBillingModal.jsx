@@ -4,11 +4,13 @@ import {
   X, Search, Plus, Trash2, Loader2, Printer, FileText, Check,
   ShoppingBag, CreditCard, Banknote, Smartphone, Store, Truck,
   User, Phone, Mail, MapPin, Tag, Sparkles, AlertCircle, IndianRupee,
-  Minus, Scan, Camera, Send, QrCode, Star, Instagram, Globe, RefreshCw
+  Minus, Scan, Camera, Send, QrCode, Star, Instagram, Globe, RefreshCw, Settings, Percent
 } from 'lucide-react';
 import { printThermalReceipt, printTaxInvoice, sendLuxuryWhatsAppInvoice } from '../utils/invoiceThermalUtils';
 import { playSuccessBeep, playErrorBeep } from '../utils/audioFeedback';
 import useScannerInput from '../hooks/useScannerInput';
+import ThermalSettingsModal from './ThermalSettingsModal';
+import { getThermalSettings } from '../utils/thermalSettings';
 
 const money = (v) => '₹' + Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
@@ -22,10 +24,14 @@ const PAYMENT_METHODS = [
 
 export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showToast }) {
   const [products, setProducts] = useState([]);
+  const [barcodesList, setBarcodesList] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const searchInputRef = useRef(null);
+
+  // Thermal format settings modal
+  const [showThermalSettingsModal, setShowThermalSettingsModal] = useState(false);
 
   // Scanner modal state
   const [showScannerModal, setShowScannerModal] = useState(false);
@@ -49,6 +55,13 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
   const [paymentStatus, setPaymentStatus] = useState('paid');
   const [orderStatus, setOrderStatus] = useState('delivered');
 
+  // GST Calculation Configuration (Default 5% Apparel Slab, Inclusive by Default)
+  const [gstRate, setGstRate] = useState(5);
+  const [isGstInclusive, setIsGstInclusive] = useState(true);
+
+  // Cash Received & Change Calculation
+  const [amountReceived, setAmountReceived] = useState('');
+
   // WhatsApp Review & Social Links Options
   const [includeReviewLinks, setIncludeReviewLinks] = useState(true);
 
@@ -60,9 +73,16 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
   // Processing state
   const [submitting, setSubmitting] = useState(false);
 
-  // Load product catalog for SKU, barcode & name search
+  // Load product catalog and thermal default settings on open
   useEffect(() => {
     if (isOpen) {
+      const currentSettings = getThermalSettings();
+      if (currentSettings?.defaultGstRate !== undefined) {
+        setGstRate(Number(currentSettings.defaultGstRate));
+      }
+      if (currentSettings?.isGstInclusive !== undefined) {
+        setIsGstInclusive(!!currentSettings.isGstInclusive);
+      }
       loadProductCatalog();
       setTimeout(() => {
         searchInputRef.current?.focus();
@@ -73,9 +93,14 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
   const loadProductCatalog = async () => {
     setLoadingProducts(true);
     try {
-      const res = await api.get('/products', { params: { include_offline: '1' } });
-      const raw = res.data?.products || (Array.isArray(res.data) ? res.data : []);
+      const [pRes, bRes] = await Promise.all([
+        api.get('/products', { params: { include_offline: '1' } }),
+        api.get('/barcodes', { params: { status: 'active', limit: 2000 } }).catch(() => ({ data: { data: [] } }))
+      ]);
+      const raw = pRes.data?.products || (Array.isArray(pRes.data) ? pRes.data : []);
+      const barcodes = bRes.data?.data || (Array.isArray(bRes.data) ? bRes.data : []);
       setProducts(raw);
+      setBarcodesList(barcodes);
     } catch (err) {
       console.warn('Failed to load products for POS billing:', err);
     } finally {
@@ -105,6 +130,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     const defaultSize = selectedSize || (Array.isArray(product.sizes) && product.sizes.length > 0 ? product.sizes[0] : (product.size || 'Free Size'));
     const defaultColor = selectedColor || (Array.isArray(product.colors) && product.colors.length > 0 ? product.colors[0] : (product.color || ''));
     const price = Number(product.price) || 0;
+    const mrp = Number(product.original_price) || Number(product.compare_price) || Number(product.price) || 0;
     const imageUrl = product.primary_image || product.image || product.image_url || (Array.isArray(product.images) && product.images[0]) || '';
     const sku = product.base_sku || product.sku || (product.id ? `SKU-${product.id}` : '');
 
@@ -119,14 +145,15 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
       updated[existingIndex].quantity = (Number(updated[existingIndex].quantity) || 1) + 1;
       setBillItems(updated);
     } else {
-      // Add new line item
+      // Add new line item with MRP as price
       setBillItems((prev) => [
         ...prev,
         {
           product_id: product.id,
           product_name: product.title || product.name || 'Untitled Item',
           sku: sku,
-          price: price,
+          price: mrp,
+          original_price: mrp,
           quantity: 1,
           size: defaultSize,
           color: defaultColor,
@@ -141,33 +168,81 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     setSearchFocused(false);
   };
 
-  // Handle barcode / QR scan from hardware wedge or camera popup
+  // Handle barcode / QR scan or manual barcode typing
   const handleBarcodeOrQrScanned = useCallback(
-    (code) => {
-      if (!code || !isOpen) return;
+    async (code) => {
+      if (!code || !isOpen) return false;
       const clean = String(code).trim().toLowerCase();
+      if (!clean) return false;
 
-      // Find by barcode, SKU, ID, or title
-      const found = products.find((p) => {
-        const b = (p.barcode || '').toLowerCase();
-        const s = (p.base_sku || p.sku || '').toLowerCase();
-        const t = (p.title || p.name || '').toLowerCase();
-        const idMatch = String(p.id) === clean;
-        return b === clean || s === clean || idMatch || t.includes(clean);
+      // 1. Check in barcodesList (exact barcode match e.g. JN-12345 or 12345)
+      const matchedBarcode = barcodesList.find((b) => {
+        const bCode = (b.barcode || '').toLowerCase();
+        return bCode === clean || bCode.replace('jn-', '') === clean || bCode.replace(/^0+/, '') === clean;
       });
 
-      if (found) {
+      let matchedProduct = null;
+      let selectedSize = null;
+      let selectedColor = null;
+
+      if (matchedBarcode) {
+        matchedProduct = products.find((p) => p.id === matchedBarcode.product_id);
+        selectedSize = matchedBarcode.size || null;
+        selectedColor = matchedBarcode.color || null;
+      }
+
+      // 2. Check in products array by barcode, SKU, product_code, or ID
+      if (!matchedProduct) {
+        matchedProduct = products.find((p) => {
+          const b = (p.barcode || '').toLowerCase();
+          const s = (p.base_sku || p.sku || '').toLowerCase();
+          const c = (p.product_code || '').toLowerCase();
+          const idMatch = String(p.id) === clean;
+          return b === clean || s === clean || c === clean || idMatch;
+        });
+      }
+
+      // 3. Fallback: Query backend API for barcode if not in initial list
+      if (!matchedProduct) {
+        try {
+          const lookupRes = await api.get('/barcodes', { params: { search: code.trim(), limit: 5 } });
+          const foundBarcodes = lookupRes.data?.data || [];
+          if (foundBarcodes.length > 0) {
+            const exact = foundBarcodes.find((b) => {
+              const bCode = (b.barcode || '').toLowerCase();
+              return bCode === clean || bCode.replace('jn-', '') === clean;
+            }) || foundBarcodes[0];
+
+            selectedSize = exact.size || null;
+            selectedColor = exact.color || null;
+            matchedProduct = products.find((p) => p.id === exact.product_id);
+            if (!matchedProduct) {
+              const pRes = await api.get(`/products/${exact.product_id}`);
+              matchedProduct = pRes.data?.product || pRes.data;
+            }
+          }
+        } catch (err) {
+          console.warn('Barcode remote lookup error:', err);
+        }
+      }
+
+      if (matchedProduct) {
         playSuccessBeep();
-        handleAddProduct(found);
-        setScanFeedback({ type: 'success', text: `✓ Added "${found.title}" (${found.base_sku || found.sku || code})` });
-        setTimeout(() => setScanFeedback(null), 3000);
+        handleAddProduct(matchedProduct, selectedSize, selectedColor);
+        setScanFeedback({
+          type: 'success',
+          text: `✓ Auto-populated "${matchedProduct.title || matchedProduct.name}" ${selectedSize ? `(${selectedSize}${selectedColor ? ` / ${selectedColor}` : ''})` : ''} from Barcode ${code.trim().toUpperCase()}`
+        });
+        setTimeout(() => setScanFeedback(null), 3500);
+        return true;
       } else {
         playErrorBeep();
-        setScanFeedback({ type: 'error', text: `✕ No product found for barcode "${code}"` });
-        setTimeout(() => setScanFeedback(null), 3500);
+        setScanFeedback({ type: 'error', text: `✕ No product found matching barcode "${code.trim()}"` });
+        setTimeout(() => setScanFeedback(null), 4000);
+        return false;
       }
     },
-    [products, isOpen, billItems]
+    [products, barcodesList, isOpen, billItems]
   );
 
   // Hook hardware scanner listener
@@ -177,21 +252,29 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     }
   });
 
-  // Filtered Products for Live Search & SKU Auto-populate
+  // Filtered Products for Live Search & SKU/Barcode Auto-populate
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return [];
+
+    // Find product IDs matching barcodes
+    const matchingBarcodeProductIds = new Set(
+      barcodesList
+        .filter((b) => (b.barcode || '').toLowerCase().includes(q))
+        .map((b) => b.product_id)
+    );
 
     return products
       .filter((p) => {
         const titleMatch = (p.title || p.name || '').toLowerCase().includes(q);
         const skuMatch = (p.base_sku || p.sku || '').toLowerCase().includes(q);
-        const barcodeMatch = (p.barcode || '').toLowerCase().includes(q);
+        const prodCodeMatch = (p.product_code || '').toLowerCase().includes(q);
+        const barcodeMatch = (p.barcode || '').toLowerCase().includes(q) || matchingBarcodeProductIds.has(p.id);
         const catMatch = (p.category || p.category_name || p.category_slug || '').toLowerCase().includes(q);
-        return titleMatch || skuMatch || barcodeMatch || catMatch;
+        return titleMatch || skuMatch || prodCodeMatch || barcodeMatch || catMatch;
       })
       .slice(0, 8); // Top 8 matches
-  }, [searchQuery, products]);
+  }, [searchQuery, products, barcodesList]);
 
   // Add empty custom item
   const handleAddCustomItem = () => {
@@ -234,6 +317,14 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     }, 0);
   }, [billItems]);
 
+  const totalMrp = useMemo(() => {
+    return billItems.reduce((sum, item) => {
+      const mrp = Number(item.original_price) || Number(item.price) || 0;
+      const q = Number(item.quantity) || 1;
+      return sum + mrp * q;
+    }, 0);
+  }, [billItems]);
+
   const discountAmount = useMemo(() => {
     const val = Number(discountValue) || 0;
     if (val <= 0) return 0;
@@ -243,10 +334,38 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     return Math.min(val, subtotal);
   }, [subtotal, discountType, discountValue]);
 
-  const grandTotal = useMemo(() => {
-    const net = subtotal - discountAmount + Number(shippingFee || 0);
-    return Math.max(net, 0);
+  const netAmount = useMemo(() => {
+    return Math.max(subtotal - discountAmount + Number(shippingFee || 0), 0);
   }, [subtotal, discountAmount, shippingFee]);
+
+  const { taxableAmount, totalGst, cgstAmount, sgstAmount, grandTotal } = useMemo(() => {
+    let taxable = 0;
+    let gst = 0;
+    let finalTotal = 0;
+
+    if (isGstInclusive) {
+      taxable = Math.round((netAmount / (1 + gstRate / 100)) * 100) / 100;
+      gst = Math.round((netAmount - taxable) * 100) / 100;
+      finalTotal = netAmount;
+    } else {
+      taxable = Math.round((subtotal - discountAmount) * 100) / 100;
+      gst = Math.round((taxable * (gstRate / 100)) * 100) / 100;
+      finalTotal = Math.round((taxable + gst + Number(shippingFee || 0)) * 100) / 100;
+    }
+
+    const halfGst = Math.round((gst / 2) * 100) / 100;
+
+    return {
+      taxableAmount: taxable,
+      totalGst: gst,
+      cgstAmount: halfGst,
+      sgstAmount: halfGst,
+      grandTotal: Math.max(finalTotal, 0),
+    };
+  }, [netAmount, subtotal, discountAmount, shippingFee, gstRate, isGstInclusive]);
+
+  const receivedNum = amountReceived !== '' ? Number(amountReceived) : grandTotal;
+  const balanceAmount = receivedNum > grandTotal ? Math.round((receivedNum - grandTotal) * 100) / 100 : 0;
 
   // Submit Order to Backend API and Auto-Save to DB
   const handleCreateOrder = async (printAction = null, triggerWhatsApp = false) => {
@@ -274,6 +393,14 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
       total_amount: grandTotal,
       discount_amount: discountAmount,
       shipping_amount: Number(shippingFee) || 0,
+      gst_rate: gstRate,
+      is_gst_inclusive: isGstInclusive,
+      taxable_amount: taxableAmount,
+      cgst_amount: cgstAmount,
+      sgst_amount: sgstAmount,
+      received_amount: receivedNum,
+      balance_amount: balanceAmount,
+      total_mrp: totalMrp,
       order_type: billingMode === 'counter' ? 'pos' : 'online',
       payment_method: paymentMethod,
       payment_status: paymentStatus,
@@ -283,7 +410,9 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
         product_name: i.product_name.trim(),
         sku: i.sku || null,
         price: Number(i.price) || 0,
+        original_price: Number(i.original_price) || Number(i.price) || 0,
         quantity: Number(i.quantity) || 1,
+        gst_rate: gstRate,
         size: i.size || null,
         color: i.color || null,
         image_url: i.image_url || null,
@@ -358,7 +487,17 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Mode Switcher */}
+            {/* Receipt Settings & Mode Switcher */}
+            <button
+              type="button"
+              onClick={() => setShowThermalSettingsModal(true)}
+              className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white rounded-xl transition flex items-center gap-1.5 text-xs font-bold border border-white/10 cursor-pointer"
+              title="Configure Thermal Receipt Format"
+            >
+              <Settings className="w-3.5 h-3.5 text-pink-300" />
+              <span className="hidden sm:inline">Receipt Settings</span>
+            </button>
+
             <div className="flex bg-black/40 p-1 rounded-xl border border-white/10 text-xs font-semibold">
               <button
                 type="button"
@@ -427,16 +566,25 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                 <div className="p-3 bg-gray-900 text-white rounded-xl border border-gray-700 space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold flex items-center gap-1.5 text-pink-300">
-                      <Scan className="w-4 h-4" /> Live Barcode &amp; QR Scanner Ready
+                      <Scan className="w-4 h-4" /> Barcode &amp; QR Entry
                     </span>
-                    <span className="text-[10px] text-gray-400">Scan or type JN-00000 / SKU-0U02</span>
+                    <span className="text-[10px] text-gray-400">Type/scan barcode e.g. JN-12345 or 12345</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
                       autoFocus
                       value={scanInputText}
-                      onChange={(e) => setScanInputText(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setScanInputText(val);
+                        const trimmed = val.trim();
+                        // Auto populate if user types or pastes full barcode format e.g. JN-12345
+                        if (trimmed.length >= 7 && (trimmed.startsWith('JN-') || trimmed.startsWith('jn-') || trimmed.startsWith('SKU-') || trimmed.startsWith('sku-'))) {
+                          handleBarcodeOrQrScanned(trimmed);
+                          setScanInputText('');
+                        }
+                      }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && scanInputText.trim()) {
                           e.preventDefault();
@@ -444,8 +592,8 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                           setScanInputText('');
                         }
                       }}
-                      placeholder="Point scanner here or type code & hit Enter..."
-                      className="flex-1 px-3 py-1.5 rounded-lg bg-gray-800 text-white text-xs font-mono border border-gray-600 focus:border-pink-400 outline-none"
+                      placeholder="Enter barcode number (e.g. JN-12345) & hit Enter to auto-populate..."
+                      className="flex-1 px-3 py-2 rounded-lg bg-gray-800 text-white text-xs font-mono border border-gray-600 focus:border-pink-400 outline-none"
                     />
                     <button
                       type="button"
@@ -455,9 +603,9 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                           setScanInputText('');
                         }
                       }}
-                      className="px-3 py-1.5 bg-[#AD4A85] hover:bg-[#963c71] text-white text-xs font-bold rounded-lg cursor-pointer"
+                      className="px-3.5 py-2 bg-[#AD4A85] hover:bg-[#963c71] text-white text-xs font-bold rounded-lg cursor-pointer flex items-center gap-1 shrink-0"
                     >
-                      Lookup &amp; Add
+                      <Plus className="w-3.5 h-3.5" /> Auto-Add
                     </button>
                   </div>
                 </div>
@@ -470,8 +618,30 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                   type="text"
                   value={searchQuery}
                   onChange={(e) => {
-                    setSearchQuery(e.target.value);
+                    const val = e.target.value;
+                    setSearchQuery(val);
                     setSearchFocused(true);
+                    // Quick auto-add if a full barcode was scanned directly into main search input
+                    const trimmed = val.trim();
+                    if (trimmed.length >= 8 && (trimmed.startsWith('JN-') || trimmed.startsWith('jn-'))) {
+                      handleBarcodeOrQrScanned(trimmed);
+                      setSearchQuery('');
+                      setSearchFocused(false);
+                    }
+                  }}
+                  onKeyDown={async (e) => {
+                    if (e.key === 'Enter' && searchQuery.trim()) {
+                      e.preventDefault();
+                      const success = await handleBarcodeOrQrScanned(searchQuery.trim());
+                      if (success) {
+                        setSearchQuery('');
+                        setSearchFocused(false);
+                      } else if (searchResults.length === 1) {
+                        handleAddProduct(searchResults[0]);
+                        setSearchQuery('');
+                        setSearchFocused(false);
+                      }
+                    }
                   }}
                   onFocus={() => setSearchFocused(true)}
                   placeholder="Type product name, SKU # (e.g. SKU-0U02) or barcode (JN-00000)..."
@@ -515,12 +685,16 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                       const img = prod.primary_image || prod.image || prod.image_url || (Array.isArray(prod.images) && prod.images[0]);
                       const inStock = Number(prod.stock || prod.total_stock) > 0 || prod.in_stock !== false;
                       const displaySku = prod.base_sku || prod.sku || `SKU-${prod.id}`;
+                      const mrp = Number(prod.original_price) || Number(prod.compare_price) || Number(prod.price) || 0;
+                      const matchedBarcode = barcodesList.find(
+                        (b) => b.product_id === prod.id && (b.barcode || '').toLowerCase().includes(searchQuery.trim().toLowerCase())
+                      );
 
                       return (
                         <div
                           key={prod.id || prod.sku}
                           className="p-2.5 hover:bg-[#FAF0E6] transition flex items-center justify-between gap-3 cursor-pointer group"
-                          onClick={() => handleAddProduct(prod)}
+                          onClick={() => handleAddProduct(prod, matchedBarcode?.size || null, matchedBarcode?.color || null)}
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             {img ? (
@@ -543,6 +717,11 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                                 <span className="font-mono px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded font-bold border border-gray-200">
                                   {displaySku}
                                 </span>
+                                {matchedBarcode && (
+                                  <span className="font-mono px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded font-bold border border-purple-200">
+                                    🏷️ {matchedBarcode.barcode} {matchedBarcode.size ? `(${matchedBarcode.size})` : ''}
+                                  </span>
+                                )}
                                 {prod.category_slug && (
                                   <span className="text-gray-500 uppercase text-[9px]">{prod.category_slug}</span>
                                 )}
@@ -557,20 +736,20 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
 
                           <div className="flex items-center gap-2 shrink-0">
                             <div className="text-right">
-                              <div className="font-bold text-xs text-[#AD4A85]">{money(prod.price)}</div>
-                              {prod.compare_price > prod.price && (
-                                <div className="text-[10px] text-gray-400 line-through">{money(prod.compare_price)}</div>
+                              <div className="font-bold text-xs text-[#AD4A85]">{money(mrp)}</div>
+                              {mrp > Number(prod.price) && (
+                                <div className="text-[10px] text-gray-400 line-through">{money(prod.price)}</div>
                               )}
                             </div>
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleAddProduct(prod);
+                                handleAddProduct(prod, matchedBarcode?.size || null, matchedBarcode?.color || null);
                               }}
                               className="px-2.5 py-1.5 bg-[#2A1A22] hover:bg-[#3D2631] text-white text-[11px] font-bold rounded-lg transition shadow-xs flex items-center gap-1"
                             >
-                              <Plus className="w-3.5 h-3.5 text-pink-300" /> Add
+                              <Plus className="w-3 h-3" /> Add
                             </button>
                           </div>
                         </div>
@@ -899,10 +1078,49 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
               </div>
             </div>
 
-            {/* Discount & Calculations */}
+            {/* GST Configuration (Rate Dropdown & Inclusive Toggle) */}
+            <div className="p-3 bg-pink-50/50 rounded-xl border border-pink-200/70 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-gray-800 flex items-center gap-1.5">
+                  <Percent className="w-3.5 h-3.5 text-[#AD4A85]" /> GST Calculation Option
+                </span>
+                <span className="text-[10px] text-gray-500 font-semibold">Indian Tax Slabs</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-0.5">GST Rate (%)</label>
+                  <select
+                    value={gstRate}
+                    onChange={(e) => setGstRate(Number(e.target.value))}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs font-bold bg-white text-gray-900 focus:ring-1 focus:ring-[#AD4A85] outline-none"
+                  >
+                    <option value={0}>0% GST (Nil)</option>
+                    <option value={5}>5% GST (Apparel Standard - Default)</option>
+                    <option value={12}>12% GST (Apparel &gt; ₹1000)</option>
+                    <option value={18}>18% GST (Standard Goods)</option>
+                    <option value={28}>28% GST (Luxury Items)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-0.5">Tax Mode</label>
+                  <select
+                    value={isGstInclusive ? 'inclusive' : 'exclusive'}
+                    onChange={(e) => setIsGstInclusive(e.target.value === 'inclusive')}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs font-bold bg-white text-gray-900 focus:ring-1 focus:ring-[#AD4A85] outline-none"
+                  >
+                    <option value="inclusive">MRP Includes GST</option>
+                    <option value="exclusive">Add GST to MRP</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Discount, Taxes & Totals Breakdown */}
             <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/90 space-y-2 text-xs">
               <div className="flex items-center justify-between text-gray-600">
-                <span>Items Subtotal:</span>
+                <span>Items MRP Subtotal:</span>
                 <span className="font-semibold text-gray-900">{money(subtotal)}</span>
               </div>
 
@@ -946,9 +1164,48 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                 </div>
               )}
 
-              <div className="pt-2 border-t border-gray-200 flex items-center justify-between">
+              {/* GST Tax Breakdown */}
+              <div className="pt-1.5 border-t border-gray-200 space-y-1 text-[11px] text-gray-600">
+                <div className="flex items-center justify-between">
+                  <span>Taxable Amount ({isGstInclusive ? 'Back-calculated' : 'Base'}):</span>
+                  <span className="font-mono font-medium text-gray-800">{money(taxableAmount)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>CGST @ {(gstRate / 2)}%:</span>
+                  <span className="font-mono font-medium text-gray-800">{money(cgstAmount)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>SGST @ {(gstRate / 2)}%:</span>
+                  <span className="font-mono font-medium text-gray-800">{money(sgstAmount)}</span>
+                </div>
+              </div>
+
+              {/* Grand Total */}
+              <div className="pt-2 border-t border-gray-300 flex items-center justify-between">
                 <span className="font-extrabold text-sm text-gray-900">Grand Total:</span>
                 <span className="font-extrabold text-base text-[#AD4A85]">{money(grandTotal)}</span>
+              </div>
+
+              {/* Cash Paid / Received & Change Due */}
+              <div className="pt-2 border-t border-dashed border-gray-300 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-gray-700 font-bold">Received (₹):</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={amountReceived}
+                    onChange={(e) => setAmountReceived(e.target.value)}
+                    placeholder={String(grandTotal)}
+                    className="w-28 px-2.5 py-1 rounded-lg border border-gray-300 text-xs font-bold text-right bg-white focus:ring-1 focus:ring-[#AD4A85] outline-none"
+                  />
+                </div>
+
+                {amountReceived && Number(amountReceived) >= grandTotal && (
+                  <div className="flex items-center justify-between text-emerald-800 font-bold bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
+                    <span>Change / Balance:</span>
+                    <span>{money(balanceAmount)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -972,7 +1229,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                 className="w-full py-2.5 px-4 bg-[#2A1A22] hover:bg-[#3D2631] text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4 text-pink-300" />}
-                Save &amp; Print Thermal Bill (80mm)
+                Save &amp; Print Thermal Bill ({getThermalSettings().paperWidth || '80mm'})
               </button>
 
               <div className="grid grid-cols-2 gap-2">
@@ -1000,6 +1257,16 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
           </div>
         </div>
       </div>
+
+      {/* Thermal Receipt Settings Modal */}
+      <ThermalSettingsModal
+        isOpen={showThermalSettingsModal}
+        onClose={() => setShowThermalSettingsModal(false)}
+        onSaved={(updated) => {
+          if (updated?.defaultGstRate !== undefined) setGstRate(Number(updated.defaultGstRate));
+          if (updated?.isGstInclusive !== undefined) setIsGstInclusive(!!updated.isGstInclusive);
+        }}
+      />
     </div>
   );
 }

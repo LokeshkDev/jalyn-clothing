@@ -16,10 +16,13 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  X,
+  AlertCircle,
+  MailCheck,
 } from 'lucide-react'
 import { useUserStore } from '@/store'
 import { useCmsData } from '@/hooks/useCmsData'
-import api from '@/services/api'
+import { authAPI } from '@/services/api'
 import jalynLogoLogin from '@/assets/jalyn-logo-login.png'
 
 export default function AuthPage({ initialMode = 'login' }) {
@@ -41,6 +44,14 @@ export default function AuthPage({ initialMode = 'login' }) {
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
   const [agreeTerms, setAgreeTerms] = useState(true)
+
+  // Forgot Password Modal states
+  const [showForgotModal, setShowForgotModal] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotStep, setForgotStep] = useState('email') // 'email' | 'success'
+  const [forgotSubmitting, setForgotSubmitting] = useState(false)
+  const [forgotError, setForgotError] = useState('')
+  const [forgotSuccess, setForgotSuccess] = useState('')
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -209,10 +220,55 @@ export default function AuthPage({ initialMode = 'login' }) {
     }
   }
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault()
+    setForgotError('')
+    setForgotSuccess('')
+
+    if (!forgotEmail) {
+      setForgotError('Please enter your registered email address.')
+      return
+    }
+
+    setForgotSubmitting(true)
+
+    try {
+      const response = await authAPI.forgotPassword(forgotEmail)
+
+      if (response.data?.success) {
+        setForgotStep('success')
+        setForgotSuccess(response.data.message || 'If the email exists in our system, a password reset link has been sent.')
+      } else {
+        throw new Error(response.data?.message || 'Failed to send reset link')
+      }
+    } catch (err) {
+      console.warn('Forgot password error:', err.message)
+      setForgotError(err.response?.data?.message || 'Failed to send reset link. Please try again.')
+    } finally {
+      setForgotSubmitting(false)
+    }
+  }
+
+  const handleCloseForgotModal = () => {
+    setShowForgotModal(false)
+    setForgotEmail('')
+    setForgotStep('email')
+    setForgotError('')
+    setForgotSuccess('')
+  }
+
+  const handleForgotModalOpen = (e) => {
+    e.preventDefault()
+    setShowForgotModal(true)
+    setErrorMessage('')
+    setSuccessMessage('')
+  }
+
   const currentReview = reviewsList[activeReviewIdx] || reviewsList[0]
 
   return (
-    <div className="min-h-screen w-full bg-[#FAF7F5] flex flex-col lg:flex-row overflow-hidden font-body">
+    <>
+      <div className="min-h-screen w-full bg-[#FAF7F5] flex flex-col lg:flex-row overflow-hidden font-body">
       {/* Floating Back to Store Link */}
       <Link
         to="/"
@@ -416,11 +472,8 @@ export default function AuthPage({ initialMode = 'login' }) {
                   </label>
                   <a
                     href="#forgot-password"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      alert('Password reset link sent to your registered email address!')
-                    }}
-                    className="text-[11px] font-semibold text-[#D4A373] hover:underline"
+                    onClick={handleForgotModalOpen}
+                    className="text-[11px] font-semibold text-[#D4A373] hover:underline cursor-pointer"
                   >
                     Forgot Password?
                   </a>
@@ -624,5 +677,104 @@ export default function AuthPage({ initialMode = 'login' }) {
         </div>
       </div>
     </div>
+
+    {/* Forgot Password Modal */}
+    {showForgotModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-[#E0D8D0] overflow-hidden"
+        >
+          <div className="flex items-center justify-between p-4 border-b border-[#E0D8D0]">
+            <h3 className="font-heading text-lg font-bold text-[#2C1C24]">
+              {forgotStep === 'email' ? 'Forgot Password' : 'Check Your Email'}
+            </h3>
+            <button
+              type="button"
+              onClick={handleCloseForgotModal}
+              className="p-1 rounded-lg text-[#888888] hover:text-[#2C1C24] hover:bg-[#F5F0EB] transition"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4">
+            {forgotStep === 'email' ? (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#2C1C24]">
+                    Registered Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#888888]" />
+                    <input
+                      type="email"
+                      required
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      className="w-full rounded-xl border border-[#E0D8D0] bg-white pl-10 pr-4 py-3 text-xs font-medium text-[#2C1C24] placeholder:text-[#AAAAAA] focus:border-[#2C1C24] focus:outline-none focus:ring-1 focus:ring-[#2C1C24] transition"
+                      autoComplete="email"
+                    />
+                  </div>
+                </div>
+
+                {forgotError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-700 border border-red-200 flex items-center gap-2"
+                  >
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>{forgotError}</span>
+                  </motion.div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={forgotSubmitting}
+                  className="w-full rounded-xl bg-primary hover:bg-primary-deep text-white py-3.5 text-xs font-bold uppercase tracking-wider shadow-soft transition cursor-pointer flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
+                >
+                  {forgotSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Sending Link...</span>
+                    </>
+                  ) : (
+                    <span>Send Reset Link</span>
+                  )}
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-4 text-center">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
+                  <MailCheck className="h-8 w-8 text-emerald-600" />
+                </div>
+                <div className="space-y-2">
+                  <p className="font-heading text-lg font-bold text-[#2C1C24]">Reset Link Sent</p>
+                  <p className="text-sm text-[#666666] leading-relaxed">
+                    {forgotSuccess || 'If the email exists in our system, a password reset link has been sent to your registered email address.'}
+                  </p>
+                  <p className="text-xs text-[#888888]">
+                    The link expires in <strong>10 minutes</strong>. Please check your inbox and spam folder.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCloseForgotModal}
+                  className="w-full rounded-xl bg-[#2C1C24] hover:bg-[#3D2832] text-white py-3 text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    )}
+    </>
   )
 }

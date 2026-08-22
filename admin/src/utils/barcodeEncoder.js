@@ -32,9 +32,9 @@ export function encodeCode128(text) {
 export function generateBarcodeSVG(text, options = {}) {
   const {
     width = '100%',
-    height = 60,
-    moduleWidth = 2,
-    quietZone = 10,
+    height = 50,
+    moduleWidth = 2.2,
+    quietZone = 8,
     showText = false,
     fontSize = 14,
     textMargin = 2,
@@ -63,11 +63,11 @@ export function generateBarcodeSVG(text, options = {}) {
   if (showText) {
     const textY = barcodeHeight + textMargin + (fontSize * 0.8);
     const textX = calculatedWidth / 2;
-    textSvg = `<text x="${textX}" y="${textY}" font-family="monospace" font-size="${fontSize}" text-anchor="middle" fill="${barColor}">${text}</text>`;
+    textSvg = `<text x="${textX}" y="${textY}" font-family="monospace" font-weight="bold" font-size="${fontSize}" text-anchor="middle" fill="${barColor}">${text}</text>`;
   }
   
   return `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${calculatedWidth} ${height}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${calculatedWidth} ${height}" preserveAspectRatio="xMidYMid meet">
       <rect width="100%" height="100%" fill="${backgroundColor}" />
       ${rects}
       ${textSvg}

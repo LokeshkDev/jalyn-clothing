@@ -1,5 +1,6 @@
 import jalynLogoUrl from '../assets/jalyn-logo-login.png';
 import jalynLogoSmallUrl from '../assets/jalyn-logo-small.jpg';
+import { getThermalSettings } from './thermalSettings';
 
 const escapeHtml = (v) =>
   String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -360,49 +361,102 @@ export const buildInvoiceHtml = (order) => {
 </html>`;
 };
 
+const formatReceiptDate = (val) => {
+  if (!val) {
+    const now = new Date();
+    return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+  }
+  const dObj = new Date(String(val).includes(' ') ? String(val).replace(' ', 'T') : val);
+  if (isNaN(dObj)) return String(val);
+  return `${String(dObj.getDate()).padStart(2, '0')}/${String(dObj.getMonth() + 1).padStart(2, '0')}/${dObj.getFullYear()}`;
+};
+
 /**
- * High-Contrast Thermal POS Receipt (80mm / 58mm Roll Format)
- * Designed specifically for POS Thermal Printers (Epson, TVS, Star, Xprinter, etc.)
+ * Thermal POS Receipt Format (Screenshot 1 Indian Tax Invoice Layout)
+ * Supports 80mm / 58mm roll widths with full CRUD customization toggles
  */
-export const buildThermalHtml = (order) => {
+export const buildThermalHtml = (order, customSettings = {}) => {
+  const cfg = { ...getThermalSettings(), ...customSettings };
   const items = order.items || [];
+  const totalQty = items.reduce((sum, it) => sum + (Number(it.quantity || it.qty) || 1), 0);
   const subtotal = itemTotal(items);
   const discount = Number(order.discount_amount) || 0;
   const shipping = Number(order.shipping_amount) || 0;
   const total = Number(order.total_amount) || Math.max(subtotal + shipping - discount, 0);
-  const paymentStatus = (order.payment_status || 'paid').toUpperCase();
-  const paymentMethod = (order.payment_method || 'CASH').toUpperCase();
-  const orderNum = order.order_number || order.id || 'POS-BILL';
-  const orderDate = formatDate(order.created_at || new Date());
-  const orderTime = formatTime(order.created_at || new Date());
+  const gstRate = Number(order.gst_rate !== undefined ? order.gst_rate : (cfg.defaultGstRate !== undefined ? cfg.defaultGstRate : 5));
+  const isGstInclusive = order.is_gst_inclusive !== undefined ? !!order.is_gst_inclusive : cfg.isGstInclusive !== false;
+
+  let taxableAmount = 0;
+  let totalGst = 0;
+
+  if (isGstInclusive) {
+    taxableAmount = Math.round((total / (1 + gstRate / 100)) * 100) / 100;
+    totalGst = Math.round((total - taxableAmount) * 100) / 100;
+  } else {
+    taxableAmount = Math.round((subtotal - discount) * 100) / 100;
+    totalGst = Math.round((taxableAmount * (gstRate / 100)) * 100) / 100;
+  }
+
+  const halfGstRate = (gstRate / 2).toFixed(1).replace(/\.0$/, '');
+  const cgst = Math.round((totalGst / 2) * 100) / 100;
+  const sgst = Math.round((totalGst / 2) * 100) / 100;
+
+  const orderNum = order.order_number || order.id || '1833';
+  const orderDate = formatReceiptDate(order.created_at || new Date());
+  const customerName = order.customer_name || 'Cash Sale';
+  const customerPhone = order.customer_phone || cfg.phone || '';
+  const placeOfSupply = order.place_of_supply || cfg.placeOfSupply || 'Tamil Nadu';
+  const shipTo = order.shipping_address && order.shipping_address !== 'In-Store Counter Pickup'
+    ? order.shipping_address
+    : (cfg.defaultShipTo || 'Business Name');
+
+  let youSaved = discount;
+  if (order.total_mrp && order.total_mrp > total) {
+    youSaved = order.total_mrp - total;
+  }
+
+  const receivedAmount = order.received_amount !== undefined && order.received_amount !== ''
+    ? Number(order.received_amount)
+    : total;
+  const balanceAmount = order.balance_amount !== undefined && order.balance_amount !== ''
+    ? Number(order.balance_amount)
+    : Math.max(0, receivedAmount - total);
 
   const rows = items
-    .map((it) => {
+    .map((it, idx) => {
       const qty = Number(it.quantity || it.qty) || 1;
       const price = Number(it.price) || 0;
-      const variantParts = [it.sku && `SKU:${it.sku}`, it.size && `S:${it.size}`, it.color && `C:${it.color}`].filter(Boolean);
-      const varStr = variantParts.join(' ');
+      const itemGst = Number(it.gst_rate !== undefined ? it.gst_rate : gstRate);
+      const itemTaxableRate = (price / (1 + itemGst / 100)).toFixed(2);
+
+      const variantParts = [it.sku, it.size, it.color].filter(Boolean);
+      const variantText = variantParts.join(', ');
 
       return `
-      <div class="item-row">
-        <div class="item-name">${escapeHtml(it.product_name || it.name || 'Item')}</div>
-        ${varStr ? `<div class="item-sku">${escapeHtml(varStr)}</div>` : ''}
-        <div class="item-calc">
-          <span>${qty} × ${money(price)}</span>
-          <span class="bold">${money(price * qty)}</span>
+      <div class="item-line">
+        <div class="col-num">${idx + 1}</div>
+        <div class="col-desc">
+          <div class="item-title">${escapeHtml(it.product_name || it.name || 'Item')}</div>
+          ${variantText ? `<div class="item-sub">${escapeHtml(variantText)}</div>` : ''}
+          ${cfg.showItemGstRate ? `<div class="item-sub">GST: ${itemGst}%</div>` : ''}
         </div>
+        <div class="col-qty">${qty} ${escapeHtml(it.unit || 'Qty')}</div>
+        ${cfg.showItemRate ? `<div class="col-rate">${itemTaxableRate}</div>` : ''}
+        <div class="col-amt">${price * qty}</div>
       </div>`;
     })
     .join('');
+
+  const paperWidth = cfg.paperWidth || '80mm';
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>POS Receipt - ${escapeHtml(orderNum)}</title>
+<title>Tax Invoice - ${escapeHtml(orderNum)}</title>
 <style>
   @page {
-    size: 80mm auto;
+    size: ${paperWidth} auto;
     margin: 0;
   }
   * {
@@ -411,215 +465,248 @@ export const buildThermalHtml = (order) => {
     box-sizing: border-box;
   }
   body {
-    width: 80mm;
+    width: ${paperWidth};
     margin: 0 auto;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Courier New', monospace;
-    font-size: 11.5px;
+    font-size: 11px;
     line-height: 1.35;
     color: #000000;
     background: #FFFFFF;
-    padding: 4mm 4mm 6mm;
+    padding: 3mm 3.5mm 5mm;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
   .center { text-align: center; }
   .right { text-align: right; }
-  .bold { font-weight: 700; }
-  
-  .store-logo {
-    width: 38mm;
-    display: block;
-    margin: 0 auto 2mm;
-    filter: grayscale(100%) contrast(150%);
+  .bold { font-weight: 800; }
+
+  /* Store Header */
+  .store-header {
+    text-align: center;
+    margin-bottom: 2mm;
   }
-  .store-name {
-    font-size: 15px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-  }
-  .store-tag {
-    font-size: 9.5px;
+  .store-title {
+    font-size: 14px;
+    font-weight: 900;
     letter-spacing: 1px;
     text-transform: uppercase;
-    color: #333;
-    margin-top: 1px;
   }
-  .store-info {
+  .store-sub {
     font-size: 9.5px;
-    color: #222;
-    margin-top: 1px;
+    line-height: 1.35;
+    color: #111;
   }
+  .inv-heading {
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    text-align: center;
+    margin: 2mm 0 1.5mm;
+  }
+
+  /* Divider */
   .divider {
     border: none;
     border-top: 1px dashed #000000;
-    margin: 2.5mm 0;
+    margin: 2mm 0;
   }
-  .double-divider {
+  .solid-divider {
     border: none;
-    border-top: 2px solid #000000;
-    margin: 2.5mm 0;
+    border-top: 1px solid #000000;
+    margin: 1.5mm 0;
   }
-  .receipt-meta {
-    font-size: 10.5px;
+
+  /* Meta Section */
+  .meta-grid {
+    font-size: 10px;
+    line-height: 1.45;
   }
   .meta-row {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 1.5px;
   }
-  .cust-box {
-    font-size: 10.5px;
-    margin-top: 1mm;
+  .meta-label {
+    font-weight: 500;
   }
-  .item-row {
-    margin-bottom: 2.5mm;
-  }
-  .item-name {
+  .meta-val {
     font-weight: 700;
-    font-size: 11px;
-    word-break: break-word;
   }
-  .item-sku {
-    font-size: 9px;
-    color: #444;
-    font-family: monospace;
+
+  /* Items Table */
+  .items-table {
+    margin: 1.5mm 0;
   }
-  .item-calc {
+  .table-header {
+    display: flex;
+    font-weight: 800;
+    font-size: 9.5px;
+    padding-bottom: 1mm;
+    border-bottom: 1px solid #000;
+  }
+  .item-line {
+    display: flex;
+    font-size: 10px;
+    padding: 1.5mm 0;
+    border-bottom: 1px dashed #e0e0e0;
+    align-items: flex-start;
+  }
+  .col-num { width: 14px; font-weight: 700; }
+  .col-desc { flex: 1; padding: 0 4px; }
+  .item-title { font-weight: 800; text-transform: uppercase; font-size: 10px; }
+  .item-sub { font-size: 8.5px; color: #333; margin-top: 1px; }
+  .col-qty { width: 44px; text-align: center; font-weight: 600; font-size: 9.5px; }
+  .col-rate { width: 52px; text-align: right; font-weight: 600; font-size: 9.5px; }
+  .col-amt { width: 44px; text-align: right; font-weight: 800; font-size: 10px; }
+
+  /* Calculations & Totals */
+  .totals-section {
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .calc-row {
     display: flex;
     justify-content: space-between;
-    font-size: 11px;
-    margin-top: 1px;
-  }
-  .summary-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 11px;
-    margin-bottom: 1.5px;
   }
   .grand-row {
     display: flex;
     justify-content: space-between;
-    font-size: 14px;
-    font-weight: 800;
-    padding-top: 2px;
+    font-size: 12px;
+    font-weight: 900;
+    padding: 1mm 0;
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    margin: 1mm 0;
   }
-  .pay-badge {
-    display: inline-block;
-    border: 1.5px solid #000;
-    font-weight: 800;
-    padding: 1.5px 6px;
-    font-size: 10.5px;
-    text-transform: uppercase;
-    margin: 2mm 0;
-  }
-  .barcode-box {
-    font-family: 'Courier New', monospace;
-    letter-spacing: 4px;
-    font-weight: 800;
-    font-size: 13px;
-    margin: 2mm 0 1mm;
-  }
-  .footer-msg {
+
+  /* Footer */
+  .footer-box {
+    text-align: center;
     font-size: 9.5px;
-    color: #333;
+    margin-top: 3mm;
     line-height: 1.4;
-    margin-top: 2mm;
   }
+
   @media print {
     body {
-      width: 80mm;
-      padding: 2mm;
+      width: ${paperWidth};
+      padding: 1mm 2mm;
     }
   }
 </style>
 </head>
 <body>
-  <div class="center">
-    <img src="${jalynLogoUrl}" alt="JALYN" class="store-logo" />
-    <div class="store-name">JALYN APPARELS</div>
-    <div class="store-tag">Style Meets Comfort</div>
-    <div class="store-info">42 Luxury Blvd, Mumbai - 400001</div>
-    <div class="store-info">GSTIN: 27AABCJ9876Q1Z2 &middot; Tel: +91 98765 43210</div>
-  </div>
+  ${cfg.showStoreHeader ? `
+  <div class="store-header">
+    <div class="store-title">${escapeHtml(cfg.storeName)}</div>
+    ${cfg.showAddress ? `
+      ${cfg.shopNo ? `<div class="store-sub">${escapeHtml(cfg.shopNo)}</div>` : ''}
+      ${cfg.addressLine2 ? `<div class="store-sub">${escapeHtml(cfg.addressLine2)}</div>` : ''}
+      ${cfg.cityStatePin ? `<div class="store-sub">${escapeHtml(cfg.cityStatePin)}</div>` : ''}
+    ` : ''}
+    ${cfg.showPhone && cfg.phone ? `<div class="store-sub">Phone No : ${escapeHtml(cfg.phone)}</div>` : ''}
+    ${cfg.showGstin && cfg.gstin ? `<div class="store-sub" style="font-weight: 800;">GST : ${escapeHtml(cfg.gstin)}</div>` : ''}
+    ${cfg.showEmail && cfg.email ? `<div class="store-sub">Email : ${escapeHtml(cfg.email)}</div>` : ''}
+  </div>` : ''}
+
+  ${cfg.showInvoiceTitle ? `<div class="inv-heading">${escapeHtml(cfg.invoiceTitle)}</div>` : ''}
+
+  ${cfg.showCustomerInfo ? `
+  <div class="meta-grid">
+    <div class="meta-row">
+      <span class="meta-label">Invoice No :</span>
+      <span class="meta-val">${escapeHtml(orderNum)}</span>
+    </div>
+    <div class="meta-row">
+      <span class="meta-label">Date :</span>
+      <span class="meta-val">${escapeHtml(orderDate)}</span>
+    </div>
+    <div class="meta-row">
+      <span class="meta-label">Bill To :</span>
+      <span class="meta-val">${escapeHtml(customerName)}</span>
+    </div>
+    ${cfg.showCustomerPhone && customerPhone ? `
+    <div class="meta-row">
+      <span class="meta-label">Ph. :</span>
+      <span class="meta-val">${escapeHtml(customerPhone)}</span>
+    </div>` : ''}
+    ${cfg.showPlaceOfSupply && placeOfSupply ? `
+    <div class="meta-row">
+      <span class="meta-label">Place of Supply :</span>
+      <span class="meta-val">${escapeHtml(placeOfSupply)}</span>
+    </div>` : ''}
+    ${cfg.showShipTo && shipTo ? `
+    <div class="meta-row">
+      <span class="meta-label">Ship To :</span>
+      <span class="meta-val">${escapeHtml(shipTo)}</span>
+    </div>` : ''}
+  </div>` : ''}
 
   <hr class="divider" />
 
-  <div class="receipt-meta">
-    <div class="meta-row">
-      <span>Bill No:</span>
-      <span class="bold">${escapeHtml(orderNum)}</span>
-    </div>
-    <div class="meta-row">
-      <span>Date / Time:</span>
-      <span>${escapeHtml(orderDate)}</span>
-    </div>
-    <div class="meta-row">
-      <span>Payment Method:</span>
-      <span class="bold">${escapeHtml(paymentMethod)}</span>
-    </div>
-    <div class="meta-row">
-      <span>Payment Status:</span>
-      <span class="bold">${escapeHtml(paymentStatus)}</span>
-    </div>
-  </div>
-
-  <div class="cust-box">
-    <div>Customer: <b>${escapeHtml(order.customer_name || 'Walk-in Customer')}</b></div>
-    ${order.customer_phone ? `<div>Phone: <b>${escapeHtml(order.customer_phone)}</b></div>` : ''}
-  </div>
-
-  <hr class="divider" />
-
-  <!-- Items -->
-  <div style="margin-bottom: 2mm;">
-    <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 10px; margin-bottom: 2mm; border-bottom: 1px solid #000; padding-bottom: 1mm;">
-      <span>ITEM / SKU</span>
-      <span>QTY &times; RATE / AMT</span>
+  <!-- Items Table -->
+  <div class="items-table">
+    <div class="table-header">
+      <span class="col-num">#</span>
+      <span class="col-desc">Item</span>
+      <span class="col-qty">Qty</span>
+      ${cfg.showItemRate ? '<span class="col-rate">Rate</span>' : ''}
+      <span class="col-amt">Amt</span>
     </div>
     ${rows}
   </div>
 
   <hr class="divider" />
 
-  <!-- Summary Totals -->
-  <div>
-    <div class="summary-row">
-      <span>Subtotal (${items.length} items):</span>
-      <span>${money(subtotal)}</span>
-    </div>
-    ${discount > 0 ? `
-    <div class="summary-row">
-      <span>Discount:</span>
-      <span>− ${money(discount)}</span>
-    </div>` : ''}
-    ${shipping > 0 ? `
-    <div class="summary-row">
-      <span>Shipping:</span>
-      <span>${money(shipping)}</span>
-    </div>` : ''}
-    <div class="summary-row" style="font-size: 9.5px; color: #444;">
-      <span>(Inclusive of all GST &amp; Taxes)</span>
-      <span>5% GST</span>
+  <!-- Totals Section -->
+  <div class="totals-section">
+    <div class="calc-row bold">
+      <span>Sub Total</span>
+      <span>${totalQty}</span>
+      <span>₹ ${subtotal.toLocaleString('en-IN')}</span>
     </div>
 
-    <hr class="double-divider" />
+    ${cfg.showTaxBreakdown ? `
+    <div class="calc-row">
+      <span>Taxable Amount</span>
+      <span>₹ ${taxableAmount.toFixed(2)}</span>
+    </div>
+    <div class="calc-row">
+      <span>CGST @${halfGstRate}%</span>
+      <span>₹ ${cgst.toFixed(1)}</span>
+    </div>
+    <div class="calc-row">
+      <span>SGST @${halfGstRate}%</span>
+      <span>₹ ${sgst.toFixed(1)}</span>
+    </div>` : ''}
 
     <div class="grand-row">
-      <span>NET AMOUNT:</span>
-      <span>${money(total)}</span>
+      <span>Total</span>
+      <span>₹ ${total.toLocaleString('en-IN')}</span>
     </div>
+
+    ${cfg.showYouSaved && youSaved > 0 ? `
+    <div class="calc-row bold" style="color: #000;">
+      <span>You Saved</span>
+      <span>- ₹ ${youSaved.toLocaleString('en-IN')}</span>
+    </div>` : ''}
+
+    ${cfg.showReceivedBalance ? `
+    <div class="calc-row bold">
+      <span>Received</span>
+      <span>₹ ${receivedAmount.toLocaleString('en-IN')}</span>
+    </div>
+    <div class="calc-row bold">
+      <span>Balance Amount</span>
+      <span>₹ ${balanceAmount.toLocaleString('en-IN')}</span>
+    </div>` : ''}
   </div>
 
-  <div class="center" style="margin-top: 3mm;">
-    <div class="pay-badge">PAID VIA ${escapeHtml(paymentMethod)}</div>
-    <div class="barcode-box">*${escapeHtml(String(orderNum).replace(/[^a-zA-Z0-9]/g, ''))}*</div>
-    <div class="footer-msg">
-      <b>Thank you for shopping with JALYN!</b><br />
-      Exchanges accepted within 7 days with original receipt &amp; tags.<br />
-      www.jalyn.in &middot; Follow us @jalyn.official
-    </div>
-  </div>
+  ${cfg.showFooterMessage ? `
+  <div class="footer-box">
+    <div class="bold">${escapeHtml(cfg.footerMessage)}</div>
+    ${cfg.termsNote ? `<div style="font-size: 8.5px; color: #444; margin-top: 1mm;">${escapeHtml(cfg.termsNote)}</div>` : ''}
+  </div>` : ''}
 </body>
 </html>`;
 };
@@ -627,13 +714,13 @@ export const buildThermalHtml = (order) => {
 /**
  * Trigger Instant Thermal Bill Print
  */
-export const printThermalReceipt = (order) => {
-  const win = window.open('', '_blank', 'width=420,height=680');
+export const printThermalReceipt = (order, customSettings = {}) => {
+  const win = window.open('', '_blank', 'width=440,height=720');
   if (!win) {
     alert('Popup blocked. Please allow popups to print the thermal bill.');
     return;
   }
-  win.document.write(buildThermalHtml(order));
+  win.document.write(buildThermalHtml(order, customSettings));
   win.document.close();
   win.focus();
   setTimeout(() => {

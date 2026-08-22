@@ -111,6 +111,7 @@ export default function ProductsPage() {
     brand: 'JALYN',
     price: '',
     original_price: '',
+    discount: '',
     description: '',
     short_description: '',
     stock: 10,
@@ -201,6 +202,7 @@ export default function ProductsPage() {
       brand: 'JALYN',
       price: '',
       original_price: '',
+      discount: '',
       description: '',
       short_description: '',
       stock: 15,
@@ -240,6 +242,13 @@ export default function ProductsPage() {
       ? p.colors.map((c) => (typeof c === 'string' ? { name: c, hex: '#AD4A85', images: p.color_images?.[c] || [] } : c))
       : [];
 
+    const origPrice = p.original_price || '';
+    const sellPrice = p.price || '';
+    let computedDiscount = p.discount !== undefined && p.discount !== null && p.discount !== '' ? p.discount : '';
+    if (computedDiscount === '' && origPrice && sellPrice && Number(origPrice) > Number(sellPrice)) {
+      computedDiscount = Math.round(((Number(origPrice) - Number(sellPrice)) / Number(origPrice)) * 100);
+    }
+
     setFormData({
       title: p.title || '',
       slug: p.slug || '',
@@ -247,8 +256,9 @@ export default function ProductsPage() {
       base_sku: p.base_sku || 'JLN-' + p.id,
       category_slug: p.category_slug || 'dresses',
       brand: p.brand || 'JALYN',
-      price: p.price || '',
-      original_price: p.original_price || '',
+      price: sellPrice,
+      original_price: origPrice,
+      discount: computedDiscount,
       description: p.description || '',
       short_description: p.short_description || '',
       stock: p.stock || 0,
@@ -586,6 +596,63 @@ export default function ProductsPage() {
     updateSizeGuide({ rows: sg.rows.filter((_, i) => i !== rIdx) });
   };
 
+  // Auto calculate discount % when Selling Price and Original Price are entered
+  const handleSellingPriceChange = (val) => {
+    const selling = val === '' ? '' : (val === '0' ? 0 : Number(val));
+    const orig = Number(formData.original_price);
+    let disc = formData.discount;
+
+    if (orig > 0 && selling !== '' && Number(selling) >= 0) {
+      if (orig >= Number(selling)) {
+        disc = Math.round(((orig - Number(selling)) / orig) * 100);
+      } else {
+        disc = 0;
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      price: selling,
+      discount: disc,
+    }));
+  };
+
+  const handleOriginalPriceChange = (val) => {
+    const orig = val === '' ? '' : (val === '0' ? 0 : Number(val));
+    const selling = formData.price !== '' ? Number(formData.price) : 0;
+    let disc = formData.discount;
+
+    if (orig !== '' && Number(orig) > 0 && selling > 0) {
+      if (Number(orig) >= selling) {
+        disc = Math.round(((Number(orig) - selling) / Number(orig)) * 100);
+      } else {
+        disc = 0;
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      original_price: orig,
+      discount: disc,
+    }));
+  };
+
+  const handleDiscountPercentageChange = (val) => {
+    const disc = val === '' ? '' : (val === '0' ? 0 : Number(val));
+    const orig = Number(formData.original_price);
+    let selling = formData.price;
+
+    if (orig > 0 && disc !== '' && Number(disc) >= 0 && Number(disc) <= 100) {
+      selling = Math.round(orig * (1 - Number(disc) / 100));
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      discount: disc,
+      price: selling,
+    }));
+  };
+
   // Form Submit Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -594,6 +661,9 @@ export default function ProductsPage() {
     try {
       const payload = {
         ...formData,
+        price: Number(formData.price) || 0,
+        original_price: formData.original_price !== '' ? Number(formData.original_price) : null,
+        discount: formData.discount !== '' && formData.discount !== null ? Number(formData.discount) : null,
         colors: formData.colors.map((c) => c.name),
         color_images: formData.colors.reduce((acc, c) => {
           if (c.images && c.images.length > 0) acc[c.name] = c.images;
@@ -1032,9 +1102,10 @@ export default function ProductsPage() {
                       <label className="block font-semibold text-gray-700 mb-1">Selling Price (₹) *</label>
                       <input
                         type="number"
+                        min="0"
                         required
-                        value={formData.price}
-                        onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                        value={formData.price !== undefined ? formData.price : ''}
+                        onChange={(e) => handleSellingPriceChange(e.target.value)}
                         placeholder="1899"
                         className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
                       />
@@ -1044,8 +1115,9 @@ export default function ProductsPage() {
                       <label className="block font-semibold text-gray-700 mb-1">Original Price (₹)</label>
                       <input
                         type="number"
-                        value={formData.original_price}
-                        onChange={(e) => setFormData({ ...formData, original_price: Number(e.target.value) })}
+                        min="0"
+                        value={formData.original_price !== undefined ? formData.original_price : ''}
+                        onChange={(e) => handleOriginalPriceChange(e.target.value)}
                         placeholder="2499"
                         className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
                       />
@@ -1055,8 +1127,10 @@ export default function ProductsPage() {
                       <label className="block font-semibold text-gray-700 mb-1">Discount (%)</label>
                       <input
                         type="number"
-                        value={formData.discount}
-                        onChange={(e) => setFormData({ ...formData, discount: Number(e.target.value) })}
+                        min="0"
+                        max="100"
+                        value={formData.discount !== undefined ? formData.discount : ''}
+                        onChange={(e) => handleDiscountPercentageChange(e.target.value)}
                         placeholder="24"
                         className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
                       />

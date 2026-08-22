@@ -14,6 +14,8 @@ import {
   createAddress,
   updateAddress,
   deleteAddress,
+  forgotPassword,
+  resetPassword,
 } from '../controllers/authController.js';
 import { verifyToken, superAdminOnly } from '../middleware/auth.js';
 
@@ -23,6 +25,8 @@ const router = express.Router();
 router.post('/login', loginUser);
 router.post('/register', registerUser);
 router.post('/google', googleAuthUser);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
 // Current User Profile & Self-Service Password Change
 router.get('/me', verifyToken, getMe);

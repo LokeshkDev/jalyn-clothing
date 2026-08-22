@@ -19,10 +19,10 @@ export default function BarcodeLabel({
     if (!barcode) return '';
     return generateBarcodeSVG(barcode, {
       width: '100%',
-      height: 42,
+      height: 38,
       showText: false,
-      moduleWidth: 2,
-      quietZone: 5,
+      moduleWidth: 2.2,
+      quietZone: 6,
       barColor: '#000000',
       backgroundColor: '#ffffff'
     });
@@ -30,64 +30,73 @@ export default function BarcodeLabel({
 
   return (
     <div
-      className={`bg-white flex flex-col items-center justify-between box-border overflow-hidden ${
-        forPrint ? '' : 'border border-gray-200 shadow-sm'
+      className={`bg-white flex flex-col items-center justify-between box-border overflow-hidden select-none ${
+        forPrint ? '' : 'border border-gray-300 shadow-xs rounded-sm'
       }`}
       style={{
         width: '50mm',
         height: '25mm',
-        padding: '1mm 1.5mm'
+        maxWidth: '50mm',
+        maxHeight: '25mm',
+        padding: '1.5mm 2.5mm',
+        boxSizing: 'border-box',
+        overflow: 'hidden'
       }}
     >
+      {/* Top Text Content Area */}
       <div className="w-full text-center flex-1 flex flex-col justify-start items-center overflow-hidden">
-        {/* Company Name */}
+        {/* Company / Brand Name - Bold Uppercase */}
         <div
-          style={{ fontSize: '6pt', letterSpacing: '1.5px', lineHeight: '1.25' }}
-          className="font-sans font-bold uppercase text-black"
+          style={{ fontSize: '6.5pt', letterSpacing: '1.5px', lineHeight: '1.2' }}
+          className="font-sans font-black uppercase text-black"
         >
           {companyName}
         </div>
 
-        {/* Product Name */}
+        {/* Product Name - Bold High-Contrast */}
         {showProductName && productName && (
           <div
-            style={{ fontSize: '6.5pt', lineHeight: '1.15' }}
-            className="font-sans font-semibold text-black mt-0.5 line-clamp-1 w-full text-center px-0.5"
+            style={{ fontSize: '6.5pt', lineHeight: '1.2' }}
+            className="font-sans font-extrabold text-black mt-0.5 truncate w-full text-center px-0.5 tracking-tight"
             title={productName}
           >
             {productName}
           </div>
         )}
 
-        {/* Variant Info Line */}
+        {/* Variant Info Line: Color • Size • Price */}
         <div
-          style={{ fontSize: '5.5pt' }}
-          className="font-sans text-black mt-0.5 flex items-center justify-center gap-1 flex-wrap w-full"
+          style={{ fontSize: '6pt', lineHeight: '1.2' }}
+          className="font-sans font-bold text-black mt-0.5 flex items-center justify-center gap-1 flex-nowrap w-full overflow-hidden truncate"
         >
           {showColor && color && <span>{color}</span>}
-          {showColor && color && showSize && size && <span>•</span>}
+          {showColor && color && showSize && size && <span className="font-extrabold">•</span>}
           {showSize && size && <span>{size}</span>}
-          {((showColor && color) || (showSize && size)) && showPrice && price && <span>•</span>}
-          {showPrice && price && <span>₹{price}</span>}
+          {((showColor && color) || (showSize && size)) && showPrice && price && <span className="font-extrabold">•</span>}
+          {showPrice && price && <span>₹{Number(price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
         </div>
       </div>
 
-      {/* Barcode Area */}
-      <div className="w-full flex flex-col items-center justify-end shrink-0" style={{ height: '42%' }}>
+      {/* Barcode Area - Bold Sharp SVG & Monospace Number */}
+      <div className="w-full flex flex-col items-center justify-end shrink-0" style={{ height: '46%' }}>
         {barcode ? (
           <>
             <div
-              className="w-full flex justify-center items-end"
+              className="w-full flex justify-center items-end overflow-hidden"
+              style={{ maxHeight: '28px' }}
               dangerouslySetInnerHTML={{ __html: barcodeSvg }}
             />
             {showBarcodeNumber && (
-              <div style={{ fontSize: '5.5pt', marginTop: '0.5mm', lineHeight: '1.2' }} className="font-mono text-black font-semibold tracking-tight">
+              <div
+                style={{ fontSize: '6pt', marginTop: '0.4mm', lineHeight: '1.1', letterSpacing: '1px' }}
+                className="font-mono text-black font-extrabold text-center w-full"
+              >
                 {barcode}
               </div>
             )}
           </>
         ) : (
-          <div className="text-gray-400 text-[5.5pt] italic pb-1">No barcode data</div>
+          <div className="text-gray-400 text-[6pt] italic pb-1">No barcode</div>
         )}
       </div>
     </div>
