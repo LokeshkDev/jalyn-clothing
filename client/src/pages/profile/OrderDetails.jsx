@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useOrderStore, useUserStore } from '@/store'
 import { formatINR, cn } from '@/lib/utils'
+import { calculateOrderTax, getApparelGstRate } from '@/lib/taxUtils'
 import api from '@/services/api'
 import logo from '@/assets/jalyn-logo-login.png'
 
@@ -185,22 +186,22 @@ export default function OrderDetails() {
           <button
             type="button"
             onClick={handlePrintInvoice}
-            className="flex items-center gap-1.5 rounded-xl border border-primary/20 bg-white px-4 py-2 text-xs font-bold text-primary shadow-sm hover:bg-rose-light/40 transition"
+            className="flex items-center gap-1.5 rounded-xl border border-primary/20 bg-white px-4 py-2 text-xs font-bold text-primary shadow-sm hover:bg-rose-light/40 transition cursor-pointer"
           >
             <Printer className="h-4 w-4" />
-            <span>Download Invoice</span>
+            <span>Download Tax Invoice (A4)</span>
           </button>
         </div>
 
         {/* Interactive Order Timeline */}
         <div className="rounded-2xl border border-primary/10 bg-white p-6 shadow-soft">
           <h4 className="font-heading text-xs font-bold uppercase tracking-wider text-ink-muted mb-6">
-            Order Status & Timeline
+            Order Status &amp; Timeline
           </h4>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-5 relative">
             {timelineSteps.map((step, idx) => (
-              <div key={step.title} className="flex flex-col items-center text-center z-10">
+              <div key={step.title || idx} className="flex flex-col items-center text-center z-10">
                 <div
                   className={cn(
                     'flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition-all',
@@ -248,16 +249,16 @@ export default function OrderDetails() {
           </div>
         )}
 
-        {/* 1. Ordered Items - Full Width */}
-        <div className="w-full">
-          <div className="rounded-2xl border border-primary/10 bg-white p-6 shadow-soft">
-            <h4 className="font-heading text-sm font-bold text-ink mb-4 pb-3 border-b border-primary/10">
-              Ordered Items ({order.items.length})
-            </h4>
+        {/* 1. Ordered Products Section */}
+        <div className="rounded-2xl border border-primary/10 bg-white p-6 shadow-soft space-y-4">
+            <h3 className="font-heading font-bold text-ink text-sm flex items-center gap-2">
+              <Package className="h-4 w-4 text-primary" />
+              <span>Ordered Items ({order.items.reduce((s, it) => s + it.qty, 0)})</span>
+            </h3>
 
-            <div className="space-y-4">
+            <div className="divide-y divide-primary/5">
               {order.items.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-4 border-b border-primary/5 pb-4 last:border-0 last:pb-0">
+                <div key={idx} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
                   <img
                     src={item.image}
                     alt={item.name}
@@ -265,10 +266,19 @@ export default function OrderDetails() {
                   />
                   <div className="flex-1 min-w-0 text-xs space-y-1">
                     <p className="font-bold text-ink text-sm">{item.name}</p>
-                    <p className="text-ink-muted">
-                      Size: <strong className="text-ink">{item.size || 'M'}</strong> | Color:{' '}
-                      <strong className="text-ink">{item.color || 'Rose'}</strong>
-                    </p>
+                    <div className="flex items-center gap-2 flex-wrap text-ink-muted">
+                      <span>Size: <strong className="text-ink">{item.size || 'M'}</strong></span>
+                      <span>Color: <strong className="text-ink">{item.color || 'Rose'}</strong></span>
+                      <span className="font-mono text-[11px]">HSN: {item.hsn_code}</span>
+                      <span className="font-mono text-[11px] bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded border border-blue-200 font-semibold">
+                        Base: {formatINR(Math.round((item.price / (1 + item.gst_rate / 100)) * 100) / 100)}
+                      </span>
+                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold border ${
+                        item.gst_rate > 5 ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      }`}>
+                        {item.gst_rate}% GST
+                      </span>
+                    </div>
                     <p className="text-ink-muted">
                       Qty: <strong className="text-ink">{item.qty}</strong> × {formatINR(item.price)}
                     </p>
@@ -280,66 +290,69 @@ export default function OrderDetails() {
               ))}
             </div>
           </div>
-        </div>
 
-        {/* 2. Address, Payment & Price Breakdown - 3 Columns Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Delivery Address */}
-          <div className="rounded-2xl border border-primary/10 bg-white p-5 shadow-soft text-xs space-y-2">
-            <h4 className="font-heading font-bold text-ink flex items-center gap-1.5 pb-2 border-b border-primary/5">
-              <MapPin className="h-4 w-4 text-primary" />
-              <span>Delivery Address</span>
-            </h4>
-            <p className="font-bold text-ink mt-2">{order.address?.name || order.customer_name}</p>
-            <p className="text-ink-muted">{order.address?.addressLine1 || order.shipping_address}</p>
-            <p className="text-ink-muted">
-              {order.address?.city || ''}, {order.address?.state || ''} — {order.address?.pincode || ''}
-            </p>
-            <p className="text-ink font-medium pt-1">Phone: {order.address?.phone || order.customer_phone}</p>
-          </div>
-
-          {/* Payment Method Info */}
-          <div className="rounded-2xl border border-primary/10 bg-white p-5 shadow-soft text-xs space-y-2">
-            <h4 className="font-heading font-bold text-ink flex items-center gap-1.5 pb-2 border-b border-primary/5">
-              <CreditCard className="h-4 w-4 text-primary" />
-              <span>Payment Details</span>
-            </h4>
-            <p className="text-ink-muted mt-2">Method: <strong className="text-ink">{order.paymentMethod || 'Online Payment'}</strong></p>
-            <p className="text-ink-muted">Status: <strong className="text-emerald-700 font-bold uppercase">{order.paymentStatus}</strong></p>
-          </div>
-
-          {/* Price Breakdown */}
-          <div className="rounded-2xl border border-primary/10 bg-white p-5 shadow-soft text-xs space-y-2.5">
-            <h4 className="font-heading font-bold text-ink pb-2 border-b border-primary/10">
-              Price Breakdown
-            </h4>
-            <div className="flex justify-between text-ink-muted">
-              <span>Subtotal</span>
-              <span className="font-semibold text-ink">{formatINR(order.subtotal)}</span>
+          {/* 2. Address, Payment & Price Breakdown - 3 Columns Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Delivery Address */}
+            <div className="rounded-2xl border border-primary/10 bg-white p-5 shadow-soft text-xs space-y-2">
+              <h4 className="font-heading font-bold text-ink flex items-center gap-1.5 pb-2 border-b border-primary/5">
+                <MapPin className="h-4 w-4 text-primary" />
+                <span>Delivery Address</span>
+              </h4>
+              <p className="font-bold text-ink mt-2">{order.address?.name || order.customer_name}</p>
+              <p className="text-ink-muted">{order.address?.addressLine1 || order.shipping_address}</p>
+              <p className="text-ink-muted">
+                {order.address?.city || ''}, {order.address?.state || ''} — {order.address?.pincode || ''}
+              </p>
+              <p className="text-ink font-medium pt-1">Phone: {order.address?.phone || order.customer_phone}</p>
             </div>
-            {order.discount > 0 && (
-              <div className="flex justify-between text-emerald-700 font-semibold">
-                <span>Discount</span>
-                <span>-{formatINR(order.discount)}</span>
+
+            {/* Payment Method Info */}
+            <div className="rounded-2xl border border-primary/10 bg-white p-5 shadow-soft text-xs space-y-2">
+              <h4 className="font-heading font-bold text-ink flex items-center gap-1.5 pb-2 border-b border-primary/5">
+                <CreditCard className="h-4 w-4 text-primary" />
+                <span>Payment Details</span>
+              </h4>
+              <p className="text-ink-muted mt-2">Method: <strong className="text-ink">{order.paymentMethod || 'Online Payment'}</strong></p>
+              <p className="text-ink-muted">Status: <strong className="text-emerald-700 font-bold uppercase">{order.paymentStatus}</strong></p>
+            </div>
+
+            {/* Price Breakdown */}
+            <div className="rounded-2xl border border-primary/10 bg-white p-5 shadow-soft text-xs space-y-2.5">
+              <h4 className="font-heading font-bold text-ink pb-2 border-b border-primary/10">
+                Price Breakdown
+              </h4>
+              <div className="flex justify-between text-ink-muted">
+                <span>Subtotal</span>
+                <span className="font-semibold text-ink">{formatINR(order.subtotal)}</span>
               </div>
-            )}
-            <div className="flex justify-between text-ink-muted">
-              <span>Shipping Fee</span>
-              <span className="font-semibold text-ink">
-                {order.shippingCost === 0 ? 'FREE' : formatINR(order.shippingCost)}
-              </span>
-            </div>
-            <div className="flex justify-between text-ink-muted">
-              <span>Tax (5%)</span>
-              <span className="font-semibold text-ink">{formatINR(order.tax)}</span>
-            </div>
-            <div className="flex justify-between border-t border-primary/10 pt-2 text-sm font-bold text-ink">
-              <span>Total Paid</span>
-              <span className="text-primary font-display text-base font-bold">{formatINR(order.total)}</span>
+              {order.discount > 0 && (
+                <div className="flex justify-between text-emerald-700 font-semibold">
+                  <span>Discount</span>
+                  <span>-{formatINR(order.discount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-ink-muted">
+                <span>Shipping Fee</span>
+                <span className="font-semibold text-ink">
+                  {order.shippingCost === 0 ? 'FREE' : formatINR(order.shippingCost)}
+                </span>
+              </div>
+              <div className="flex justify-between text-ink-muted">
+                <span>GST (Included)</span>
+                <span className="font-semibold text-ink">{formatINR(order.tax)}</span>
+              </div>
+              <div className="flex justify-between text-[11px] text-ink-muted/80 pl-2">
+                <span>Taxable Value:</span>
+                <span className="font-mono">{formatINR(order.taxableAmount)}</span>
+              </div>
+              <div className="flex justify-between border-t border-primary/10 pt-2 text-sm font-bold text-ink">
+                <span>Total Paid</span>
+                <span className="text-primary font-display text-base font-bold">{formatINR(order.total)}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
       {/* Printable Invoice Container (only visible when printing) */}
       <div className="hidden print:block bg-white p-8 text-black text-xs font-sans space-y-6">
@@ -348,11 +361,11 @@ export default function OrderDetails() {
           <div>
             <img src={logo} alt="Jalyn Logo" className="h-16 object-contain mb-2" />
             <p className="font-bold text-lg text-[#AD4A85] font-display">JALYN</p>
-            <p className="text-gray-500">Style Meets Comfort</p>
-            <p className="text-gray-500">support@jalyn.in | www.jalyn.in</p>
+            <p className="text-gray-500">Luxury Ethnic &amp; Occasion Wear</p>
+            <p className="text-gray-500">connect.jalyn@gmail.com | +91 97909 04504</p>
           </div>
           <div className="text-right space-y-1">
-            <h1 className="text-2xl font-bold text-gray-800 tracking-wider">INVOICE</h1>
+            <h1 className="text-2xl font-bold text-gray-800 tracking-wider">TAX INVOICE</h1>
             <p className="text-gray-600">Invoice No: <strong className="text-black">INV-{(order.order_number || order.id).replace('JALYN', '').replace('_CF_', '')}</strong></p>
             <p className="text-gray-600">Date: <strong className="text-black">{order.date || new Date().toLocaleDateString('en-GB')}</strong></p>
             <p className="text-gray-600">Order ID: <strong className="text-black">#{order.order_number || order.id}</strong></p>
@@ -373,10 +386,10 @@ export default function OrderDetails() {
           </div>
           <div>
             <h5 className="font-bold text-gray-500 uppercase tracking-wider mb-2">Shipped By:</h5>
-            <p className="font-bold text-gray-800">JALYN Retail Private Limited</p>
-            <p className="text-gray-600 mt-1">102, Couture Fashion Plaza,</p>
-            <p className="text-gray-600">Bandra West, Mumbai — 400050</p>
-            <p className="text-gray-600 mt-1">GSTIN: 27AAACJ8273K1Z9</p>
+            <p className="font-bold text-gray-800">JALYN APPARELS</p>
+            <p className="text-gray-600 mt-1">Luxury Ethnic &amp; Occasion Wear</p>
+            <p className="text-gray-600">Tamil Nadu, India</p>
+            <p className="text-gray-600 mt-1 font-semibold">GSTIN: 33BPCPA4714D1ZP</p>
             <p className="text-gray-600 mt-1">Courier Partner: {order.courier || 'BlueDart Express'}</p>
           </div>
         </div>
@@ -388,27 +401,33 @@ export default function OrderDetails() {
               <tr className="border-b border-gray-300 bg-gray-50 text-gray-700 font-bold uppercase">
                 <th className="p-3">#</th>
                 <th className="p-3">Item Description</th>
-                <th className="p-3">Attributes</th>
-                <th className="p-3 text-right">Price</th>
+                <th className="p-3">HSN</th>
+                <th className="p-3 text-right">Base Price</th>
+                <th className="p-3 text-center">GST Slab</th>
+                <th className="p-3 text-right">Price (MRP)</th>
                 <th className="p-3 text-center">Qty</th>
                 <th className="p-3 text-right">Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {order.items.map((item, idx) => (
-                <tr key={idx} className="text-gray-800 font-medium">
-                  <td className="p-3 font-medium">{idx + 1}</td>
-                  <td className="p-3">
-                    <p className="font-bold">{item.name}</p>
-                  </td>
-                  <td className="p-3 text-gray-600">
-                    Size: {item.size || 'M'} | Color: {item.color || 'Default'}
-                  </td>
-                  <td className="p-3 text-right">{formatINR(item.price)}</td>
-                  <td className="p-3 text-center">{item.qty}</td>
-                  <td className="p-3 text-right font-bold">{formatINR(item.price * item.qty)}</td>
-                </tr>
-              ))}
+              {order.items.map((item, idx) => {
+                const unitBase = Math.round((item.price / (1 + (item.gst_rate || 5) / 100)) * 100) / 100;
+                return (
+                  <tr key={idx} className="text-gray-800 font-medium">
+                    <td className="p-3 font-medium">{idx + 1}</td>
+                    <td className="p-3">
+                      <p className="font-bold">{item.name}</p>
+                      <p className="text-[10px] text-gray-500">Size: {item.size || 'M'} | Color: {item.color || 'Default'}</p>
+                    </td>
+                    <td className="p-3 font-mono">{item.hsn_code || '6204'}</td>
+                    <td className="p-3 text-right font-mono text-gray-700">{formatINR(unitBase)}</td>
+                    <td className="p-3 text-center">{item.gst_rate}%</td>
+                    <td className="p-3 text-right">{formatINR(item.price)}</td>
+                    <td className="p-3 text-center">{item.qty}</td>
+                    <td className="p-3 text-right font-bold">{formatINR(item.price * item.qty)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -420,14 +439,14 @@ export default function OrderDetails() {
             <p>Payment Method: <strong>{order.paymentMethod}</strong></p>
             <p>Payment Status: <strong className="text-emerald-700 font-bold">{order.paymentStatus?.toUpperCase()}</strong></p>
             <div className="border border-dashed border-gray-200 rounded-xl p-3 bg-gray-50/50 mt-4 text-[10px] leading-relaxed">
-              <p className="font-bold text-gray-700 mb-1">Terms & Conditions:</p>
+              <p className="font-bold text-gray-700 mb-1">Terms &amp; Conditions:</p>
               <p>1. Goods once sold cannot be returned but only exchanged within 7 days.</p>
-              <p>2. This is a computer generated invoice and requires no signature.</p>
+              <p>2. This is a computer generated tax invoice and requires no physical signature.</p>
             </div>
           </div>
-          <div className="col-span-5 space-y-2.5 text-right font-medium">
+          <div className="col-span-5 space-y-2 text-right font-medium">
             <div className="flex justify-between text-gray-600">
-              <span>Subtotal:</span>
+              <span>Gross Total:</span>
               <span className="text-gray-900">{formatINR(order.subtotal)}</span>
             </div>
             {order.discount > 0 && (
@@ -441,11 +460,29 @@ export default function OrderDetails() {
               <span className="text-gray-900">{order.shippingCost === 0 ? 'FREE' : formatINR(order.shippingCost)}</span>
             </div>
             <div className="flex justify-between text-gray-600">
-              <span>GST (5%):</span>
-              <span className="text-gray-900">{formatINR(order.tax)}</span>
+              <span>Taxable Value:</span>
+              <span className="text-gray-900 font-mono">{formatINR(order.taxableAmount)}</span>
             </div>
+            {order.cgstAmount > 0 && (
+              <div className="flex justify-between text-gray-600">
+                <span>CGST:</span>
+                <span className="text-gray-900 font-mono">{formatINR(order.cgstAmount)}</span>
+              </div>
+            )}
+            {order.sgstAmount > 0 && (
+              <div className="flex justify-between text-gray-600">
+                <span>SGST:</span>
+                <span className="text-gray-900 font-mono">{formatINR(order.sgstAmount)}</span>
+              </div>
+            )}
+            {order.igstAmount > 0 && (
+              <div className="flex justify-between text-gray-600">
+                <span>IGST:</span>
+                <span className="text-gray-900 font-mono">{formatINR(order.igstAmount)}</span>
+              </div>
+            )}
             <div className="flex justify-between border-t border-gray-300 pt-2 text-sm font-bold text-gray-900">
-              <span>Total Amount:</span>
+              <span>Total Invoice Amount:</span>
               <span className="text-[#AD4A85] text-base font-bold">{formatINR(order.total)}</span>
             </div>
           </div>

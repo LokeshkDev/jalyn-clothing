@@ -309,6 +309,8 @@ export const ensureProductsTable = async () => {
       }
     };
 
+    await ensureColumn('base_price', 'ALTER TABLE products ADD COLUMN base_price DECIMAL(10,2) NULL');
+    await ensureColumn('hsn_code', "ALTER TABLE products ADD COLUMN hsn_code VARCHAR(50) DEFAULT '6204'");
     await ensureColumn('product_code', 'ALTER TABLE products ADD COLUMN product_code VARCHAR(100)');
     await ensureColumn('base_sku', 'ALTER TABLE products ADD COLUMN base_sku VARCHAR(100)');
     await ensureColumn('brand', "ALTER TABLE products ADD COLUMN brand VARCHAR(100) DEFAULT 'JALYN'");
@@ -526,7 +528,7 @@ export const getProductBySlug = async (req, res) => {
 // ─── POST /products ───
 export const createProduct = async (req, res) => {
   const {
-    title, barcode_short_name, slug, category_slug, price, original_price, description, short_description,
+    title, barcode_short_name, slug, category_slug, price, original_price, base_price, hsn_code, description, short_description,
     sizes, colors, stock, brand, product_code, base_sku,
     is_featured, is_new_arrival, is_online, is_offline, low_stock_threshold,
     variants, color_images, size_guide,
@@ -581,6 +583,8 @@ export const createProduct = async (req, res) => {
     category_slug: category_slug || 'dresses',
     price: parseFloat(price) || 0,
     original_price: parseFloat(original_price) || parseFloat(price) || 0,
+    base_price: base_price !== undefined && base_price !== null && base_price !== '' ? parseFloat(base_price) : null,
+    hsn_code: hsn_code || '6204',
     discount: disc, rating: 4.8, reviews_count: 0,
     stock: totalStock,
     is_featured: is_featured ? 1 : 0,
@@ -608,15 +612,15 @@ export const createProduct = async (req, res) => {
   try {
     const [result] = await pool.query(
       `INSERT INTO products 
-      (title, barcode_short_name, slug, category_slug, price, original_price, discount, description, short_description,
+      (title, barcode_short_name, slug, category_slug, price, original_price, base_price, hsn_code, discount, description, short_description,
        sizes, colors, primary_image, hover_image, stock, brand, product_code, base_sku,
        is_featured, is_new_arrival, is_online, is_offline, low_stock_threshold,
        variants, color_images, size_guide, fabric, sleeve, occasion, fit, pattern, season,
        vendor_id, rack_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         title, barcode_short_name || null, productSlug, category_slug || 'dresses',
-        price, original_price || price, disc,
+        price, original_price || price, newProd.base_price, newProd.hsn_code, disc,
         description || '', short_description || '',
         JSON.stringify(parsedSizes), JSON.stringify(parsedColors),
         primaryImg, hoverImg, totalStock,
@@ -722,6 +726,7 @@ export const updateProduct = async (req, res) => {
     const params = [];
     const fieldMap = {
       title: 'title', barcode_short_name: 'barcode_short_name', price: 'price', original_price: 'original_price',
+      base_price: 'base_price', hsn_code: 'hsn_code',
       discount: 'discount', stock: 'stock', category_slug: 'category_slug',
       brand: 'brand', product_code: 'product_code', base_sku: 'base_sku',
       description: 'description', short_description: 'short_description',

@@ -3,11 +3,10 @@ import {
   Calendar, Download, Printer, Search, IndianRupee, FileSpreadsheet,
   TrendingUp, ArrowDownRight, ArrowUpRight, CheckCircle2, Clock,
   Filter, RefreshCw, Layers, CreditCard, Banknote, QrCode, Store,
-  Globe, ShieldCheck, ChevronDown, Copy, Check
+  Globe, ShieldCheck, ChevronDown, Copy, Check, Percent
 } from 'lucide-react';
 import { isWalkinOrder } from '../pages/OrdersPage';
-
-const GST_RATE_PERCENT = 5; // Standard 5% GST for Apparels
+import { calculateOrderTax, getApparelGstRate, calculateItemTax } from '../utils/taxUtils';
 
 const money = (val) => '₹' + Number(val || 0).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 const moneyClean = (val) => Number(val || 0).toFixed(2);
@@ -36,8 +35,8 @@ const getDateRangeForPreset = (preset) => {
       return { start: yStart, end: yEnd };
     }
     case 'this_week': {
-      const day = todayStart.getDay(); // 0 is Sun
-      const diff = todayStart.getDate() - day + (day === 0 ? -6 : 1); // Monday
+      const day = todayStart.getDay(); 
+      const diff = todayStart.getDate() - day + (day === 0 ? -6 : 1);
       const wStart = new Date(todayStart.setDate(diff));
       return { start: wStart, end: todayEnd };
     }
@@ -50,75 +49,60 @@ const getDateRangeForPreset = (preset) => {
       const lmEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
       return { start: lmStart, end: lmEnd };
     }
-    case 'q1': // Apr - Jun (Indian FY)
-      return {
-        start: new Date(now.getFullYear(), 3, 1),
-        end: new Date(now.getFullYear(), 5, 30, 23, 59, 59, 999),
-      };
-    case 'q2': // Jul - Sep
-      return {
-        start: new Date(now.getFullYear(), 6, 1),
-        end: new Date(now.getFullYear(), 8, 30, 23, 59, 59, 999),
-      };
-    case 'q3': // Oct - Dec
-      return {
-        start: new Date(now.getFullYear(), 9, 1),
-        end: new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999),
-      };
-    case 'q4': // Jan - Mar
-      return {
-        start: new Date(now.getFullYear(), 0, 1),
-        end: new Date(now.getFullYear(), 2, 31, 23, 59, 59, 999),
-      };
+    case 'q1': {
+      const yr = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
+      return { start: new Date(yr, 3, 1), end: new Date(yr, 5, 30, 23, 59, 59, 999) };
+    }
+    case 'q2': {
+      const yr = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
+      return { start: new Date(yr, 6, 1), end: new Date(yr, 8, 30, 23, 59, 59, 999) };
+    }
+    case 'q3': {
+      const yr = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
+      return { start: new Date(yr, 9, 1), end: new Date(yr, 11, 31, 23, 59, 59, 999) };
+    }
+    case 'q4': {
+      const yr = now.getMonth() < 3 ? now.getFullYear() : now.getFullYear() + 1;
+      return { start: new Date(yr, 0, 1), end: new Date(yr, 2, 31, 23, 59, 59, 999) };
+    }
     case 'fy': {
-      const currentYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-      return {
-        start: new Date(currentYear, 3, 1),
-        end: new Date(currentYear + 1, 2, 31, 23, 59, 59, 999),
-      };
+      const yr = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
+      return { start: new Date(yr, 3, 1), end: new Date(yr + 1, 2, 31, 23, 59, 59, 999) };
     }
     default:
       return { start: null, end: null };
   }
 };
 
-export default function BiTaxReport({ orders = [], onRefresh }) {
+export default function BiTaxReport({ orders = [], onRefresh, loading = false }) {
   const [preset, setPreset] = useState('this_month');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
-  const [channelFilter, setChannelFilter] = useState('all'); // 'all', 'online', 'pos'
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all'); // 'all', 'paid', 'pending'
+  const [channelFilter, setChannelFilter] = useState('all'); 
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all'); 
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeReportTab, setActiveReportTab] = useState('gstr1'); // 'gstr1', 'hsn', 'payments'
+  const [activeReportTab, setActiveReportTab] = useState('gstr1'); 
   const [copied, setCopied] = useState(false);
 
-  // Filter orders by Date range, Channel, Payment Status & Search
+  // Filtered Orders Calculation
   const filteredOrders = useMemo(() => {
-    let { start, end } = getDateRangeForPreset(preset);
-    if (preset === 'custom') {
-      start = customStart ? new Date(customStart + 'T00:00:00') : null;
-      end = customEnd ? new Date(customEnd + 'T23:59:59') : null;
-    }
-
+    const { start, end } = getDateRangeForPreset(preset);
     const q = searchQuery.trim().toLowerCase();
 
     return orders.filter((o) => {
-      // Date filter
-      if (start || end) {
-        const oDate = new Date(o.created_at || o.date || 0);
-        if (start && oDate < start) return false;
-        if (end && oDate > end) return false;
+      const createdDate = new Date(String(o.created_at || '').includes(' ') ? String(o.created_at).replace(' ', 'T') : o.created_at);
+      if (preset === 'custom') {
+        if (customStart && createdDate < new Date(customStart)) return false;
+        if (customEnd && createdDate > new Date(customEnd + 'T23:59:59.999')) return false;
+      } else if (start && end) {
+        if (createdDate < start || createdDate > end) return false;
       }
 
-      // Channel filter
-      if (channelFilter === 'online' && isWalkinOrder(o)) return false;
       if (channelFilter === 'pos' && !isWalkinOrder(o)) return false;
-
-      // Payment status filter
+      if (channelFilter === 'online' && isWalkinOrder(o)) return false;
       if (paymentStatusFilter === 'paid' && o.payment_status !== 'paid') return false;
       if (paymentStatusFilter === 'pending' && o.payment_status === 'paid') return false;
 
-      // Search query
       if (q) {
         const orderNum = (o.order_number || '').toLowerCase();
         const custName = (o.customer_name || '').toLowerCase();
@@ -128,18 +112,31 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
           return false;
         }
       }
-
       return true;
     });
   }, [orders, preset, customStart, customEnd, channelFilter, paymentStatusFilter, searchQuery]);
 
-  // Aggregate Tax & Financial Computation
+  // Aggregate Tax & Financial Computation with Per-Item GST Slabs
   const stats = useMemo(() => {
     let grossTurnover = 0;
     let netDiscounts = 0;
     let totalShipping = 0;
     let paidAmount = 0;
     let pendingAmount = 0;
+
+    let totalTaxableValue = 0;
+    let totalGstAmount = 0;
+    let totalCgst = 0;
+    let totalSgst = 0;
+    let totalIgst = 0;
+
+    let slab5Taxable = 0;
+    let slab5Gst = 0;
+    let slab5Qty = 0;
+
+    let slab18Taxable = 0;
+    let slab18Gst = 0;
+    let slab18Qty = 0;
 
     let cashTotal = 0;
     let upiTotal = 0;
@@ -177,23 +174,55 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
       } else {
         otherPayTotal += amount;
       }
-    });
 
-    // GST Breakdown (assuming inclusive 5% GST on gross apparel sales)
-    // Formula: Taxable Value = Gross Turnover / (1 + GST Rate)
-    // CGST = 2.5%, SGST = 2.5%
-    const taxableValue = Math.round((grossTurnover / (1 + GST_RATE_PERCENT / 100)) * 100) / 100;
-    const totalGst = Math.round((grossTurnover - taxableValue) * 100) / 100;
-    const cgst = Math.round((totalGst / 2) * 100) / 100;
-    const sgst = Math.round((totalGst - cgst) * 100) / 100;
+      const isInclusive = o.is_gst_inclusive !== undefined ? Boolean(o.is_gst_inclusive) : true;
+      const orderTax = calculateOrderTax({
+        items: o.items || [],
+        discountAmount: discount,
+        shippingAmount: shipping,
+        isGstInclusive: isInclusive,
+        shippingState: o.shipping_address,
+      });
+
+      const oTaxable = o.taxable_amount !== null && o.taxable_amount !== undefined ? Number(o.taxable_amount) : orderTax.taxableAmount;
+      const oCgst = o.cgst_amount !== null && o.cgst_amount !== undefined ? Number(o.cgst_amount) : orderTax.cgstAmount;
+      const oSgst = o.sgst_amount !== null && o.sgst_amount !== undefined ? Number(o.sgst_amount) : orderTax.sgstAmount;
+      const oIgst = o.igst_amount !== null && o.igst_amount !== undefined ? Number(o.igst_amount) : orderTax.igstAmount;
+      const oTotalTax = oCgst + oSgst + oIgst;
+
+      totalTaxableValue += oTaxable;
+      totalGstAmount += oTotalTax;
+      totalCgst += oCgst;
+      totalSgst += oSgst;
+      totalIgst += oIgst;
+
+      slab5Taxable += orderTax.slab5.taxableAmount;
+      slab5Gst += orderTax.slab5.totalTax;
+      slab5Qty += orderTax.slab5.itemCount;
+
+      slab18Taxable += orderTax.slab18.taxableAmount;
+      slab18Gst += orderTax.slab18.totalTax;
+      slab18Qty += orderTax.slab18.itemCount;
+    });
 
     return {
       orderCount: filteredOrders.length,
       grossTurnover,
-      taxableValue,
-      totalGst,
-      cgst,
-      sgst,
+      taxableValue: Math.round(totalTaxableValue * 100) / 100,
+      totalGst: Math.round(totalGstAmount * 100) / 100,
+      cgst: Math.round(totalCgst * 100) / 100,
+      sgst: Math.round(totalSgst * 100) / 100,
+      igst: Math.round(totalIgst * 100) / 100,
+      slab5: {
+        taxable: Math.round(slab5Taxable * 100) / 100,
+        gst: Math.round(slab5Gst * 100) / 100,
+        qty: slab5Qty,
+      },
+      slab18: {
+        taxable: Math.round(slab18Taxable * 100) / 100,
+        gst: Math.round(slab18Gst * 100) / 100,
+        qty: slab18Qty,
+      },
       netDiscounts,
       totalShipping,
       paidAmount,
@@ -209,7 +238,7 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
     };
   }, [filteredOrders]);
 
-  // HSN / Product Level Summary Aggregation
+  // HSN / Product Level Summary Aggregation with 5% vs 18% Slabs
   const hsnSummary = useMemo(() => {
     const map = {};
     filteredOrders.forEach((o) => {
@@ -219,29 +248,35 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
         const qty = Number(item.quantity || item.qty) || 1;
         const price = Number(item.price) || 0;
         const itemGross = price * qty;
+        const hsnCode = item.hsn_code || '6204';
+        const gstRate = Number(item.gst_rate) || getApparelGstRate(price);
 
-        if (!map[sku]) {
-          map[sku] = {
+        const key = `${hsnCode}_${sku}_${gstRate}`;
+
+        if (!map[key]) {
+          map[key] = {
             sku,
             title,
             qty: 0,
             grossTotal: 0,
-            hsnCode: '6204', // Women's suits, dresses, skirts HSN code
+            hsnCode,
+            gstRate,
           };
         }
-        map[sku].qty += qty;
-        map[sku].grossTotal += itemGross;
+        map[key].qty += qty;
+        map[key].grossTotal += itemGross;
       });
     });
 
     return Object.values(map).map((item) => {
-      const taxable = Math.round((item.grossTotal / 1.05) * 100) / 100;
+      const taxable = Math.round((item.grossTotal / (1 + item.gstRate / 100)) * 100) / 100;
       const gst = Math.round((item.grossTotal - taxable) * 100) / 100;
+      const half = Math.round((gst / 2) * 100) / 100;
       return {
         ...item,
         taxableValue: taxable,
-        cgst: Math.round((gst / 2) * 100) / 100,
-        sgst: Math.round((gst / 2) * 100) / 100,
+        cgst: half,
+        sgst: Math.round((gst - half) * 100) / 100,
         totalGst: gst,
       };
     });
@@ -259,19 +294,32 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
       'Payment Method',
       'Payment Status',
       'Taxable Value (INR)',
-      'GST Rate (%)',
       'CGST (INR)',
       'SGST (INR)',
+      'IGST (INR)',
       'Total GST (INR)',
       'Total Invoice Amount (INR)',
     ];
 
     const rows = filteredOrders.map((o) => {
       const gross = Number(o.total_amount) || 0;
-      const taxable = Math.round((gross / 1.05) * 100) / 100;
-      const gst = Math.round((gross - taxable) * 100) / 100;
-      const cgst = Math.round((gst / 2) * 100) / 100;
-      const sgst = Math.round((gst - cgst) * 100) / 100;
+      const discount = Number(o.discount_amount) || 0;
+      const shipping = Number(o.shipping_amount) || 0;
+      const isInclusive = o.is_gst_inclusive !== undefined ? Boolean(o.is_gst_inclusive) : true;
+
+      const orderTax = calculateOrderTax({
+        items: o.items || [],
+        discountAmount: discount,
+        shippingAmount: shipping,
+        isGstInclusive: isInclusive,
+        shippingState: o.shipping_address,
+      });
+
+      const taxable = o.taxable_amount !== null && o.taxable_amount !== undefined ? Number(o.taxable_amount) : orderTax.taxableAmount;
+      const cgst = o.cgst_amount !== null && o.cgst_amount !== undefined ? Number(o.cgst_amount) : orderTax.cgstAmount;
+      const sgst = o.sgst_amount !== null && o.sgst_amount !== undefined ? Number(o.sgst_amount) : orderTax.sgstAmount;
+      const igst = o.igst_amount !== null && o.igst_amount !== undefined ? Number(o.igst_amount) : orderTax.igstAmount;
+      const totalTax = cgst + sgst + igst;
       const channel = isWalkinOrder(o) ? 'POS Counter' : 'Online Website';
 
       return [
@@ -280,14 +328,14 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
         `"${channel}"`,
         `"${(o.customer_name || 'Walk-in Customer').replace(/"/g, '""')}"`,
         `"${o.customer_phone || ''}"`,
-        `"Maharashtra (27)"`,
+        `"${orderTax.isInterState ? 'Interstate' : 'Tamil Nadu (33)'}"`,
         `"${o.payment_method || 'Cash'}"`,
         `"${(o.payment_status || 'paid').toUpperCase()}"`,
         moneyClean(taxable),
-        '5%',
         moneyClean(cgst),
         moneyClean(sgst),
-        moneyClean(gst),
+        moneyClean(igst),
+        moneyClean(totalTax),
         moneyClean(gross),
       ];
     });
@@ -310,11 +358,13 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
       'HSN Code',
       'Product Description',
       'SKU Code',
+      'GST Slab (%)',
       'UQC',
       'Total Quantity',
       'Taxable Value (INR)',
-      'Central Tax (CGST 2.5%)',
-      'State Tax (SGST 2.5%)',
+      'Central Tax (CGST)',
+      'State Tax (SGST)',
+      'Integrated Tax (IGST)',
       'Total Tax Amount',
       'Gross Total (INR)',
     ];
@@ -323,11 +373,13 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
       `"${h.hsnCode}"`,
       `"${h.title.replace(/"/g, '""')}"`,
       `"${h.sku}"`,
+      `"${h.gstRate}%"`,
       `"PCS"`,
       h.qty,
       moneyClean(h.taxableValue),
       moneyClean(h.cgst),
       moneyClean(h.sgst),
+      moneyClean(0),
       moneyClean(h.totalGst),
       moneyClean(h.grossTotal),
     ]);
@@ -354,25 +406,35 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
     const rowsHtml = filteredOrders
       .map((o) => {
         const gross = Number(o.total_amount) || 0;
-        const taxable = Math.round((gross / 1.05) * 100) / 100;
-        const gst = Math.round((gross - taxable) * 100) / 100;
-        const cgst = Math.round((gst / 2) * 100) / 100;
-        const sgst = Math.round((gst - cgst) * 100) / 100;
+        const discount = Number(o.discount_amount) || 0;
+        const shipping = Number(o.shipping_amount) || 0;
+        const isInclusive = o.is_gst_inclusive !== undefined ? Boolean(o.is_gst_inclusive) : true;
+
+        const orderTax = calculateOrderTax({
+          items: o.items || [],
+          discountAmount: discount,
+          shippingAmount: shipping,
+          isGstInclusive: isInclusive,
+          shippingState: o.shipping_address,
+        });
+
+        const taxable = o.taxable_amount !== null && o.taxable_amount !== undefined ? Number(o.taxable_amount) : orderTax.taxableAmount;
+        const cgst = o.cgst_amount !== null && o.cgst_amount !== undefined ? Number(o.cgst_amount) : orderTax.cgstAmount;
+        const sgst = o.sgst_amount !== null && o.sgst_amount !== undefined ? Number(o.sgst_amount) : orderTax.sgstAmount;
         const channel = isWalkinOrder(o) ? 'POS' : 'Online';
 
         return `
         <tr>
           <td>${formatDate(o.created_at)}</td>
-          <td style="font-weight:bold; font-family:monospace;">${o.order_number || o.id}</td>
+          <td style="font-family:monospace; font-weight:bold;">${o.order_number || o.id}</td>
           <td>${channel}</td>
-          <td>${o.customer_name || 'Customer'}</td>
+          <td>${o.customer_name || 'Walk-in'}</td>
           <td>${o.payment_method || 'Cash'}</td>
-          <td style="text-align:right;">₹${moneyClean(taxable)}</td>
-          <td style="text-align:right;">₹${moneyClean(cgst)}</td>
-          <td style="text-align:right;">₹${moneyClean(sgst)}</td>
-          <td style="text-align:right; font-weight:bold;">₹${moneyClean(gross)}</td>
-        </tr>
-      `;
+          <td style="text-align:right; font-family:monospace;">₹${moneyClean(taxable)}</td>
+          <td style="text-align:right; font-family:monospace;">₹${moneyClean(cgst)}</td>
+          <td style="text-align:right; font-family:monospace;">₹${moneyClean(sgst)}</td>
+          <td style="text-align:right; font-family:monospace; font-weight:bold;">₹${moneyClean(gross)}</td>
+        </tr>`;
       })
       .join('');
 
@@ -380,7 +442,7 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>JALYN - Financial & Tax Audit Sheet</title>
+  <title>JALYN - Financial &amp; Tax Audit Sheet</title>
   <style>
     @page { size: A4; margin: 15mm; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #2A1A22; font-size: 11px; margin: 0; padding: 0; }
@@ -405,11 +467,11 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
   <div class="header">
     <div>
       <div class="brand">JALYN APPARELS</div>
-      <div class="sub">Luxury Ethnic & Occasion Wear · GSTIN: 27AABCJ9876Q1Z2</div>
-      <div class="sub">support@jalyn.in | +91 98765 43210</div>
+      <div class="sub">Luxury Ethnic &amp; Occasion Wear · GSTIN: 33BPCPA4714D1ZP</div>
+      <div class="sub">connect.jalyn@gmail.com | +91 97909 04504</div>
     </div>
     <div class="title-box">
-      <div class="title">GST & Financial Statement</div>
+      <div class="title">GST &amp; Financial Statement</div>
       <div class="sub">Period: ${periodLabel}</div>
       <div class="sub">Generated: ${new Date().toLocaleString('en-IN')}</div>
     </div>
@@ -429,19 +491,19 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
       <div class="card-val">₹${moneyClean(stats.taxableValue)}</div>
     </div>
     <div class="card">
-      <div class="card-label">Total GST (5%)</div>
+      <div class="card-label">Total Output GST</div>
       <div class="card-val">₹${moneyClean(stats.totalGst)}</div>
     </div>
   </div>
 
   <div class="grid">
     <div class="card">
-      <div class="card-label">CGST (2.5%)</div>
-      <div class="card-val">₹${moneyClean(stats.cgst)}</div>
+      <div class="card-label">5% Slab Taxable / GST</div>
+      <div class="card-val">₹${moneyClean(stats.slab5.taxable)} / ₹${moneyClean(stats.slab5.gst)}</div>
     </div>
     <div class="card">
-      <div class="card-label">SGST (2.5%)</div>
-      <div class="card-val">₹${moneyClean(stats.sgst)}</div>
+      <div class="card-label">18% Slab Taxable / GST</div>
+      <div class="card-val">₹${moneyClean(stats.slab18.taxable)} / ₹${moneyClean(stats.slab18.gst)}</div>
     </div>
     <div class="card">
       <div class="card-label">Cash Collected</div>
@@ -502,14 +564,24 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
   const handleCopyTallyJson = () => {
     const exportData = {
       company: 'JALYN APPARELS',
-      gstin: '27AABCJ9876Q1Z2',
+      gstin: '33BPCPA4714D1ZP',
       period: preset,
       generatedAt: new Date().toISOString(),
       summary: stats,
       invoices: filteredOrders.map((o) => {
         const gross = Number(o.total_amount) || 0;
-        const taxable = Math.round((gross / 1.05) * 100) / 100;
-        const gst = Math.round((gross - taxable) * 100) / 100;
+        const discount = Number(o.discount_amount) || 0;
+        const shipping = Number(o.shipping_amount) || 0;
+        const isInclusive = o.is_gst_inclusive !== undefined ? Boolean(o.is_gst_inclusive) : true;
+
+        const orderTax = calculateOrderTax({
+          items: o.items || [],
+          discountAmount: discount,
+          shippingAmount: shipping,
+          isGstInclusive: isInclusive,
+          shippingState: o.shipping_address,
+        });
+
         return {
           invoice_no: o.order_number || o.id,
           date: o.created_at,
@@ -518,16 +590,19 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
           channel: isWalkinOrder(o) ? 'pos' : 'online',
           payment_method: o.payment_method,
           payment_status: o.payment_status,
-          taxable_value: taxable,
-          cgst: Math.round((gst / 2) * 100) / 100,
-          sgst: Math.round((gst / 2) * 100) / 100,
-          total_gst: gst,
+          taxable_value: o.taxable_amount !== null && o.taxable_amount !== undefined ? Number(o.taxable_amount) : orderTax.taxableAmount,
+          cgst: o.cgst_amount !== null && o.cgst_amount !== undefined ? Number(o.cgst_amount) : orderTax.cgstAmount,
+          sgst: o.sgst_amount !== null && o.sgst_amount !== undefined ? Number(o.sgst_amount) : orderTax.sgstAmount,
+          igst: o.igst_amount !== null && o.igst_amount !== undefined ? Number(o.igst_amount) : orderTax.igstAmount,
+          total_gst: orderTax.totalTax,
           gross_amount: gross,
           items: (o.items || []).map((i) => ({
             name: i.product_name,
             sku: i.sku,
+            hsn_code: i.hsn_code || '6204',
             qty: i.quantity,
             price: i.price,
+            gst_rate: i.gst_rate || getApparelGstRate(i.price),
           })),
         };
       }),
@@ -546,10 +621,10 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
           <div>
             <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
               <Layers className="w-5 h-5 text-[#AD4A85]" />
-              BI Financial & Tally Tax/GST Reporting Center
+              BI Financial &amp; Tally Tax/GST Reporting Center
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Comprehensive GSTR-1, GSTR-3B, HSN summary & financial ledger for tax filing and accountant audits.
+              Apparel GST Slabs (≤ ₹2,500 @ 5% GST, &gt; ₹2,500 @ 18% GST), GSTR-1, HSN summary &amp; financial ledger for audits.
             </p>
           </div>
 
@@ -730,14 +805,17 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
           <p className="text-[10px] text-gray-400 mt-1">Excluding GST</p>
         </div>
 
-        {/* Total GST (5%) */}
+        {/* Total GST with Slab Breakdown */}
         <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Total Output GST (5%)</span>
+            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Total Output GST</span>
             <span className="p-1.5 bg-emerald-50 rounded-lg text-emerald-600"><ShieldCheck className="w-4 h-4" /></span>
           </div>
           <p className="text-xl font-extrabold text-emerald-700 mt-2">{money(stats.totalGst)}</p>
-          <p className="text-[10px] text-emerald-600 font-semibold mt-1">CGST: {money(stats.cgst)} | SGST: {money(stats.sgst)}</p>
+          <div className="flex items-center justify-between text-[10px] text-gray-500 mt-1">
+            <span className="text-emerald-700 font-semibold">5% GST: {money(stats.slab5.gst)}</span>
+            <span className="text-amber-700 font-semibold">18% GST: {money(stats.slab18.gst)}</span>
+          </div>
         </div>
 
         {/* Realized Cash/Digital vs Pending */}
@@ -754,7 +832,7 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
       {/* ─── PAYMENT SPLIT LEDGER ─── */}
       <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm">
         <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3">
-          Payment Mode Breakdown & Cash Ledger
+          Payment Mode Breakdown &amp; Cash Ledger
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
@@ -769,7 +847,7 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
 
           <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
             <div className="flex items-center gap-1.5 text-xs font-bold text-blue-800">
-              <QrCode className="w-4 h-4" /> UPI & QR
+              <QrCode className="w-4 h-4" /> UPI &amp; QR
             </div>
             <p className="text-base font-extrabold text-gray-900 mt-1.5">{money(stats.payments.upi)}</p>
             <p className="text-[10px] text-blue-700 mt-0.5">
@@ -855,8 +933,8 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
                       <th className="py-3 px-4">Customer</th>
                       <th className="py-3 px-4">Payment</th>
                       <th className="py-3 px-4 text-right">Taxable Value</th>
-                      <th className="py-3 px-4 text-right">CGST (2.5%)</th>
-                      <th className="py-3 px-4 text-right">SGST (2.5%)</th>
+                      <th className="py-3 px-4 text-right">CGST</th>
+                      <th className="py-3 px-4 text-right">SGST</th>
                       <th className="py-3 px-4 text-right">Total Invoice</th>
                       <th className="py-3 px-4 text-center">Status</th>
                     </tr>
@@ -864,10 +942,21 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
                   <tbody className="divide-y divide-gray-100 font-medium">
                     {filteredOrders.map((o) => {
                       const gross = Number(o.total_amount) || 0;
-                      const taxable = Math.round((gross / 1.05) * 100) / 100;
-                      const gst = Math.round((gross - taxable) * 100) / 100;
-                      const cgst = Math.round((gst / 2) * 100) / 100;
-                      const sgst = Math.round((gst - cgst) * 100) / 100;
+                      const discount = Number(o.discount_amount) || 0;
+                      const shipping = Number(o.shipping_amount) || 0;
+                      const isInclusive = o.is_gst_inclusive !== undefined ? Boolean(o.is_gst_inclusive) : true;
+
+                      const orderTax = calculateOrderTax({
+                        items: o.items || [],
+                        discountAmount: discount,
+                        shippingAmount: shipping,
+                        isGstInclusive: isInclusive,
+                        shippingState: o.shipping_address,
+                      });
+
+                      const taxable = o.taxable_amount !== null && o.taxable_amount !== undefined ? Number(o.taxable_amount) : orderTax.taxableAmount;
+                      const cgst = o.cgst_amount !== null && o.cgst_amount !== undefined ? Number(o.cgst_amount) : orderTax.cgstAmount;
+                      const sgst = o.sgst_amount !== null && o.sgst_amount !== undefined ? Number(o.sgst_amount) : orderTax.sgstAmount;
                       const isWalkin = isWalkinOrder(o);
 
                       return (
@@ -900,8 +989,8 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
                             <span
                               className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                                 o.payment_status === 'paid'
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    : 'bg-amber-50 text-amber-700 border-amber-200'
                               }`}
                             >
                               {(o.payment_status || 'paid').toUpperCase()}
@@ -944,29 +1033,57 @@ export default function BiTaxReport({ orders = [], onRefresh }) {
                       <th className="py-3 px-4">HSN Code</th>
                       <th className="py-3 px-4">Product Description</th>
                       <th className="py-3 px-4">SKU</th>
+                      <th className="py-3 px-4 text-center">GST Slab</th>
                       <th className="py-3 px-4 text-center">UQC</th>
                       <th className="py-3 px-4 text-center">Units Sold</th>
                       <th className="py-3 px-4 text-right">Taxable Value</th>
-                      <th className="py-3 px-4 text-right">CGST (2.5%)</th>
-                      <th className="py-3 px-4 text-right">SGST (2.5%)</th>
+                      <th className="py-3 px-4 text-right">CGST</th>
+                      <th className="py-3 px-4 text-right">SGST</th>
                       <th className="py-3 px-4 text-right">Gross Total</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 font-medium">
-                    {hsnSummary.map((h, i) => (
-                      <tr key={i} className="hover:bg-gray-50/80 transition">
-                        <td className="py-2.5 px-4 font-mono font-bold text-gray-700">{h.hsnCode}</td>
+                    {hsnSummary.map((h, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50/80 transition">
+                        <td className="py-2.5 px-4 font-mono font-bold text-gray-900">{h.hsnCode}</td>
                         <td className="py-2.5 px-4 font-semibold text-gray-800">{h.title}</td>
-                        <td className="py-2.5 px-4 font-mono text-gray-500">{h.sku}</td>
-                        <td className="py-2.5 px-4 text-center text-gray-500">PCS</td>
+                        <td className="py-2.5 px-4 font-mono text-gray-500 text-[11px]">{h.sku}</td>
+                        <td className="py-2.5 px-4 text-center">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            h.gstRate > 5 ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                          }`}>
+                            {h.gstRate}%
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-4 text-center text-gray-400 font-bold text-[10px]">PCS</td>
                         <td className="py-2.5 px-4 text-center font-bold text-gray-900">{h.qty}</td>
                         <td className="py-2.5 px-4 text-right font-mono text-gray-800">{money(h.taxableValue)}</td>
                         <td className="py-2.5 px-4 text-right font-mono text-gray-600">{money(h.cgst)}</td>
                         <td className="py-2.5 px-4 text-right font-mono text-gray-600">{money(h.sgst)}</td>
-                        <td className="py-2.5 px-4 text-right font-mono font-bold text-gray-900">{money(h.grossTotal)}</td>
+                        <td className="py-2.5 px-4 text-right font-mono font-bold text-[#AD4A85]">{money(h.grossTotal)}</td>
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot className="bg-gray-50 border-t border-gray-200 font-bold text-xs text-gray-900">
+                    <tr>
+                      <td colSpan={5} className="py-3 px-4 uppercase tracking-wider text-[10px] text-gray-500">
+                        Total HSN Aggregates
+                      </td>
+                      <td className="py-3 px-4 text-center font-bold">{hsnSummary.reduce((s, h) => s + h.qty, 0)}</td>
+                      <td className="py-3 px-4 text-right font-mono text-blue-700">
+                        {money(hsnSummary.reduce((s, h) => s + h.taxableValue, 0))}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-emerald-700">
+                        {money(hsnSummary.reduce((s, h) => s + h.cgst, 0))}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-emerald-700">
+                        {money(hsnSummary.reduce((s, h) => s + h.sgst, 0))}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-gray-900 text-sm">
+                        {money(hsnSummary.reduce((s, h) => s + h.grossTotal, 0))}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             )}

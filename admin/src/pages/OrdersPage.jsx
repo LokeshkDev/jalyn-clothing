@@ -17,6 +17,7 @@ import {
   printTaxInvoice,
   sendLuxuryWhatsAppInvoice,
 } from '../utils/invoiceThermalUtils';
+import { calculateOrderTax, getApparelGstRate } from '../utils/taxUtils';
 
 const ORDER_STATUS = {
   pending: { label: 'Pending', cls: 'bg-amber-100 text-amber-800 border-amber-200', icon: Clock },
@@ -703,38 +704,61 @@ export default function OrdersPage() {
                       <thead className="bg-gray-100 font-bold text-gray-600 text-[10px] uppercase">
                         <tr>
                           <th className="py-2.5 px-3">Product</th>
-                          <th className="py-2.5 px-3">Variant</th>
+                          <th className="py-2.5 px-3">Variant / HSN</th>
+                          <th className="py-2.5 px-3 text-right">Base Price</th>
+                          <th className="py-2.5 px-3 text-center">GST Slab</th>
+                          <th className="py-2.5 px-3 text-right">Rate (MRP)</th>
                           <th className="py-2.5 px-3 text-center">Qty</th>
-                          <th className="py-2.5 px-3 text-right">Unit Price</th>
                           <th className="py-2.5 px-3 text-right">Line Total</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {(detailOrder.items || []).length === 0 ? (
-                          <tr><td colSpan={5} className="py-8 text-center text-gray-400">No items found for this order.</td></tr>
-                        ) : (detailOrder.items || []).map((item, idx) => (
-                          <tr key={idx} className="hover:bg-gray-50/70">
-                            <td className="py-2.5 px-3">
-                              <div className="flex items-center gap-2.5">
-                                <img
-                                  src={item.image_url || 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=200&q=80'}
-                                  alt={item.product_name}
-                                  className="w-10 h-12 rounded-lg object-cover border border-gray-200 shadow-sm"
-                                />
-                                <span className="font-semibold text-gray-900">{item.product_name || 'Untitled Item'}</span>
-                              </div>
-                            </td>
-                            <td className="py-2.5 px-3 text-gray-500">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                {item.size && <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-semibold">Size {item.size}</span>}
-                                {item.color && <span className="bg-pink-50 px-1.5 py-0.5 rounded text-[10px] font-semibold capitalize text-brand-700">{item.color}</span>}
-                              </div>
-                            </td>
-                            <td className="py-2.5 px-3 text-center font-bold">{item.quantity}</td>
-                            <td className="py-2.5 px-3 text-right">{money(item.price)}</td>
-                            <td className="py-2.5 px-3 text-right font-bold text-gray-900">{money((Number(item.price) || 0) * (Number(item.quantity) || 1))}</td>
-                          </tr>
-                        ))}
+                          <tr><td colSpan={7} className="py-8 text-center text-gray-400">No items found for this order.</td></tr>
+                        ) : (detailOrder.items || []).map((item, idx) => {
+                          const itemGst = item.gst_rate || getApparelGstRate(Number(item.price) || 0);
+                          const hsn = item.hsn_code || '6204';
+                          const unitPrice = Number(item.price) || 0;
+                          const isInclusive = detailOrder.is_gst_inclusive !== undefined ? Boolean(detailOrder.is_gst_inclusive) : true;
+                          const unitBase = isInclusive
+                            ? Math.round((unitPrice / (1 + itemGst / 100)) * 100) / 100
+                            : unitPrice;
+                          return (
+                            <tr key={idx} className="hover:bg-gray-50/70">
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-2.5">
+                                  <img
+                                    src={item.image_url || 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=200&q=80'}
+                                    alt={item.product_name}
+                                    className="w-10 h-12 rounded-lg object-cover border border-gray-200 shadow-sm"
+                                  />
+                                  <div>
+                                    <span className="font-semibold text-gray-900 block">{item.product_name || 'Untitled Item'}</span>
+                                    {item.sku && <span className="font-mono text-[10px] text-gray-400">SKU: {item.sku}</span>}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-gray-500">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {item.size && <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-semibold">Size {item.size}</span>}
+                                  {item.color && <span className="bg-pink-50 px-1.5 py-0.5 rounded text-[10px] font-semibold capitalize text-brand-700">{item.color}</span>}
+                                  <span className="text-[10px] font-mono text-gray-400">HSN: {hsn}</span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-mono font-semibold text-gray-700">{money(unitBase)}</td>
+                              <td className="py-2.5 px-3 text-center">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                  itemGst > 5 ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                }`}>
+                                  {itemGst}%
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-medium">{money(item.price)}</td>
+                              <td className="py-2.5 px-3 text-center font-bold">{item.quantity}</td>
+                              <td className="py-2.5 px-3 text-right font-bold text-gray-900">{money((Number(item.price) || 0) * (Number(item.quantity) || 1))}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -761,6 +785,21 @@ export default function OrdersPage() {
                       )}
                       {detailOrder.shipping_amount > 0 && (
                         <p className="flex justify-between text-gray-500"><span>Shipping</span><span className="font-semibold">{money(detailOrder.shipping_amount)}</span></p>
+                      )}
+                      {detailOrder.taxable_amount > 0 && (
+                        <p className="flex justify-between text-gray-500"><span>Taxable Value</span><span className="font-mono text-gray-700">{money(detailOrder.taxable_amount)}</span></p>
+                      )}
+                      {(detailOrder.cgst_amount > 0 || detailOrder.sgst_amount > 0) && (
+                        <p className="flex justify-between text-gray-500">
+                          <span>CGST + SGST</span>
+                          <span className="font-mono text-gray-700">{money((Number(detailOrder.cgst_amount) || 0) + (Number(detailOrder.sgst_amount) || 0))}</span>
+                        </p>
+                      )}
+                      {detailOrder.igst_amount > 0 && (
+                        <p className="flex justify-between text-gray-500">
+                          <span>IGST</span>
+                          <span className="font-mono text-gray-700">{money(detailOrder.igst_amount)}</span>
+                        </p>
                       )}
                       <p className="flex justify-between text-gray-900 font-extrabold text-xs pt-1 border-t border-gray-200">
                         <span>Order Total</span>

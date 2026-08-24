@@ -34,7 +34,8 @@ export const DEFAULT_THERMAL_SETTINGS = {
   showShipTo: false, // Clean layout - disabled by default
   showItemSku: false, // Clean layout - hides JLN-XX codes under item
   showItemRate: true, // Shows taxable unit rate column
-  showItemGstRate: false, // Clean layout - hides individual GST % line under item (already in totals breakdown)
+  showItemTaxDetails: true, // Shows HSN, Base Price & GST % line under item name
+  showItemGstRate: true, // Backward compatibility alias
   showTaxBreakdown: true, // Shows Taxable Amount, CGST, SGST breakdown
   showYouSaved: true, // Shows "You Saved - ₹ XX" line
   showReceivedBalance: true, // Shows Received and Balance Amount lines

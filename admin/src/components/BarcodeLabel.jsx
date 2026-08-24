@@ -14,8 +14,10 @@ export default function BarcodeLabel({
   showSize = true,
   showPrice = true,
   showBarcodeNumber = true,
+  layoutMode = '3_per_row', // '3_per_row', '2_per_row', '1_per_row'
   forPrint = false
 }) {
+  const isThreePerRow = layoutMode === '3_per_row';
   const displayPrice = mrp !== undefined && mrp !== null && mrp !== '' ? mrp : price;
   const clothName = (barcodeShortName && barcodeShortName.trim()) || (barcode_short_name && barcode_short_name.trim()) || productName || '';
   const formattedSize = size ? `(${String(size).replace(/^\(|\)$/g, '').trim()})` : '';
@@ -24,14 +26,14 @@ export default function BarcodeLabel({
     if (!barcode) return '';
     return generateBarcodeSVG(barcode, {
       width: '100%',
-      height: 28,
+      height: isThreePerRow ? 22 : 28,
       showText: false,
-      moduleWidth: 2,
-      quietZone: 6,
+      moduleWidth: isThreePerRow ? 1.5 : 2,
+      quietZone: isThreePerRow ? 4 : 6,
       barColor: '#000000',
       backgroundColor: '#ffffff'
     });
-  }, [barcode]);
+  }, [barcode, isThreePerRow]);
 
   // Combined code line: "JN-43320 (M) KURTIN"
   const barcodeRowParts = [];
@@ -46,17 +48,22 @@ export default function BarcodeLabel({
   }
   const combinedBarcodeInfo = barcodeRowParts.join(' ');
 
+  const labelWidth = isThreePerRow
+    ? (forPrint ? '32.5mm' : '33mm')
+    : (forPrint ? '48.5mm' : '50mm');
+  const labelHeight = forPrint ? '24mm' : '25mm';
+
   return (
     <div
       className={`bg-white flex flex-col items-center justify-between box-border overflow-hidden select-none ${
         forPrint ? '' : 'border border-gray-300 shadow-xs rounded-sm'
       }`}
       style={{
-        width: forPrint ? '48.5mm' : '50mm',
-        height: forPrint ? '24mm' : '25mm',
-        maxWidth: forPrint ? '48.5mm' : '50mm',
-        maxHeight: forPrint ? '24mm' : '25mm',
-        padding: '1.2mm 1mm 0.4mm',
+        width: labelWidth,
+        height: labelHeight,
+        maxWidth: labelWidth,
+        maxHeight: labelHeight,
+        padding: isThreePerRow ? '0.8mm 0.6mm 0.2mm' : '1.2mm 1mm 0.4mm',
         boxSizing: 'border-box',
         overflow: 'hidden',
         background: '#ffffff',
@@ -64,15 +71,15 @@ export default function BarcodeLabel({
         boxShadow: 'none'
       }}
     >
-      {/* 1. Shop / Company Name (JALYN APPARELS in CAPS, increased 2px font size, spaced down from top edge) */}
+      {/* 1. Shop / Company Name */}
       <div
         style={{
-          fontSize: '10.5pt',
-          letterSpacing: '1px',
+          fontSize: isThreePerRow ? '7.5pt' : '10.5pt',
+          letterSpacing: isThreePerRow ? '0.3px' : '1px',
           lineHeight: '1.05',
           fontWeight: 900,
           color: '#000000',
-          marginBottom: '0.4mm'
+          marginBottom: isThreePerRow ? '0.2mm' : '0.4mm'
         }}
         className="font-sans uppercase text-black w-full text-center truncate shrink-0"
       >
@@ -84,7 +91,7 @@ export default function BarcodeLabel({
         {barcode ? (
           <div
             className="w-full flex justify-center items-center overflow-hidden"
-            style={{ maxHeight: '26px', height: '26px' }}
+            style={{ maxHeight: isThreePerRow ? '20px' : '26px', height: isThreePerRow ? '20px' : '26px' }}
             dangerouslySetInnerHTML={{ __html: barcodeSvg }}
           />
         ) : (
@@ -96,9 +103,9 @@ export default function BarcodeLabel({
       {combinedBarcodeInfo && (
         <div
           style={{
-            fontSize: '8.5pt',
+            fontSize: isThreePerRow ? '6.8pt' : '8.5pt',
             lineHeight: '1.1',
-            letterSpacing: '0.5px',
+            letterSpacing: isThreePerRow ? '0.2px' : '0.5px',
             fontWeight: 900,
             color: '#000000',
             marginTop: '0.2mm'
@@ -110,11 +117,11 @@ export default function BarcodeLabel({
         </div>
       )}
 
-      {/* 4. Price (Extra Bold, Increased Font Size, Rupee symbol.00, No MRP) */}
+      {/* 4. MRP Price (Extra Bold with MRP label) */}
       {showPrice && displayPrice && (
         <div
           style={{
-            fontSize: '13pt',
+            fontSize: isThreePerRow ? '9.5pt' : '12pt',
             lineHeight: '1.05',
             fontWeight: 900,
             color: '#000000',
@@ -122,7 +129,7 @@ export default function BarcodeLabel({
           }}
           className="font-sans text-black text-center w-full shrink-0 tracking-tight"
         >
-          ₹{Number(displayPrice).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          MRP: ₹{Number(displayPrice).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
       )}
     </div>

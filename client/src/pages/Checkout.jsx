@@ -28,6 +28,7 @@ import 'swiper/css'
 import { useCartStore, useUserStore, useOrderStore } from '@/store'
 import { useCoupons, calcCouponDiscount } from '@/hooks/useCoupons'
 import { useCmsData } from '@/hooks/useCmsData'
+import { calculateOrderTax, getApparelGstRate } from '@/lib/taxUtils'
 import api from '@/services/api'
 import { formatINR, cn } from '@/lib/utils'
 import AddressModal from '@/components/profile/AddressModal'
@@ -135,22 +136,39 @@ export default function Checkout() {
     return calcCouponDiscount(appliedCoupon, subtotal)
   }, [subtotal, appliedCoupon])
 
-  // DYNAMIC TAX ESTIMATION FROM ADMIN CMS
-  const isTaxEnabled = taxSettings?.enabled ?? true
-  const taxPercent = taxSettings?.tax_percent ?? 18
-  const taxLabel = taxSettings?.tax_label || `GST (${taxPercent}%)`
-
-  const taxAmount = useMemo(() => {
-    if (!isTaxEnabled) return 0
-    const taxableAmount = Math.max(0, subtotal - discountAmount)
-    return Math.round(taxableAmount * (taxPercent / 100))
-  }, [isTaxEnabled, subtotal, discountAmount, taxPercent])
-
-  const grandTotal = Math.max(0, subtotal - discountAmount + shippingCost + taxAmount + codFee)
-
   const selectedAddressObj = useMemo(() => {
     return addresses.find((a) => a.id === selectedAddrId) || addresses[0]
   }, [addresses, selectedAddrId])
+
+  // Multi-Item Dynamic Apparel GST Calculation (5% if <= 2500, 18% if > 2500)
+  const orderTax = useMemo(() => {
+    return calculateOrderTax({
+      items: cartItems.map((i) => ({
+        ...i,
+        price: Number(i.price) || 0,
+        quantity: Number(i.qty || i.quantity) || 1,
+        hsn_code: i.hsn_code || '6204',
+      })),
+      discountAmount,
+      shippingAmount: shippingCost,
+      isGstInclusive: true,
+      shippingState: selectedAddressObj?.state || selectedAddressObj?.addressLine1 || 'Tamil Nadu',
+    })
+  }, [cartItems, discountAmount, shippingCost, selectedAddressObj])
+
+  const {
+    taxableAmount,
+    cgstAmount,
+    sgstAmount,
+    igstAmount,
+    totalTax: taxAmount,
+    isInterState: isOrderInterstate,
+    slab5,
+    slab18,
+  } = orderTax
+
+  // Storefront MRP prices are inclusive of GST
+  const grandTotal = Math.max(0, subtotal - discountAmount + shippingCost + codFee)
 
   const effectivePhone = useMemo(() => {
     return (
@@ -250,6 +268,25 @@ export default function Checkout() {
 
     setIsSubmitting(true)
 
+    const payloadItems = orderTax.items.map((i) => ({
+      product_id: i.id || i.product_id || null,
+      product_name: i.name || i.title || i.product_name || 'Jalyn Product',
+      sku: i.sku || null,
+      hsn_code: i.hsnCode || i.hsn_code || '6204',
+      price: Number(i.price) || 0,
+      original_price: Number(i.original_price) || Number(i.price) || 0,
+      quantity: Number(i.quantity || i.qty) || 1,
+      gst_rate: Number(i.gstRate) || 5,
+      taxable_amount: Number(i.taxableAmount) || 0,
+      cgst_amount: Number(i.cgstAmount) || 0,
+      sgst_amount: Number(i.sgstAmount) || 0,
+      igst_amount: Number(i.igstAmount) || 0,
+      total_tax: Number(i.totalTax) || 0,
+      size: i.size || 'M',
+      color: i.color || 'Default',
+      image_url: i.image || i.primary_image || i.image_url || '',
+    }))
+
     // Option 1: Cashfree Online Payment
     if (paymentMethod === 'online') {
       try {
@@ -278,6 +315,10 @@ export default function Checkout() {
               subtotal,
               discount: discountAmount,
               tax: taxAmount,
+              taxable_amount: taxableAmount,
+              cgst_amount: cgstAmount,
+              sgst_amount: sgstAmount,
+              igst_amount: igstAmount,
               total: grandTotal,
             })
 
@@ -288,17 +329,17 @@ export default function Checkout() {
               customer_phone: cleanPhone,
               shipping_address: `${selectedAddressObj.addressLine1 || ''}, ${selectedAddressObj.city || ''}, ${selectedAddressObj.state || ''} ${selectedAddressObj.pincode || ''}`,
               total_amount: grandTotal,
+              discount_amount: discountAmount,
+              shipping_amount: shippingCost,
+              taxable_amount: taxableAmount,
+              cgst_amount: cgstAmount,
+              sgst_amount: sgstAmount,
+              igst_amount: igstAmount,
+              is_gst_inclusive: 1,
               payment_status: 'paid',
               order_status: 'Processing',
               payment_method: 'Online Payment (Cashfree Simulated)',
-              items: cartItems.map((i) => ({
-                product_name: i.name || i.title || 'Jalyn Product',
-                price: i.price,
-                quantity: i.qty || 1,
-                size: i.size || 'M',
-                color: i.color || 'Default',
-                image_url: i.image || i.primary_image || '',
-              })),
+              items: payloadItems,
             })
 
             clearCart()
@@ -417,6 +458,10 @@ export default function Checkout() {
             subtotal,
             discount: discountAmount,
             tax: taxAmount,
+            taxable_amount: taxableAmount,
+            cgst_amount: cgstAmount,
+            sgst_amount: sgstAmount,
+            igst_amount: igstAmount,
             total: grandTotal,
           })
 
@@ -429,18 +474,16 @@ export default function Checkout() {
             total_amount: grandTotal,
             discount_amount: discountAmount,
             shipping_amount: shippingCost,
+            taxable_amount: taxableAmount,
+            cgst_amount: cgstAmount,
+            sgst_amount: sgstAmount,
+            igst_amount: igstAmount,
+            is_gst_inclusive: 1,
             order_type: 'online',
             payment_status: 'paid',
             order_status: 'processing',
             payment_method: 'Online Payment (Cashfree)',
-            items: cartItems.map((i) => ({
-              product_name: i.name || i.title || 'Jalyn Product',
-              price: i.price,
-              quantity: i.qty || 1,
-              size: i.size || 'M',
-              color: i.color || 'Default',
-              image_url: i.image || i.primary_image || '',
-            })),
+            items: payloadItems,
           }
 
           try {
@@ -467,18 +510,16 @@ export default function Checkout() {
           total_amount: grandTotal,
           discount_amount: discountAmount,
           shipping_amount: shippingCost,
+          taxable_amount: taxableAmount,
+          cgst_amount: cgstAmount,
+          sgst_amount: sgstAmount,
+          igst_amount: igstAmount,
+          is_gst_inclusive: 1,
           order_type: 'online',
           payment_status: 'failed',
           order_status: 'cancelled',
           payment_method: 'Online Payment (Error)',
-          items: cartItems.map((i) => ({
-            product_name: i.name || i.title || 'Jalyn Product',
-            price: i.price,
-            quantity: i.qty || 1,
-            size: i.size || 'M',
-            color: i.color || 'Default',
-            image_url: i.image || i.primary_image || '',
-          })),
+          items: payloadItems,
         }
 
         try {
@@ -508,6 +549,10 @@ export default function Checkout() {
         subtotal,
         discount: discountAmount,
         tax: taxAmount,
+        taxable_amount: taxableAmount,
+        cgst_amount: cgstAmount,
+        sgst_amount: sgstAmount,
+        igst_amount: igstAmount,
         total: grandTotal,
       })
 
@@ -518,17 +563,17 @@ export default function Checkout() {
         customer_phone: cleanPhone,
         shipping_address: `${selectedAddressObj.addressLine1 || ''}, ${selectedAddressObj.city || ''}, ${selectedAddressObj.state || ''} ${selectedAddressObj.pincode || ''}`,
         total_amount: grandTotal,
+        discount_amount: discountAmount,
+        shipping_amount: shippingCost,
+        taxable_amount: taxableAmount,
+        cgst_amount: cgstAmount,
+        sgst_amount: sgstAmount,
+        igst_amount: igstAmount,
+        is_gst_inclusive: 1,
         payment_status: 'pending',
         order_status: 'Processing',
         payment_method: 'Cash on Delivery (COD)',
-        items: cartItems.map((i) => ({
-          product_name: i.name || i.title || 'Jalyn Product',
-          price: i.price,
-          quantity: i.qty || 1,
-          size: i.size || 'M',
-          color: i.color || 'Default',
-          image_url: i.image || i.primary_image || '',
-        })),
+        items: payloadItems,
       }
 
       try {
@@ -893,8 +938,12 @@ export default function Checkout() {
               </span>
             </div>
             <div className="flex justify-between text-[#666666]">
-              <span>Estimated Tax (5%)</span>
+              <span>Estimated GST (Included)</span>
               <span className="font-semibold text-[#222222]">{formatINR(taxAmount)}</span>
+            </div>
+            <div className="flex justify-between text-[11px] text-[#888888] pl-2">
+              <span>Taxable Base Value:</span>
+              <span className="font-mono">{formatINR(taxableAmount)}</span>
             </div>
             {paymentMethod === 'cod' && codFee > 0 && (
               <div className="flex justify-between text-[#666666]">
@@ -1466,12 +1515,14 @@ export default function Checkout() {
                       {shippingCost === 0 ? <span className="text-emerald-700 font-bold">FREE</span> : formatINR(shippingCost)}
                     </span>
                   </div>
-                  {isTaxEnabled && (
-                    <div className="flex justify-between text-ink-muted">
-                      <span>{taxLabel}</span>
-                      <span className="font-semibold text-ink">{formatINR(taxAmount)}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between text-ink-muted">
+                    <span>GST (Included in Prices)</span>
+                    <span className="font-semibold text-ink">{formatINR(taxAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-[11px] text-ink-muted/80 pl-2">
+                    <span>Taxable Base Value:</span>
+                    <span className="font-mono">{formatINR(taxableAmount)}</span>
+                  </div>
                   {paymentMethod === 'cod' && codFee > 0 && (
                     <div className="flex justify-between text-ink-muted">
                       <span>COD Handling Fee</span>

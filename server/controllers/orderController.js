@@ -1,6 +1,51 @@
 import pool from '../config/db.js';
+import { calculateOrderTax, calculateItemTax, getApparelGstRate } from '../utils/taxCalculator.js';
 
 let mockOrders = [];
+
+// Ensure all tax & financial columns exist in MySQL orders and order_items tables
+export const ensureOrderColumns = async () => {
+  try {
+    const ensureCol = async (tableName, colName, colSql) => {
+      const [cols] = await pool.query(
+        `SELECT COUNT(*) as count FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+        [tableName, colName]
+      );
+      if (cols[0].count === 0) {
+        try { await pool.query(colSql); } catch (_) {}
+      }
+    };
+
+    // Orders columns
+    await ensureCol('orders', 'discount_amount', 'ALTER TABLE orders ADD COLUMN discount_amount DECIMAL(10,2) DEFAULT 0');
+    await ensureCol('orders', 'shipping_amount', 'ALTER TABLE orders ADD COLUMN shipping_amount DECIMAL(10,2) DEFAULT 0');
+    await ensureCol('orders', 'received_amount', 'ALTER TABLE orders ADD COLUMN received_amount DECIMAL(10,2) NULL');
+    await ensureCol('orders', 'balance_amount', 'ALTER TABLE orders ADD COLUMN balance_amount DECIMAL(10,2) NULL');
+    await ensureCol('orders', 'gst_rate', 'ALTER TABLE orders ADD COLUMN gst_rate DECIMAL(5,2) NULL');
+    await ensureCol('orders', 'is_gst_inclusive', 'ALTER TABLE orders ADD COLUMN is_gst_inclusive TINYINT(1) DEFAULT 1');
+    await ensureCol('orders', 'taxable_amount', 'ALTER TABLE orders ADD COLUMN taxable_amount DECIMAL(10,2) NULL');
+    await ensureCol('orders', 'cgst_amount', 'ALTER TABLE orders ADD COLUMN cgst_amount DECIMAL(10,2) NULL');
+    await ensureCol('orders', 'sgst_amount', 'ALTER TABLE orders ADD COLUMN sgst_amount DECIMAL(10,2) NULL');
+    await ensureCol('orders', 'igst_amount', 'ALTER TABLE orders ADD COLUMN igst_amount DECIMAL(10,2) NULL');
+    await ensureCol('orders', 'total_mrp', 'ALTER TABLE orders ADD COLUMN total_mrp DECIMAL(10,2) NULL');
+    await ensureCol('orders', 'order_type', "ALTER TABLE orders ADD COLUMN order_type VARCHAR(20) DEFAULT 'online'");
+
+    // Order Items columns
+    await ensureCol('order_items', 'sku', 'ALTER TABLE order_items ADD COLUMN sku VARCHAR(100) NULL');
+    await ensureCol('order_items', 'hsn_code', "ALTER TABLE order_items ADD COLUMN hsn_code VARCHAR(50) DEFAULT '6204'");
+    await ensureCol('order_items', 'gst_rate', 'ALTER TABLE order_items ADD COLUMN gst_rate DECIMAL(5,2) NULL');
+    await ensureCol('order_items', 'taxable_amount', 'ALTER TABLE order_items ADD COLUMN taxable_amount DECIMAL(10,2) NULL');
+    await ensureCol('order_items', 'cgst_amount', 'ALTER TABLE order_items ADD COLUMN cgst_amount DECIMAL(10,2) NULL');
+    await ensureCol('order_items', 'sgst_amount', 'ALTER TABLE order_items ADD COLUMN sgst_amount DECIMAL(10,2) NULL');
+    await ensureCol('order_items', 'igst_amount', 'ALTER TABLE order_items ADD COLUMN igst_amount DECIMAL(10,2) NULL');
+    await ensureCol('order_items', 'total_tax', 'ALTER TABLE order_items ADD COLUMN total_tax DECIMAL(10,2) NULL');
+  } catch (err) {
+    console.log('ℹ️ MySQL database order columns check:', err.message);
+  }
+};
+
+ensureOrderColumns();
 
 const normalizeRow = (row) => ({
   ...row,
@@ -157,6 +202,7 @@ export const createOrder = async (req, res) => {
     taxable_amount = null,
     cgst_amount = null,
     sgst_amount = null,
+    igst_amount = null,
     total_mrp = null,
     order_type,
     payment_status = 'pending',
@@ -182,6 +228,37 @@ export const createOrder = async (req, res) => {
       ? 'pos'
       : 'online');
 
+  // Unified tax calculation
+  const isInclusive = is_gst_inclusive !== undefined ? Boolean(is_gst_inclusive) : true;
+  const orderTax = calculateOrderTax({
+    items,
+    discountAmount: Number(discount_amount) || 0,
+    shippingAmount: Number(shipping_amount) || 0,
+    isGstInclusive: isInclusive,
+    shippingState: shipping_address,
+  });
+
+  const finalTotal = total_amount !== undefined && total_amount !== null && total_amount !== ''
+    ? Number(total_amount)
+    : orderTax.grandTotal;
+  const finalTaxable = taxable_amount !== null && taxable_amount !== undefined && taxable_amount !== ''
+    ? Number(taxable_amount)
+    : orderTax.taxableAmount;
+  const finalCgst = cgst_amount !== null && cgst_amount !== undefined && cgst_amount !== ''
+    ? Number(cgst_amount)
+    : orderTax.cgstAmount;
+  const finalSgst = sgst_amount !== null && sgst_amount !== undefined && sgst_amount !== ''
+    ? Number(sgst_amount)
+    : orderTax.sgstAmount;
+  const finalIgst = igst_amount !== null && igst_amount !== undefined && igst_amount !== ''
+    ? Number(igst_amount)
+    : orderTax.igstAmount;
+
+  // Derive composite or single gst_rate
+  const dominantGstRate = gst_rate !== null && gst_rate !== undefined && gst_rate !== ''
+    ? Number(gst_rate)
+    : (orderTax.slab18.itemCount > 0 && orderTax.slab5.itemCount === 0 ? 18 : (orderTax.slab5.itemCount > 0 && orderTax.slab18.itemCount === 0 ? 5 : null));
+
   const generatedOrderNum = createOrderNumber(Date.now() % 100000);
   const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
@@ -193,27 +270,36 @@ export const createOrder = async (req, res) => {
     customer_email: orderCustomerEmail,
     customer_phone: customer_phone || null,
     shipping_address,
-    total_amount: Number(total_amount) || 0,
+    total_amount: finalTotal,
     discount_amount: Number(discount_amount) || 0,
     shipping_amount: Number(shipping_amount) || 0,
-    received_amount: received_amount !== null && received_amount !== undefined ? Number(received_amount) : null,
-    balance_amount: balance_amount !== null && balance_amount !== undefined ? Number(balance_amount) : null,
-    gst_rate: gst_rate !== null && gst_rate !== undefined ? Number(gst_rate) : null,
-    is_gst_inclusive: is_gst_inclusive !== undefined ? (is_gst_inclusive ? 1 : 0) : 1,
-    taxable_amount: taxable_amount !== null && taxable_amount !== undefined ? Number(taxable_amount) : null,
-    cgst_amount: cgst_amount !== null && cgst_amount !== undefined ? Number(cgst_amount) : null,
-    sgst_amount: sgst_amount !== null && sgst_amount !== undefined ? Number(sgst_amount) : null,
-    total_mrp: total_mrp !== null && total_mrp !== undefined ? Number(total_mrp) : null,
+    received_amount: received_amount !== null && received_amount !== undefined && received_amount !== '' ? Number(received_amount) : null,
+    balance_amount: balance_amount !== null && balance_amount !== undefined && balance_amount !== '' ? Number(balance_amount) : null,
+    gst_rate: dominantGstRate,
+    is_gst_inclusive: isInclusive ? 1 : 0,
+    taxable_amount: finalTaxable,
+    cgst_amount: finalCgst,
+    sgst_amount: finalSgst,
+    igst_amount: finalIgst,
+    total_mrp: total_mrp !== null && total_mrp !== undefined && total_mrp !== '' ? Number(total_mrp) : null,
     order_type: inferredOrderType,
     payment_status,
     order_status,
     payment_method: payment_method || null,
     created_at: nowStr,
-    items: items.map((i) => ({
+    items: orderTax.items.map((i) => ({
+      product_id: i.product_id || null,
       product_name: i.product_name || i.name || 'Untitled Item',
       sku: i.sku || null,
+      hsn_code: i.hsnCode || '6204',
       price: Number(i.price) || 0,
       quantity: Number(i.quantity || i.qty) || 1,
+      gst_rate: Number(i.gstRate) || 5,
+      taxable_amount: Number(i.taxableAmount) || 0,
+      cgst_amount: Number(i.cgstAmount) || 0,
+      sgst_amount: Number(i.sgstAmount) || 0,
+      igst_amount: Number(i.igstAmount) || 0,
+      total_tax: Number(i.totalTax) || 0,
       size: i.size || null,
       color: i.color || null,
       image_url: i.image_url || i.image || null,
@@ -225,8 +311,8 @@ export const createOrder = async (req, res) => {
     try {
       const [result] = await pool.query(
         `INSERT INTO orders
-         (order_number, user_id, customer_name, customer_email, customer_phone, shipping_address, total_amount, discount_amount, shipping_amount, received_amount, balance_amount, gst_rate, is_gst_inclusive, taxable_amount, cgst_amount, sgst_amount, total_mrp, order_type, payment_method, payment_status, order_status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (order_number, user_id, customer_name, customer_email, customer_phone, shipping_address, total_amount, discount_amount, shipping_amount, received_amount, balance_amount, gst_rate, is_gst_inclusive, taxable_amount, cgst_amount, sgst_amount, igst_amount, total_mrp, order_type, payment_method, payment_status, order_status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           generatedOrderNum,
           orderUserId,
@@ -234,17 +320,18 @@ export const createOrder = async (req, res) => {
           orderCustomerEmail,
           customer_phone || null,
           shipping_address,
-          Number(total_amount) || 0,
+          finalTotal,
           Number(discount_amount) || 0,
           Number(shipping_amount) || 0,
-          received_amount !== null && received_amount !== undefined && received_amount !== '' ? Number(received_amount) : null,
-          balance_amount !== null && balance_amount !== undefined && balance_amount !== '' ? Number(balance_amount) : null,
-          gst_rate !== null && gst_rate !== undefined && gst_rate !== '' ? Number(gst_rate) : null,
-          is_gst_inclusive ? 1 : 0,
-          taxable_amount !== null && taxable_amount !== undefined && taxable_amount !== '' ? Number(taxable_amount) : null,
-          cgst_amount !== null && cgst_amount !== undefined && cgst_amount !== '' ? Number(cgst_amount) : null,
-          sgst_amount !== null && sgst_amount !== undefined && sgst_amount !== '' ? Number(sgst_amount) : null,
-          total_mrp !== null && total_mrp !== undefined && total_mrp !== '' ? Number(total_mrp) : null,
+          createdOrderObject.received_amount,
+          createdOrderObject.balance_amount,
+          dominantGstRate,
+          isInclusive ? 1 : 0,
+          finalTaxable,
+          finalCgst,
+          finalSgst,
+          finalIgst,
+          createdOrderObject.total_mrp,
           inferredOrderType,
           payment_method || null,
           payment_status,
@@ -265,7 +352,7 @@ export const createOrder = async (req, res) => {
           orderCustomerEmail,
           customer_phone || null,
           shipping_address,
-          Number(total_amount) || 0,
+          finalTotal,
           payment_method || null,
           payment_status,
           order_status,
@@ -276,34 +363,43 @@ export const createOrder = async (req, res) => {
 
     createdOrderObject.id = orderId;
 
-    for (const item of items) {
+    for (const item of createdOrderObject.items) {
       try {
+        await pool.query(
+          `INSERT INTO order_items (order_id, product_id, product_name, sku, hsn_code, price, quantity, gst_rate, taxable_amount, cgst_amount, sgst_amount, igst_amount, total_tax, size, color, image_url)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            orderId,
+            item.product_id,
+            item.product_name,
+            item.sku,
+            item.hsn_code,
+            item.price,
+            item.quantity,
+            item.gst_rate,
+            item.taxable_amount,
+            item.cgst_amount,
+            item.sgst_amount,
+            item.igst_amount,
+            item.total_tax,
+            item.size,
+            item.color,
+            item.image_url,
+          ]
+        );
+      } catch (itemColErr) {
         await pool.query(
           `INSERT INTO order_items (order_id, product_name, sku, price, quantity, size, color, image_url)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             orderId,
-            item.product_name || item.name || 'Untitled Item',
-            item.sku || null,
-            Number(item.price) || 0,
-            Number(item.quantity || item.qty) || 1,
-            item.size || null,
-            item.color || null,
-            item.image_url || item.image || null,
-          ]
-        );
-      } catch (itemColErr) {
-        await pool.query(
-          `INSERT INTO order_items (order_id, product_name, price, quantity, size, color, image_url)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            orderId,
-            item.product_name || item.name || 'Untitled Item',
-            Number(item.price) || 0,
-            Number(item.quantity || item.qty) || 1,
-            item.size || null,
-            item.color || null,
-            item.image_url || item.image || null,
+            item.product_name,
+            item.sku,
+            item.price,
+            item.quantity,
+            item.size,
+            item.color,
+            item.image_url,
           ]
         );
       }

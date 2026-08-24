@@ -93,24 +93,35 @@ export default function ProductInfoPanel({
       </div>
 
       {/* Price Block */}
-      <div className="border-y border-primary/10 py-3.5">
-        <div className="flex flex-wrap items-baseline gap-2.5">
-          <span className="font-display text-3xl font-bold text-primary">
-            {formatINR(product.price)}
-          </span>
-          {product.originalPrice > product.price && (
-            <>
-              <span className="text-base text-ink-muted line-through">
-                {formatINR(product.originalPrice)}
+      {(() => {
+        const sellingPrice = Number(product?.price) || 0;
+        const originalPrice = Number(product?.originalPrice ?? product?.original_price ?? product?.compareAt ?? 0);
+        const hasDiscount = originalPrice > sellingPrice;
+        const discountPercent = product?.discount || (hasDiscount ? Math.round(((originalPrice - sellingPrice) / originalPrice) * 100) : 0);
+
+        return (
+          <div className="border-y border-primary/10 py-3.5">
+            <div className="flex flex-wrap items-baseline gap-2.5">
+              <span className="font-display text-3xl font-bold text-primary">
+                {formatINR(sellingPrice)}
               </span>
-              <span className="font-label text-xs font-bold uppercase tracking-wider text-primary">
-                {product.discount}% OFF
-              </span>
-            </>
-          )}
-        </div>
-        <p className="mt-1 text-xs text-ink-muted">Inclusive of all taxes</p>
-      </div>
+              {hasDiscount && (
+                <>
+                  <span className="text-base text-ink-muted line-through font-normal">
+                    {formatINR(originalPrice)}
+                  </span>
+                  {discountPercent > 0 && (
+                    <span className="font-label text-xs font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                      {discountPercent}% OFF
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-ink-muted">Inclusive of all taxes</p>
+          </div>
+        );
+      })()}
 
       {/* Color Selector */}
       <div>

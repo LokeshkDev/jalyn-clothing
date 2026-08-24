@@ -111,24 +111,35 @@ export default function MobilePDPInfo({
       </div>
 
       {/* Price */}
-      <div className="border-y border-primary/10 py-3">
-        <div className="flex flex-wrap items-baseline gap-2">
-          <span className="font-display text-[22px] font-bold text-primary">
-            {formatINR(product.price)}
-          </span>
-          {product.originalPrice > product.price && (
-            <>
-              <span className="text-[13px] text-[#666666] line-through">
-                {formatINR(product.originalPrice)}
+      {(() => {
+        const sellingPrice = Number(product?.price) || 0;
+        const originalPrice = Number(product?.originalPrice ?? product?.original_price ?? product?.compareAt ?? 0);
+        const hasDiscount = originalPrice > sellingPrice;
+        const discountPercent = product?.discount || (hasDiscount ? Math.round(((originalPrice - sellingPrice) / originalPrice) * 100) : 0);
+
+        return (
+          <div className="border-y border-primary/10 py-3">
+            <div className="flex flex-wrap items-baseline gap-2">
+              <span className="font-display text-[22px] font-bold text-primary">
+                {formatINR(sellingPrice)}
               </span>
-              <span className="text-[12px] font-bold text-primary">
-                {product.discount}% OFF
-              </span>
-            </>
-          )}
-        </div>
-        <p className="mt-0.5 text-[11px] text-[#666666]">Inclusive of all taxes</p>
-      </div>
+              {hasDiscount && (
+                <>
+                  <span className="text-[13px] text-[#666666] line-through font-normal">
+                    {formatINR(originalPrice)}
+                  </span>
+                  {discountPercent > 0 && (
+                    <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                      {discountPercent}% OFF
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+            <p className="mt-0.5 text-[11px] text-[#666666]">Inclusive of all taxes</p>
+          </div>
+        );
+      })()}
 
       {/* Pincode Delivery Estimate Option for Mobile (Collapsible when verified) */}
       <div className={cn(

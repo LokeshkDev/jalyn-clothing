@@ -142,15 +142,15 @@ export function useProductsApi(category = 'all', search = '', sort = '') {
   const { data: products = SHOP_PRODUCTS.map(normalizeProduct), isLoading: prodLoading, error: prodError } = useQuery({
     queryKey: ['products', category, search, sort],
     queryFn: () => fetchProductsList(category, search, sort),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   const { data: categories = SHOP_CATEGORIES, isLoading: catLoading, error: catError } = useQuery({
     queryKey: ['categories'],
     queryFn: fetchCategoriesList,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   return {

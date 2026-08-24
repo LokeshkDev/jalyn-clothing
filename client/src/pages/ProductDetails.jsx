@@ -22,6 +22,8 @@ import MobileRelatedProducts from '@/components/pdp/mobile/MobileRelatedProducts
 import MobilePurchaseBar from '@/components/pdp/mobile/MobilePurchaseBar'
 import MobileRecentlyViewed from '@/components/shop/MobileRecentlyViewed'
 
+import api from '@/services/api'
+
 export function PdpSkeleton() {
   return (
     <div className="bg-surface min-h-screen py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 animate-pulse">
@@ -83,43 +85,83 @@ export default function ProductDetails() {
   const { products: apiProducts } = useProductsApi()
   const reviewsRef = useRef(null)
   const mobileReviewsRef = useRef(null)
+  const [directProduct, setDirectProduct] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let isMounted = true
     setLoading(true)
-    const t = setTimeout(() => setLoading(false), 1000)
-    return () => clearTimeout(t)
+    api.get(`/products/${slug}`)
+      .then((res) => {
+        if (isMounted && res.data?.product) {
+          setDirectProduct(normalizeProduct(res.data.product))
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) setLoading(false)
+      })
+    return () => { isMounted = false }
   }, [slug])
 
-  // Dynamically look up product by slug or default to first product
+  // Dynamically look up product by direct fetch, then list query, then fallback
   const product = useMemo(() => {
+    if (directProduct) return directProduct
     const rawList = apiProducts && apiProducts.length > 0 ? apiProducts : SHOP_PRODUCTS.map(normalizeProduct)
     const match = rawList.find((p) => p.slug === slug || String(p.id) === String(slug))
     return match ? normalizeProduct(match) : normalizeProduct(rawList[0])
-  }, [slug, apiProducts])
+  }, [slug, directProduct, apiProducts])
 
   const [selectedColor, setSelectedColor] = useState(
     product.colors?.[0] || 'rose',
   )
   const [selectedSize, setSelectedSize] = useState(
-    product.sizes?.[1] || 'M',
+    product.sizes?.[1] || product.sizes?.[0] || 'M',
   )
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false)
 
-  // Variant-aware product: price + stock follow the selected color/size
-  // from the admin-managed variant matrix, so updates reflect instantly.
+  // Sync selected color and size when product changes
+  useEffect(() => {
+    if (product.colors?.length > 0) {
+      const col = typeof product.colors[0] === 'object' ? product.colors[0].name || product.colors[0].id : product.colors[0]
+      setSelectedColor(col)
+    }
+    if (product.sizes?.length > 0) {
+      setSelectedSize(product.sizes[1] || product.sizes[0] || 'M')
+    }
+  }, [product.id, product.slug])
+
+  // Variant-aware product: uses master product price (same as product card),
+  // variant only controls stock/availability. This prevents PDP vs card mismatch.
   const displayProduct = useMemo(() => {
     const variants = product.variants || []
     const variant = variants.find(
-      (v) => v.color === selectedColor && v.size === selectedSize,
+      (v) => (String(v.color).toLowerCase() === String(selectedColor).toLowerCase()) &&
+             (String(v.size).toUpperCase() === String(selectedSize).toUpperCase()),
     )
-    if (!variant) return product
+
+    // Master product price fields — these are what the product card displays
+    const masterPrice = Number(product.price) || 0
+    const rawOrig = product.original_price ?? product.originalPrice ?? product.compareAt
+    const origPrice = Number(rawOrig) || masterPrice
+
+    // Use the master product selling price (consistent with product card)
+    const sellPrice = masterPrice
+    const hasDiscount = origPrice > sellPrice && sellPrice > 0
+    const disc = hasDiscount
+      ? Math.round(((origPrice - sellPrice) / origPrice) * 100)
+      : (Number(product.discount) || 0)
+
     return {
       ...product,
-      price: Number(variant.price) || product.price,
-      stock: variant.stock,
-      inStock: (parseInt(variant.stock, 10) || 0) > 0,
-      activeVariant: variant,
+      price: sellPrice,
+      original_price: origPrice,
+      originalPrice: origPrice,
+      compareAt: hasDiscount ? origPrice : null,
+      discount: disc,
+      stock: variant ? variant.stock : product.stock,
+      inStock: variant ? (parseInt(variant.stock, 10) || 0) > 0 : product.inStock !== false,
+      activeVariant: variant || null,
     }
   }, [product, selectedColor, selectedSize])
 

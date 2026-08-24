@@ -204,6 +204,8 @@ export default function ProductsPage() {
       brand: 'JALYN',
       price: '',
       original_price: '',
+      base_price: '',
+      hsn_code: '6204',
       discount: '',
       description: '',
       short_description: '',
@@ -261,6 +263,8 @@ export default function ProductsPage() {
       brand: p.brand || 'JALYN',
       price: sellPrice,
       original_price: origPrice,
+      base_price: p.base_price !== undefined && p.base_price !== null ? p.base_price : '',
+      hsn_code: p.hsn_code || '6204',
       discount: computedDiscount,
       description: p.description || '',
       short_description: p.short_description || '',
@@ -599,7 +603,69 @@ export default function ProductsPage() {
     updateSizeGuide({ rows: sg.rows.filter((_, i) => i !== rIdx) });
   };
 
-  // Auto calculate discount % when Selling Price and Original Price are entered
+  // Dynamic GST, Base Price, MRP, Selling Price & Discount Calculator
+  const handleBasePriceChange = (val) => {
+    const base = val === '' ? '' : Number(val);
+    let mrp = formData.original_price;
+    let selling = formData.price;
+    let disc = formData.discount;
+
+    if (base !== '' && !isNaN(base) && base >= 0) {
+      const rate = base <= 2500 ? 5 : 18;
+      mrp = Math.round(base * (1 + rate / 100));
+      // If selling price was equal to old MRP or unset, default it to new MRP
+      if (!selling || String(selling) === String(formData.original_price)) {
+        selling = mrp;
+        disc = 0;
+      } else if (mrp > 0 && Number(selling) <= mrp) {
+        disc = Math.round(((mrp - Number(selling)) / mrp) * 100);
+      }
+    }
+
+    const oldPrice = Number(formData.price);
+    const newNumeric = Number(selling) || 0;
+
+    setFormData((prev) => ({
+      ...prev,
+      base_price: val,
+      original_price: mrp,
+      price: selling,
+      discount: disc,
+      variants: (prev.variants || []).map((v) => {
+        if (!v.price || Number(v.price) === oldPrice || Number(v.price) === 0) {
+          return { ...v, price: newNumeric };
+        }
+        return v;
+      }),
+    }));
+  };
+
+  const handleOriginalPriceChange = (val) => {
+    const orig = val === '' ? '' : (val === '0' ? 0 : Number(val));
+    const selling = formData.price !== '' ? Number(formData.price) : 0;
+    let disc = formData.discount;
+    let computedBase = formData.base_price;
+
+    if (orig !== '' && Number(orig) > 0) {
+      const rate = Number(orig) <= 2500 ? 5 : 18;
+      computedBase = Math.round((Number(orig) / (1 + rate / 100)) * 100) / 100;
+      if (selling > 0) {
+        if (Number(orig) >= selling) {
+          disc = Math.round(((Number(orig) - selling) / Number(orig)) * 100);
+        } else {
+          disc = 0;
+        }
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      original_price: orig,
+      base_price: computedBase,
+      discount: disc,
+    }));
+  };
+
   const handleSellingPriceChange = (val) => {
     const selling = val === '' ? '' : (val === '0' ? 0 : Number(val));
     const orig = Number(formData.original_price);
@@ -613,30 +679,19 @@ export default function ProductsPage() {
       }
     }
 
+    const oldPrice = Number(formData.price);
+    const newNumeric = Number(selling) || 0;
+
     setFormData((prev) => ({
       ...prev,
       price: selling,
       discount: disc,
-    }));
-  };
-
-  const handleOriginalPriceChange = (val) => {
-    const orig = val === '' ? '' : (val === '0' ? 0 : Number(val));
-    const selling = formData.price !== '' ? Number(formData.price) : 0;
-    let disc = formData.discount;
-
-    if (orig !== '' && Number(orig) > 0 && selling > 0) {
-      if (Number(orig) >= selling) {
-        disc = Math.round(((Number(orig) - selling) / Number(orig)) * 100);
-      } else {
-        disc = 0;
-      }
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      original_price: orig,
-      discount: disc,
+      variants: (prev.variants || []).map((v) => {
+        if (!v.price || Number(v.price) === oldPrice || Number(v.price) === 0) {
+          return { ...v, price: newNumeric };
+        }
+        return v;
+      }),
     }));
   };
 
@@ -649,11 +704,29 @@ export default function ProductsPage() {
       selling = Math.round(orig * (1 - Number(disc) / 100));
     }
 
+    const oldPrice = Number(formData.price);
+    const newNumeric = Number(selling) || 0;
+
     setFormData((prev) => ({
       ...prev,
       discount: disc,
       price: selling,
+      variants: (prev.variants || []).map((v) => {
+        if (!v.price || Number(v.price) === oldPrice || Number(v.price) === 0) {
+          return { ...v, price: newNumeric };
+        }
+        return v;
+      }),
     }));
+  };
+
+  const handleSyncAllVariantPrices = () => {
+    const p = Number(formData.price) || 0;
+    setFormData((prev) => ({
+      ...prev,
+      variants: (prev.variants || []).map((v) => ({ ...v, price: p })),
+    }));
+    showToast(`All variants synced to Selling Price: ₹${p}`, 'success');
   };
 
   // Form Submit Handler
@@ -662,11 +735,19 @@ export default function ProductsPage() {
     setSubmitting(true);
 
     try {
+      const masterPrice = Number(formData.price) || 0;
       const payload = {
         ...formData,
-        price: Number(formData.price) || 0,
+        price: masterPrice,
         original_price: formData.original_price !== '' ? Number(formData.original_price) : null,
+        base_price: formData.base_price !== '' && formData.base_price !== null ? Number(formData.base_price) : null,
+        hsn_code: formData.hsn_code || '6204',
         discount: formData.discount !== '' && formData.discount !== null ? Number(formData.discount) : null,
+        variants: (formData.variants || []).map((v) => ({
+          ...v,
+          price: Number(v.price) > 0 ? Number(v.price) : masterPrice,
+          stock: parseInt(v.stock, 10) || 0,
+        })),
         colors: formData.colors.map((c) => c.name),
         color_images: formData.colors.reduce((acc, c) => {
           if (c.images && c.images.length > 0) acc[c.name] = c.images;
@@ -954,12 +1035,19 @@ export default function ProductsPage() {
                       </td>
 
                       <td className="py-3 px-4 font-semibold text-gray-900">
-                        ₹{p.price}
-                        {p.original_price > p.price && (
-                          <span className="text-[10px] text-gray-400 line-through ml-1.5 font-normal">
-                            ₹{p.original_price}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span>₹{p.price}</span>
+                          {p.original_price > p.price && (
+                            <span className="text-[10px] text-gray-400 line-through font-normal">
+                              ₹{p.original_price}
+                            </span>
+                          )}
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                            Number(p.price) <= 2500 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}>
+                            {Number(p.price) <= 2500 ? '5% GST' : '18% GST'}
                           </span>
-                        )}
+                        </div>
                       </td>
 
                       <td className="py-3 px-4">
@@ -1115,29 +1203,48 @@ export default function ProductsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                     <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Selling Price (₹) *</label>
+                      <label className="block font-semibold text-gray-700 mb-1">
+                        Base Price (₹) <span className="text-[10px] text-blue-600 font-bold">(Excl. GST)</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.base_price !== undefined ? formData.base_price : ''}
+                        onChange={(e) => handleBasePriceChange(e.target.value)}
+                        placeholder="e.g. 2000"
+                        className="w-full px-3 py-2 rounded-xl border border-blue-300 font-mono font-bold focus:ring-2 focus:ring-blue-500 bg-blue-50/20 text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1">
+                        MRP Price (₹) * <span className="text-[10px] text-purple-600 font-bold">(On Barcode)</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        value={formData.original_price !== undefined ? formData.original_price : ''}
+                        onChange={(e) => handleOriginalPriceChange(e.target.value)}
+                        placeholder="e.g. 2100"
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-bold focus:ring-2 focus:ring-brand-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1">
+                        Selling Price (₹) * <span className="text-[10px] text-emerald-600 font-bold">(On Website)</span>
+                      </label>
                       <input
                         type="number"
                         min="0"
                         required
                         value={formData.price !== undefined ? formData.price : ''}
                         onChange={(e) => handleSellingPriceChange(e.target.value)}
-                        placeholder="1899"
-                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-gray-700 mb-1">Original Price (₹)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formData.original_price !== undefined ? formData.original_price : ''}
-                        onChange={(e) => handleOriginalPriceChange(e.target.value)}
-                        placeholder="2499"
-                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
+                        placeholder="e.g. 1899"
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-bold focus:ring-2 focus:ring-brand-500"
                       />
                     </div>
 
@@ -1149,8 +1256,19 @@ export default function ProductsPage() {
                         max="100"
                         value={formData.discount !== undefined ? formData.discount : ''}
                         onChange={(e) => handleDiscountPercentageChange(e.target.value)}
-                        placeholder="24"
+                        placeholder="10"
                         className="w-full px-3 py-2 rounded-xl border border-gray-300 font-medium focus:ring-2 focus:ring-brand-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1">HSN Code</label>
+                      <input
+                        type="text"
+                        value={formData.hsn_code !== undefined ? formData.hsn_code : '6204'}
+                        onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
+                        placeholder="6204"
+                        className="w-full px-3 py-2 rounded-xl border border-gray-300 font-mono font-bold focus:ring-2 focus:ring-brand-500 bg-white text-xs"
                       />
                     </div>
 
@@ -1169,6 +1287,46 @@ export default function ProductsPage() {
                       </select>
                     </div>
                   </div>
+
+                  {/* Dynamic Apparel GST Slab Indicator & Live Tariff Calculation */}
+                  {(() => {
+                    const baseNum = Number(formData.base_price || 0);
+                    const sellingNum = Number(formData.price || 0);
+                    const mrpNum = Number(formData.original_price || sellingNum || 0);
+                    const isFivePercent = baseNum > 0 ? baseNum <= 2500 : (sellingNum > 0 ? sellingNum <= 2500 : true);
+                    const gstRate = isFivePercent ? 5 : 18;
+                    const computedBase = baseNum > 0 ? baseNum : (sellingNum > 0 ? Math.round((sellingNum / (1 + gstRate / 100)) * 100) / 100 : 0);
+                    const gstAmount = sellingNum > 0 ? Math.round((sellingNum - (sellingNum / (1 + gstRate / 100))) * 100) / 100 : (baseNum > 0 ? Math.round((mrpNum - baseNum) * 100) / 100 : 0);
+
+                    return (
+                      <div className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-semibold ${
+                        isFivePercent
+                          ? 'bg-emerald-50/90 border-emerald-200 text-emerald-900'
+                          : 'bg-amber-50/90 border-amber-200 text-amber-900'
+                      }`}>
+                        <div className="flex items-center gap-2.5">
+                          <span className={`px-2.5 py-1 rounded-md font-extrabold text-[11px] uppercase tracking-wide shrink-0 ${
+                            isFivePercent
+                              ? 'bg-emerald-200 text-emerald-950 border border-emerald-300'
+                              : 'bg-amber-200 text-amber-950 border border-amber-300'
+                          }`}>
+                            {isFivePercent ? '✓ 5% GST SLAB' : '⚡ 18% GST SLAB'}
+                          </span>
+                          <span className="leading-tight">
+                            {isFivePercent
+                              ? 'Base Price ≤ ₹2,500 attracts 5% GST (Intrastate: 2.5% CGST + 2.5% SGST | Interstate: 5% IGST)'
+                              : 'Base Price > ₹2,500 attracts 18% GST (Intrastate: 9% CGST + 9% SGST | Interstate: 18% IGST)'}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-700 shrink-0 bg-white/80 px-3 py-1.5 rounded-lg border border-gray-200 font-mono">
+                          <span>Base: <strong>₹{computedBase.toFixed(2)}</strong></span>
+                          <span>GST ({gstRate}%): <strong>₹{gstAmount.toFixed(2)}</strong></span>
+                          <span>MRP: <strong>₹{mrpNum}</strong></span>
+                          <span>Selling: <strong>₹{sellingNum}</strong></span>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
@@ -1649,6 +1807,14 @@ export default function ProductsPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSyncAllVariantPrices}
+                        className="bg-white hover:bg-gray-50 text-brand-700 border border-brand-300 font-bold px-3 py-2 rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer text-xs"
+                        title="Set all variant rows to the current Selling Price"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" /> Sync Prices (₹{formData.price || 0})
+                      </button>
                       <button
                         type="button"
                         onClick={handleAddVariant}

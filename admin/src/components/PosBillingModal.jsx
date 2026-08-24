@@ -11,6 +11,7 @@ import { playSuccessBeep, playErrorBeep } from '../utils/audioFeedback';
 import useScannerInput from '../hooks/useScannerInput';
 import ThermalSettingsModal from './ThermalSettingsModal';
 import { getThermalSettings } from '../utils/thermalSettings';
+import { calculateOrderTax, getApparelGstRate, calculateItemTax } from '../utils/taxUtils';
 
 const money = (v) => '₹' + Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
@@ -134,6 +135,8 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     const mrp = Number(product.original_price) || Number(product.compare_price) || Number(product.price) || 0;
     const imageUrl = product.primary_image || product.image || product.image_url || (Array.isArray(product.images) && product.images[0]) || '';
     const sku = product.base_sku || product.sku || (product.id ? `SKU-${product.id}` : '');
+    const hsnCode = product.hsn_code || '6204';
+    const itemGstRate = getApparelGstRate(mrp);
 
     setBillItems((prev) => {
       const existingIndex = prev.findIndex(
@@ -156,8 +159,15 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
           product_id: product.id,
           product_name: product.title || product.name || 'Untitled Item',
           sku: sku,
+          hsn_code: hsnCode,
           price: mrp,
           original_price: mrp,
+          base_price: product.base_price
+            ? Number(product.base_price)
+            : (mrp > 0
+              ? Math.round((mrp / (1 + itemGstRate / 100)) * 100) / 100
+              : ''),
+          gst_rate: itemGstRate,
           quantity: 1,
           size: defaultSize,
           color: defaultColor,
@@ -302,7 +312,11 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
         product_id: null,
         product_name: '',
         sku: `SKU-${randomHex}`,
+        hsn_code: '6204',
         price: '',
+        original_price: '',
+        base_price: '',
+        gst_rate: 5,
         quantity: 1,
         size: 'Free Size',
         color: '',
@@ -313,10 +327,30 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     ]);
   };
 
-  // Update line item details
+  // Update line item details (rate edits dynamically update item's GST rate slab + base price, and vice versa)
   const handleUpdateItem = (index, field, value) => {
     const updated = [...billItems];
     updated[index][field] = value;
+
+    if (field === 'price') {
+      // RATE (MRP) changed → recalculate base_price from MRP
+      const p = Number(value) || 0;
+      const rate = p <= 2500 ? 5 : 18;
+      updated[index].gst_rate = rate;
+      if (isGstInclusive) {
+        updated[index].base_price = Math.round((p / (1 + rate / 100)) * 100) / 100;
+      } else {
+        updated[index].base_price = p;
+      }
+    } else if (field === 'base_price') {
+      // BASE PRICE changed → recalculate MRP (rate) from base price
+      const base = Number(value) || 0;
+      const rate = base <= 2500 ? 5 : 18;
+      updated[index].gst_rate = rate;
+      const mrp = Math.round(base * (1 + rate / 100));
+      updated[index].price = mrp;
+    }
+
     setBillItems(updated);
   };
 
@@ -326,69 +360,44 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
   };
 
   // Calculations
-  const subtotal = useMemo(() => {
-    return billItems.reduce((sum, item) => {
+  const discountAmount = useMemo(() => {
+    const rawSubtotal = billItems.reduce((sum, item) => {
       const p = Number(item.price) || 0;
       const q = Number(item.quantity) || 1;
       return sum + p * q;
     }, 0);
-  }, [billItems]);
-
-  const totalMrp = useMemo(() => {
-    return billItems.reduce((sum, item) => {
-      const mrp = Number(item.original_price) || Number(item.price) || 0;
-      const q = Number(item.quantity) || 1;
-      return sum + mrp * q;
-    }, 0);
-  }, [billItems]);
-
-  // Auto-apply 18% GST if Bill Amount > 2500, else 5% GST
-  useEffect(() => {
-    if (subtotal > 2500) {
-      setGstRate(18);
-    } else {
-      setGstRate(5);
-    }
-  }, [subtotal]);
-
-  const discountAmount = useMemo(() => {
     const val = Number(discountValue) || 0;
     if (val <= 0) return 0;
     if (discountType === 'percent') {
-      return Math.min(Math.round((subtotal * val) / 100), subtotal);
+      return Math.min(Math.round((rawSubtotal * val) / 100), rawSubtotal);
     }
-    return Math.min(val, subtotal);
-  }, [subtotal, discountType, discountValue]);
+    return Math.min(val, rawSubtotal);
+  }, [billItems, discountType, discountValue]);
 
-  const netAmount = useMemo(() => {
-    return Math.max(subtotal - discountAmount + Number(shippingFee || 0), 0);
-  }, [subtotal, discountAmount, shippingFee]);
+  // Unified Multi-Item Dynamic GST Calculation
+  const orderTax = useMemo(() => {
+    return calculateOrderTax({
+      items: billItems,
+      discountAmount,
+      shippingAmount: Number(shippingFee) || 0,
+      isGstInclusive,
+      shippingState: shippingAddress,
+    });
+  }, [billItems, discountAmount, shippingFee, isGstInclusive, shippingAddress]);
 
-  const { taxableAmount, totalGst, cgstAmount, sgstAmount, grandTotal } = useMemo(() => {
-    let taxable = 0;
-    let gst = 0;
-    let finalTotal = 0;
-
-    if (isGstInclusive) {
-      taxable = Math.round((netAmount / (1 + gstRate / 100)) * 100) / 100;
-      gst = Math.round((netAmount - taxable) * 100) / 100;
-      finalTotal = netAmount;
-    } else {
-      taxable = Math.round((subtotal - discountAmount) * 100) / 100;
-      gst = Math.round((taxable * (gstRate / 100)) * 100) / 100;
-      finalTotal = Math.round((taxable + gst + Number(shippingFee || 0)) * 100) / 100;
-    }
-
-    const halfGst = Math.round((gst / 2) * 100) / 100;
-
-    return {
-      taxableAmount: taxable,
-      totalGst: gst,
-      cgstAmount: halfGst,
-      sgstAmount: halfGst,
-      grandTotal: Math.max(finalTotal, 0),
-    };
-  }, [netAmount, subtotal, discountAmount, shippingFee, gstRate, isGstInclusive]);
+  const {
+    subtotal,
+    totalMrp,
+    taxableAmount,
+    cgstAmount,
+    sgstAmount,
+    igstAmount,
+    totalTax,
+    grandTotal,
+    isInterState: isOrderInterstate,
+    slab5,
+    slab18,
+  } = orderTax;
 
   const receivedNum = amountReceived !== '' ? Number(amountReceived) : grandTotal;
   const balanceAmount = receivedNum > grandTotal ? Math.round((receivedNum - grandTotal) * 100) / 100 : 0;
@@ -415,6 +424,11 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     const cleanEmail = (customerEmail || '').trim() || `${cleanPhone}@jalyn.in`;
     const cleanAddress = (shippingAddress || 'In-Store Counter Pickup').trim();
 
+    const dominantGstRate =
+      slab18.itemCount > 0 && slab5.itemCount === 0
+        ? 18
+        : (slab5.itemCount > 0 && slab18.itemCount === 0 ? 5 : null);
+
     const payload = {
       customer_name: cleanName,
       customer_email: cleanEmail,
@@ -423,11 +437,12 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
       total_amount: grandTotal,
       discount_amount: discountAmount,
       shipping_amount: Number(shippingFee) || 0,
-      gst_rate: gstRate,
-      is_gst_inclusive: isGstInclusive,
+      gst_rate: dominantGstRate,
+      is_gst_inclusive: isGstInclusive ? 1 : 0,
       taxable_amount: taxableAmount,
       cgst_amount: cgstAmount,
       sgst_amount: sgstAmount,
+      igst_amount: igstAmount,
       received_amount: receivedNum,
       balance_amount: balanceAmount,
       total_mrp: totalMrp,
@@ -435,14 +450,20 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
       payment_method: paymentMethod,
       payment_status: paymentStatus,
       order_status: orderStatus,
-      items: validItems.map((i) => ({
+      items: orderTax.items.map((i) => ({
         product_id: i.product_id || null,
         product_name: i.product_name.trim(),
         sku: i.sku || null,
+        hsn_code: i.hsnCode || '6204',
         price: Number(i.price) || 0,
         original_price: Number(i.original_price) || Number(i.price) || 0,
         quantity: Number(i.quantity) || 1,
-        gst_rate: gstRate,
+        gst_rate: Number(i.gstRate) || 5,
+        taxable_amount: Number(i.taxableAmount) || 0,
+        cgst_amount: Number(i.cgstAmount) || 0,
+        sgst_amount: Number(i.sgstAmount) || 0,
+        igst_amount: Number(i.igstAmount) || 0,
+        total_tax: Number(i.totalTax) || 0,
         size: i.size || null,
         color: i.color || null,
         image_url: i.image_url || null,
@@ -883,10 +904,10 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                         </div>
                       </div>
 
-                      {/* Bottom Row: Clear separated Rate (₹), Qty Stepper, Line Total & Delete */}
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-100 gap-2">
-                        {/* Rate Input */}
-                        <div className="flex items-center gap-1.5">
+                      {/* Bottom Row: Clear separated Rate (₹), Live GST Slab Badge, Qty Stepper, Line Total & Delete */}
+                      <div className="flex flex-wrap items-center justify-between pt-2 border-t border-gray-100 gap-2">
+                        {/* Rate / Unit Input + Dynamic Per-Item GST Slab Badge */}
+                        <div className="flex items-center gap-2">
                           <span className="text-[10px] font-bold uppercase text-gray-500">Rate:</span>
                           <div className="relative">
                             <span className="absolute left-2 top-1.5 text-xs text-gray-400 font-bold">₹</span>
@@ -896,7 +917,53 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                               value={item.price}
                               onChange={(e) => handleUpdateItem(idx, 'price', e.target.value)}
                               placeholder="0"
-                              className="w-24 pl-5 pr-2 py-1 text-xs font-bold text-gray-900 border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#AD4A85] outline-none bg-white"
+                              className="w-24 pl-5 pr-2 py-1 text-xs font-bold text-gray-900 border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#AD4A85] outline-none bg-white"
+                            />
+                          </div>
+
+                          {/* Dynamic Per-Item GST Slab Badge */}
+                          <span
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition ${
+                              (Number(item.price) || 0) <= 2500
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                : 'bg-amber-50 text-amber-800 border-amber-300'
+                            }`}
+                            title={`Per unit rate: ₹${item.price || 0}. ${
+                              (Number(item.price) || 0) <= 2500
+                                ? '≤ ₹2,500 applies 5% GST'
+                                : '> ₹2,500 applies 18% GST'
+                            }`}
+                          >
+                            {(Number(item.price) || 0) <= 2500 ? '5% GST' : '18% GST'}
+                          </span>
+
+                          <span className="text-[10px] text-gray-400 font-mono">
+                            HSN: {item.hsn_code || '6204'}
+                          </span>
+
+                          {/* Editable Base Price (Taxable Unit Rate before GST) */}
+                          <div
+                            className="flex items-center gap-1.5 bg-blue-50/80 text-blue-900 border border-blue-200 px-2 py-0.5 rounded-lg text-[10px] font-semibold"
+                            title="Taxable Unit Base Price (excl. GST) — editable, auto-syncs MRP"
+                          >
+                            <span className="text-blue-700 font-bold uppercase tracking-wider text-[9px]">Base Price:</span>
+                            <span className="text-blue-950 font-bold">₹</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.base_price !== '' && item.base_price !== undefined
+                                ? item.base_price
+                                : (() => {
+                                    const unitRate = Number(item.price) || 0;
+                                    const rate = unitRate <= 2500 ? 5 : 18;
+                                    return isGstInclusive
+                                      ? Math.round((unitRate / (1 + rate / 100)) * 100) / 100
+                                      : unitRate;
+                                  })()
+                              }
+                              onChange={(e) => handleUpdateItem(idx, 'base_price', e.target.value)}
+                              className="w-20 px-1 py-0.5 text-[11px] font-bold font-mono text-blue-950 bg-white border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
                             />
                           </div>
                         </div>
@@ -911,7 +978,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                                 const q = Math.max((Number(item.quantity) || 1) - 1, 1);
                                 handleUpdateItem(idx, 'quantity', q);
                               }}
-                              className="px-2.5 py-1 hover:bg-gray-200 text-gray-600 transition"
+                              className="px-2.5 py-1 hover:bg-gray-200 text-gray-600 transition cursor-pointer"
                             >
                               <Minus className="w-3 h-3" />
                             </button>
@@ -924,7 +991,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                                 const q = (Number(item.quantity) || 1) + 1;
                                 handleUpdateItem(idx, 'quantity', q);
                               }}
-                              className="px-2.5 py-1 hover:bg-gray-200 text-gray-600 transition"
+                              className="px-2.5 py-1 hover:bg-gray-200 text-gray-600 transition cursor-pointer"
                             >
                               <Plus className="w-3 h-3" />
                             </button>
@@ -943,7 +1010,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                           <button
                             type="button"
                             onClick={() => handleRemoveItem(idx)}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
                             title="Remove Line Item"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1096,43 +1163,37 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
               </div>
             </div>
 
-            {/* GST Configuration (Rate Dropdown & Inclusive Toggle) */}
+            {/* GST Configuration (Rate & Inclusive Mode) */}
             <div className="p-3 bg-pink-50/50 rounded-xl border border-pink-200/70 space-y-2 text-xs">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-gray-800 flex items-center gap-1.5">
-                  <Percent className="w-3.5 h-3.5 text-[#AD4A85]" /> GST Calculation Option
+                  <Percent className="w-3.5 h-3.5 text-[#AD4A85]" /> Apparel GST Configuration
                 </span>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
-                  subtotal > 2500 ? 'bg-amber-50 text-amber-900 border-amber-300' : 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                  slab18.itemCount > 0 && slab5.itemCount > 0
+                    ? 'bg-purple-50 text-purple-900 border-purple-300'
+                    : slab18.itemCount > 0
+                      ? 'bg-amber-50 text-amber-900 border-amber-300'
+                      : 'bg-emerald-50 text-emerald-900 border-emerald-300'
                 }`}>
-                  {subtotal > 2500 ? '⚡ Auto 18% GST (> ₹2,500)' : '✓ Auto 5% GST (≤ ₹2,500)'}
+                  {slab18.itemCount > 0 && slab5.itemCount > 0
+                    ? 'Mixed Slabs (5% & 18%)'
+                    : slab18.itemCount > 0
+                      ? '18% GST (> ₹2,500 pcs)'
+                      : '5% GST (≤ ₹2,500 pcs)'}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-0.5">GST Rate (%)</label>
-                  <select
-                    value={gstRate}
-                    onChange={(e) => setGstRate(Number(e.target.value))}
-                    className="w-full px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs font-bold bg-white text-gray-900 focus:ring-1 focus:ring-[#AD4A85] outline-none"
-                  >
-                    <option value={5}>5% GST (Bill &le; ₹2,500)</option>
-                    <option value={18}>18% GST (Bill &gt; ₹2,500)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-0.5">Tax Mode</label>
-                  <select
-                    value={isGstInclusive ? 'inclusive' : 'exclusive'}
-                    onChange={(e) => setIsGstInclusive(e.target.value === 'inclusive')}
-                    className="w-full px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs font-bold bg-white text-gray-900 focus:ring-1 focus:ring-[#AD4A85] outline-none"
-                  >
-                    <option value="inclusive">MRP Includes GST</option>
-                    <option value="exclusive">Add GST to MRP</option>
-                  </select>
-                </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-medium text-gray-600">Tax Pricing Mode:</span>
+                <select
+                  value={isGstInclusive ? 'inclusive' : 'exclusive'}
+                  onChange={(e) => setIsGstInclusive(e.target.value === 'inclusive')}
+                  className="px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs font-bold bg-white text-gray-900 focus:ring-1 focus:ring-[#AD4A85] outline-none"
+                >
+                  <option value="inclusive">MRP Includes GST (Standard)</option>
+                  <option value="exclusive">Add GST on top of MRP</option>
+                </select>
               </div>
             </div>
 
@@ -1189,13 +1250,42 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                   <span>Taxable Amount ({isGstInclusive ? 'Back-calculated' : 'Base'}):</span>
                   <span className="font-mono font-medium text-gray-800">{money(taxableAmount)}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span>CGST @ {(gstRate / 2)}%:</span>
-                  <span className="font-mono font-medium text-gray-800">{money(cgstAmount)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>SGST @ {(gstRate / 2)}%:</span>
-                  <span className="font-mono font-medium text-gray-800">{money(sgstAmount)}</span>
+
+                {slab5.itemCount > 0 && (
+                  <div className="flex items-center justify-between text-[10px] text-emerald-800 bg-emerald-50/50 px-1.5 py-0.5 rounded">
+                    <span>5% Slab ({slab5.itemCount} pcs ≤ ₹2.5k, Taxable {money(slab5.taxableAmount)}):</span>
+                    <span className="font-mono font-semibold">{money(slab5.totalTax)}</span>
+                  </div>
+                )}
+
+                {slab18.itemCount > 0 && (
+                  <div className="flex items-center justify-between text-[10px] text-amber-800 bg-amber-50/50 px-1.5 py-0.5 rounded">
+                    <span>18% Slab ({slab18.itemCount} pcs &gt; ₹2.5k, Taxable {money(slab18.taxableAmount)}):</span>
+                    <span className="font-mono font-semibold">{money(slab18.totalTax)}</span>
+                  </div>
+                )}
+
+                {isOrderInterstate ? (
+                  <div className="flex items-center justify-between">
+                    <span>IGST (Interstate):</span>
+                    <span className="font-mono font-medium text-gray-800">{money(igstAmount)}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span>CGST (Intrastate):</span>
+                      <span className="font-mono font-medium text-gray-800">{money(cgstAmount)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>SGST (Intrastate):</span>
+                      <span className="font-mono font-medium text-gray-800">{money(sgstAmount)}</span>
+                    </div>
+                  </>
+                )}
+
+                <div className="flex items-center justify-between font-bold text-gray-700 pt-0.5 border-t border-gray-200/50">
+                  <span>Total Tax Included:</span>
+                  <span className="font-mono">{money(totalTax)}</span>
                 </div>
               </div>
 

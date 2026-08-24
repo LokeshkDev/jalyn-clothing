@@ -4,13 +4,13 @@ import BarcodeLabel from './BarcodeLabel';
 import { generateBarcodeSVG, generateBarcodePNG } from '../utils/barcodeEncoder';
 import { BARCODE_LABEL_CONFIG } from '../utils/barcodeLabelConfig';
 
-const LABEL_WIDTH_MM = 50;
+const LABEL_WIDTH_MM = 33;
 const LABEL_HEIGHT_MM = 25;
 
 const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }) => {
   const [copiesMap, setCopiesMap] = useState({});
   const [globalCopies, setGlobalCopies] = useState(defaultCopies);
-  const [layoutMode, setLayoutMode] = useState('2_per_row'); // '2_per_row' (100mm) or '1_per_row' (50mm)
+  const [layoutMode, setLayoutMode] = useState('3_per_row'); // '3_per_row' (105mm TVS LP-46 Lite), '2_per_row' (100mm), '1_per_row' (50mm)
 
   const [companyName, setCompanyName] = useState(BARCODE_LABEL_CONFIG.label.companyName);
 
@@ -20,8 +20,9 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
   const [showPrice, setShowPrice] = useState(BARCODE_LABEL_CONFIG.label.showPrice);
   const [showBarcodeNumber, setShowBarcodeNumber] = useState(BARCODE_LABEL_CONFIG.label.showBarcodeNumber);
 
-  const labelsPerRow = layoutMode === '2_per_row' ? 2 : 1;
-  const pageWidthMm = labelsPerRow * LABEL_WIDTH_MM;
+  const labelsPerRow = layoutMode === '3_per_row' ? 3 : (layoutMode === '2_per_row' ? 2 : 1);
+  const currentLabelWidthMm = layoutMode === '3_per_row' ? 33 : 48.5;
+  const pageWidthMm = layoutMode === '3_per_row' ? 105 : (layoutMode === '2_per_row' ? 100 : 50);
 
   useEffect(() => {
     if (isOpen) {
@@ -53,9 +54,10 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
   };
 
   const handlePrint = () => {
+    const isThreePerRow = layoutMode === '3_per_row';
     const isTwoPerRow = layoutMode === '2_per_row';
-    const rowWidth = isTwoPerRow ? '100mm' : '50mm';
-    const labelWidth = '48mm';
+    const rowWidth = isThreePerRow ? '105mm' : (isTwoPerRow ? '100mm' : '50mm');
+    const labelWidth = isThreePerRow ? '33mm' : '48.5mm';
     const labelHeight = '24mm';
     const rowHeight = '25mm';
 
@@ -63,10 +65,10 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
       const labelsHtml = row.map((item) => {
         const barcodeSvg = generateBarcodeSVG(item.barcode, {
           width: '100%',
-          height: 30,
+          height: isThreePerRow ? 22 : 28,
           showText: false,
-          moduleWidth: 2,
-          quietZone: 6,
+          moduleWidth: isThreePerRow ? 1.5 : 2,
+          quietZone: isThreePerRow ? 4 : 6,
           barColor: '#000000',
           backgroundColor: '#ffffff'
         });
@@ -94,7 +96,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
               ${barcodeSvg}
             </div>
             ${combinedBarcodeInfo ? `<div class="barcode-num">${String(combinedBarcodeInfo).replace(/[&<>"']/g, '')}</div>` : ''}
-            ${showPrice && displayPrice ? `<div class="price-line">₹${Number(displayPrice).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>` : ''}
+            ${showPrice && displayPrice ? `<div class="price-line">MRP: ₹${Number(displayPrice).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>` : ''}
           </div>
         `;
       }).join('');
@@ -106,7 +108,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
 <html>
 <head>
 <meta charset="UTF-8" />
-<title>Zebra Barcode Labels</title>
+<title>Barcode Stickers - ${layoutMode}</title>
 <style>
   @page {
     size: ${rowWidth} ${rowHeight};
@@ -132,9 +134,9 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     max-height: ${rowHeight} !important;
     display: flex !important;
     flex-direction: row !important;
-    justify-content: ${isTwoPerRow ? 'space-between' : 'center'} !important;
+    justify-content: ${isThreePerRow || isTwoPerRow ? 'space-between' : 'center'} !important;
     align-items: center !important;
-    padding: 0.4mm 0.8mm !important;
+    padding: ${isThreePerRow ? '0.3mm 0.5mm' : '0.4mm 0.8mm'} !important;
     box-sizing: border-box !important;
     page-break-after: always !important;
     break-after: page !important;
@@ -149,7 +151,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     max-width: ${labelWidth} !important;
     max-height: ${labelHeight} !important;
     box-sizing: border-box !important;
-    padding: 1.2mm 1mm 0.4mm !important;
+    padding: ${isThreePerRow ? '0.8mm 0.6mm 0.2mm' : '1.2mm 1mm 0.4mm'} !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
@@ -161,9 +163,9 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     overflow: hidden !important;
   }
   .brand-title {
-    font-size: 10.5pt;
+    font-size: ${isThreePerRow ? '7.5pt' : '10.5pt'};
     font-weight: 900;
-    letter-spacing: 1px;
+    letter-spacing: ${isThreePerRow ? '0.3px' : '1px'};
     line-height: 1.05;
     text-transform: uppercase;
     color: #000000;
@@ -171,7 +173,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    margin-bottom: 0.4mm;
+    margin-bottom: ${isThreePerRow ? '0.2mm' : '0.4mm'};
   }
   .barcode-box {
     width: 100%;
@@ -179,19 +181,19 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    margin: 0.2mm 0;
+    margin: 0.1mm 0;
   }
   .barcode-box svg {
-    max-height: 26px;
-    height: 26px;
+    max-height: ${isThreePerRow ? '20px' : '26px'};
+    height: ${isThreePerRow ? '20px' : '26px'};
     width: 100%;
     shape-rendering: crispEdges;
   }
   .barcode-num {
     font-family: monospace;
-    font-size: 8.5pt;
+    font-size: ${isThreePerRow ? '6.8pt' : '8.5pt'};
     font-weight: 900;
-    letter-spacing: 0.5px;
+    letter-spacing: ${isThreePerRow ? '0.2px' : '0.5px'};
     line-height: 1.1;
     color: #000000;
     white-space: nowrap;
@@ -200,7 +202,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     width: 100%;
   }
   .price-line {
-    font-size: 13pt;
+    font-size: ${isThreePerRow ? '10pt' : '13pt'};
     font-weight: 900;
     line-height: 1.05;
     color: #000000;
@@ -211,6 +213,10 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     letter-spacing: -0.3px;
   }
   @media print {
+    @page {
+      size: ${rowWidth} ${rowHeight};
+      margin: 0 !important;
+    }
     html, body {
       width: ${rowWidth} !important;
       height: ${rowHeight} !important;
@@ -341,7 +347,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
                   {printLabels.length} Total Labels
                 </span>
                 <span className="text-xs font-semibold text-gray-600 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-xs">
-                  {totalRows} Row{totalRows === 1 ? '' : 's'} ({layoutMode === '2_per_row' ? '2 Stickers / Row' : '1 Sticker / Row'})
+                  {totalRows} Row{totalRows === 1 ? '' : 's'} ({layoutMode === '3_per_row' ? '3 Stickers / Row' : (layoutMode === '2_per_row' ? '2 Stickers / Row' : '1 Sticker / Row')})
                 </span>
               </div>
             </div>
@@ -354,15 +360,17 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
                       <BarcodeLabel
                         barcode={item.barcode}
                         productName={item.productName}
-                        color={item.color}
+                        barcodeShortName={item.barcodeShortName || item.barcode_short_name}
                         size={item.size}
                         price={item.price}
+                        mrp={item.mrp || item.original_price || item.compare_price || item.price}
                         companyName={companyName}
                         showProductName={showProductName}
                         showColor={showColor}
                         showSize={showSize}
                         showPrice={showPrice}
                         showBarcodeNumber={showBarcodeNumber}
+                        layoutMode={layoutMode}
                         forPrint={false}
                       />
                     </div>
@@ -398,9 +406,9 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
                     </p>
                     <div className="space-y-1.5 bg-white p-3 rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
                       {printRows.slice(0, 4).map((row, rIdx) => (
-                        <div key={rIdx} className="flex border border-dashed border-gray-300" style={{ width: `${pageWidthMm}mm` }}>
+                        <div key={rIdx} className="flex justify-between border border-dashed border-gray-300" style={{ width: `${pageWidthMm}mm` }}>
                           {row.map((item, i) => (
-                            <div key={i} style={{ width: `${LABEL_WIDTH_MM}mm`, height: `${LABEL_HEIGHT_MM}mm` }} className="shrink-0">
+                            <div key={i} style={{ width: `${currentLabelWidthMm}mm`, height: `${LABEL_HEIGHT_MM}mm` }} className="shrink-0">
                               <BarcodeLabel
                                 barcode={item.barcode}
                                 productName={item.productName}
@@ -414,6 +422,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
                                 showSize={showSize}
                                 showPrice={showPrice}
                                 showBarcodeNumber={showBarcodeNumber}
+                                layoutMode={layoutMode}
                                 forPrint={false}
                               />
                             </div>
@@ -433,43 +442,69 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
           </div>
 
           {/* Right: Controls */}
-          <div className="w-full md:w-80 border-l border-gray-100 bg-white flex flex-col h-full shrink-0">
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="w-full md:w-84 border-l border-gray-100 bg-white flex flex-col h-full shrink-0">
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
 
               {/* Printer Roll Mode Selection */}
               <div className="space-y-2">
-                <label className="text-sm font-bold text-gray-900 block">Sticker Roll Format</label>
-                <div className="grid grid-cols-2 gap-2">
+                <label className="text-xs font-bold text-gray-900 uppercase tracking-wide block">Sticker Roll Format</label>
+                <div className="grid grid-cols-3 gap-1.5">
                   <button
                     type="button"
-                    onClick={() => setLayoutMode('2_per_row')}
-                    className={`p-2.5 rounded-xl border text-center transition flex flex-col items-center gap-0.5 cursor-pointer ${
-                      layoutMode === '2_per_row'
-                        ? 'border-[#2A1A22] bg-[#2A1A22] text-white font-bold'
+                    onClick={() => setLayoutMode('3_per_row')}
+                    className={`p-2 rounded-xl border text-center transition flex flex-col items-center gap-0.5 cursor-pointer ${
+                      layoutMode === '3_per_row'
+                        ? 'border-[#2A1A22] bg-[#2A1A22] text-white font-bold shadow-xs'
                         : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                     }`}
                   >
-                    <span className="text-xs font-bold">2 Stickers / Row</span>
-                    <span className="text-[10px] opacity-80">100mm × 25mm</span>
+                    <span className="text-[11px] font-black">3 / Row</span>
+                    <span className="text-[9px] opacity-80">TVS (105mm)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLayoutMode('2_per_row')}
+                    className={`p-2 rounded-xl border text-center transition flex flex-col items-center gap-0.5 cursor-pointer ${
+                      layoutMode === '2_per_row'
+                        ? 'border-[#2A1A22] bg-[#2A1A22] text-white font-bold shadow-xs'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-[11px] font-black">2 / Row</span>
+                    <span className="text-[9px] opacity-80">100mm</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setLayoutMode('1_per_row')}
-                    className={`p-2.5 rounded-xl border text-center transition flex flex-col items-center gap-0.5 cursor-pointer ${
+                    className={`p-2 rounded-xl border text-center transition flex flex-col items-center gap-0.5 cursor-pointer ${
                       layoutMode === '1_per_row'
-                        ? 'border-[#2A1A22] bg-[#2A1A22] text-white font-bold'
+                        ? 'border-[#2A1A22] bg-[#2A1A22] text-white font-bold shadow-xs'
                         : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                     }`}
                   >
-                    <span className="text-xs font-bold">1 Sticker / Row</span>
-                    <span className="text-[10px] opacity-80">50mm × 25mm</span>
+                    <span className="text-[11px] font-black">1 / Row</span>
+                    <span className="text-[9px] opacity-80">50mm</span>
                   </button>
                 </div>
               </div>
 
+              {/* TVS LP-46 Lite Setup Guide */}
+              <div className="bg-amber-50/90 border border-amber-200/80 rounded-xl p-3 space-y-1.5 text-xs text-amber-900">
+                <div className="font-black flex items-center gap-1.5 text-amber-950 text-[11.5px]">
+                  <Printer className="w-4 h-4 text-amber-800 shrink-0" />
+                  <span>TVS LP-46 Lite Print Settings</span>
+                </div>
+                <ul className="list-disc pl-3.5 space-y-1 font-semibold text-[10.5px] text-amber-900 leading-tight">
+                  <li><strong>Destination:</strong> TVS LP-46 Lite</li>
+                  <li><strong>Paper Size:</strong> 105mm × 25mm (or 3-Up Label)</li>
+                  <li><strong>Margins:</strong> None (0mm)</li>
+                  <li><strong>Options:</strong> <span className="text-red-700 font-black underline">UNCHECK "Headers & Footers"</span></li>
+                </ul>
+              </div>
+
               {/* Global Copies */}
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-gray-900 block">Copies Per Label</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-700 block">Copies Per Label</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
@@ -477,7 +512,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
                     max="50"
                     value={globalCopies}
                     onChange={(e) => handleGlobalCopiesChange(parseInt(e.target.value) || 1)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                    className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                   />
                   <span className="text-xs text-gray-500 whitespace-nowrap">per label</span>
                 </div>
@@ -486,101 +521,78 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
               <div className="h-px bg-gray-100" />
 
               {/* Content Settings */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-bold text-gray-900">Label Content (Bold Layout)</h3>
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wide">Label Content</h3>
 
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   <div>
-                    <label className="text-xs font-semibold text-gray-600 block mb-1">Company / Brand Name</label>
+                    <label className="text-[11px] font-semibold text-gray-600 block mb-1">Company / Brand Name</label>
                     <input
                       type="text"
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-                      placeholder="e.g. JALYN"
+                      className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-bold uppercase focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                      placeholder="e.g. JALYN APPARELS"
                     />
                   </div>
 
-                  <div className="space-y-2 pt-2">
+                  <div className="space-y-1.5 pt-1">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={showProductName}
                         onChange={(e) => setShowProductName(e.target.checked)}
-                        className="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
+                        className="w-3.5 h-3.5 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
                       />
-                      <span className="text-sm font-medium text-gray-700">Product Name</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={showColor}
-                        onChange={(e) => setShowColor(e.target.checked)}
-                        className="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
-                      />
-                      <span className="text-sm font-medium text-gray-700">Color</span>
+                      <span className="text-xs font-medium text-gray-700">Product / Short Name</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={showSize}
                         onChange={(e) => setShowSize(e.target.checked)}
-                        className="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
+                        className="w-3.5 h-3.5 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
                       />
-                      <span className="text-sm font-medium text-gray-700">Size</span>
+                      <span className="text-xs font-medium text-gray-700">Size</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={showPrice}
                         onChange={(e) => setShowPrice(e.target.checked)}
-                        className="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
+                        className="w-3.5 h-3.5 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
                       />
-                      <span className="text-sm font-medium text-gray-700">Price (₹)</span>
+                      <span className="text-xs font-medium text-gray-700">Price (₹)</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={showBarcodeNumber}
                         onChange={(e) => setShowBarcodeNumber(e.target.checked)}
-                        className="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
+                        className="w-3.5 h-3.5 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
                       />
-                      <span className="text-sm font-medium text-gray-700">Barcode Digits</span>
+                      <span className="text-xs font-medium text-gray-700">Barcode Digits</span>
                     </label>
                   </div>
-                </div>
-              </div>
-
-              {/* Info Box */}
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3">
-                <Info className="w-5 h-5 text-blue-500 shrink-0" />
-                <div className="text-xs text-blue-800 space-y-1">
-                  <p className="font-bold">Physical Sticker Size: 50mm × 25mm</p>
-                  <ul className="list-disc pl-4 space-y-0.5 font-medium">
-                    <li>High contrast bold letters &amp; barcode bars</li>
-                    <li>Inner safe margin prevents text crossing sticker gap</li>
-                    <li>Printer scale: 100% (Actual Size)</li>
-                    <li>Margins: None (0mm)</li>
-                  </ul>
                 </div>
               </div>
 
             </div>
 
             {/* Footer Actions */}
-            <div className="p-6 border-t border-gray-100 bg-gray-50 flex flex-col gap-3">
+            <div className="p-5 border-t border-gray-100 bg-gray-50 flex flex-col gap-2.5">
               <button
                 onClick={handlePrint}
                 className="w-full flex items-center justify-center gap-2 bg-[#2A1A22] hover:bg-[#3D2631] text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-md transition-colors cursor-pointer"
               >
                 <Printer className="w-4 h-4 text-pink-300" />
-                Print Labels
+                Print Sticker Sheet
               </button>
               <button
                 onClick={handleDownloadPNG}
-                className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-200 px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors cursor-pointer shadow-xs"
+                className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-200 px-4 py-2 rounded-xl text-xs font-bold hover:bg-gray-50 transition-colors cursor-pointer shadow-xs"
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-3.5 h-3.5" />
                 Download PNG
               </button>
             </div>

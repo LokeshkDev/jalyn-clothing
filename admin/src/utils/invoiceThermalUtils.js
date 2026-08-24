@@ -1,6 +1,7 @@
 import jalynLogoUrl from '../assets/jalyn-logo.png';
 import jalynLogoPngUrl from '../assets/jalyn-logo.png';
 import { getThermalSettings } from './thermalSettings';
+import { calculateOrderTax, getApparelGstRate, calculateItemTax } from './taxUtils';
 
 const escapeHtml = (v) =>
   String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -33,14 +34,34 @@ export const buildInvoiceHtml = (order) => {
   const subtotal = itemTotal(items);
   const discount = Number(order.discount_amount) || 0;
   const shipping = Number(order.shipping_amount) || 0;
-  const total = Number(order.total_amount) || Math.max(subtotal + shipping - discount, 0);
   const paymentStatus = (order.payment_status || 'paid').toLowerCase();
   const paymentMethod = order.payment_method || 'Cash / Counter';
+  const isGstInclusive = order.is_gst_inclusive !== undefined ? !!order.is_gst_inclusive : true;
 
-  const rows = items
+  const orderTax = calculateOrderTax({
+    items,
+    discountAmount: discount,
+    shippingAmount: shipping,
+    isGstInclusive,
+    shippingState: order.shipping_address,
+  });
+
+  const total = Number(order.total_amount) || orderTax.grandTotal;
+  const taxableAmount = order.taxable_amount !== null && order.taxable_amount !== undefined ? Number(order.taxable_amount) : orderTax.taxableAmount;
+  const cgstAmount = order.cgst_amount !== null && order.cgst_amount !== undefined ? Number(order.cgst_amount) : orderTax.cgstAmount;
+  const sgstAmount = order.sgst_amount !== null && order.sgst_amount !== undefined ? Number(order.sgst_amount) : orderTax.sgstAmount;
+  const igstAmount = order.igst_amount !== null && order.igst_amount !== undefined ? Number(order.igst_amount) : orderTax.igstAmount;
+  const isInterstate = orderTax.isInterState;
+
+  const rows = orderTax.items
     .map((it, i) => {
       const qty = Number(it.quantity || it.qty) || 1;
       const price = Number(it.price) || 0;
+      const hsn = it.hsnCode || '6204';
+      const itemGst = Number(it.gstRate) || 5;
+      const unitBase = isGstInclusive
+        ? Math.round((price / (1 + itemGst / 100)) * 100) / 100
+        : price;
       const variantParts = [
         it.sku && `SKU: ${it.sku}`,
         it.size && `Size: ${it.size}`,
@@ -55,8 +76,11 @@ export const buildInvoiceHtml = (order) => {
           <div style="font-weight: 700; color: #1E1218; font-size: 13px;">${escapeHtml(it.product_name || it.name || 'Item')}</div>
           ${variantText ? `<div style="font-size: 11px; color: #7A626E; margin-top: 2px;">${escapeHtml(variantText)}</div>` : ''}
         </td>
-        <td style="text-align: center; font-weight: 700; color: #1E1218;">${qty}</td>
+        <td style="text-align: center; font-family: monospace; font-size: 11px; color: #555;">${hsn}</td>
+        <td style="text-align: right; font-family: monospace; color: #2B3A42; font-weight: 600;">${money(unitBase)}</td>
+        <td style="text-align: center; font-weight: 600; font-size: 11px; color: ${itemGst > 5 ? '#B45309' : '#047857'};">${itemGst}%</td>
         <td style="text-align: right; color: #4A3B43;">${money(price)}</td>
+        <td style="text-align: center; font-weight: 700; color: #1E1218;">${qty}</td>
         <td style="text-align: right; font-weight: 700; color: #AD4A85;">${money(price * qty)}</td>
       </tr>`;
     })
@@ -84,55 +108,63 @@ export const buildInvoiceHtml = (order) => {
     background: #FFFFFF;
     border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 12px 36px rgba(42, 26, 34, 0.08);
-    border: 1px solid #EEDCE5;
+    box-shadow: 0 16px 48px rgba(173, 74, 133, 0.12);
+    border: 2px solid #E6CDDC;
+    position: relative;
+  }
+  .shiny-top-bar {
+    height: 6px;
+    background: linear-gradient(90deg, #AD4A85 0%, #D97706 35%, #7A2859 70%, #AD4A85 100%);
+    width: 100%;
   }
   .inv-header {
-    background: linear-gradient(135deg, #2A1A22 0%, #4A223B 60%, #AD4A85 100%);
-    color: #FFFFFF;
-    padding: 32px 36px;
+    background: #FFFFFF;
+    color: #2A1A22;
+    padding: 28px 36px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1.5px solid #F1E2EB;
+    position: relative;
   }
   .logo-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 5px;
   }
   .logo-img {
     height: 52px;
     width: auto;
     object-fit: contain;
-    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.25));
+    mix-blend-mode: multiply;
   }
   .brand-tagline {
     font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 2.5px;
-    color: #F3D5E3;
-    font-weight: 500;
+    letter-spacing: 2px;
+    color: #7A2859;
+    font-weight: 700;
   }
   .inv-title-box {
     text-align: right;
   }
   .inv-title {
-    font-size: 20px;
-    font-weight: 800;
+    font-size: 22px;
+    font-weight: 900;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: #FFFFFF;
+    color: #2A1A22;
   }
   .inv-badge {
     display: inline-block;
-    background: rgba(255, 255, 255, 0.18);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: linear-gradient(135deg, #AD4A85 0%, #7A2859 100%);
+    box-shadow: 0 2px 8px rgba(173, 74, 133, 0.25);
     color: #FFFFFF;
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 10.5px;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1px;
-    padding: 3px 10px;
+    padding: 3.5px 12px;
     border-radius: 20px;
     margin-top: 6px;
   }
@@ -141,7 +173,7 @@ export const buildInvoiceHtml = (order) => {
     grid-template-columns: 1fr 1fr;
     gap: 20px;
     padding: 24px 36px;
-    background: #FFF9FB;
+    background: #FCF8FA;
     border-bottom: 1px solid #F1E2EB;
   }
   .meta-card {
@@ -254,7 +286,7 @@ export const buildInvoiceHtml = (order) => {
     }
     .invoice-container {
       box-shadow: none !important;
-      border: none !important;
+      border: 1px solid #E6CDDC !important;
       border-radius: 0 !important;
       max-width: 100% !important;
     }
@@ -263,6 +295,7 @@ export const buildInvoiceHtml = (order) => {
 </head>
 <body>
   <div class="invoice-container">
+    <div class="shiny-top-bar"></div>
     <!-- Header -->
     <header class="inv-header">
       <div class="logo-wrapper">
@@ -271,7 +304,7 @@ export const buildInvoiceHtml = (order) => {
       </div>
       <div class="inv-title-box">
         <div class="inv-title">Tax Invoice</div>
-        <div style="font-size: 12px; color: #F3D5E3; margin-top: 2px;"># ${escapeHtml(order.order_number || order.id)}</div>
+        <div style="font-size: 12px; color: #7A2859; font-weight: 700; font-family: monospace; margin-top: 2px;"># ${escapeHtml(order.order_number || order.id)}</div>
         <div class="inv-badge">${paymentStatus === 'paid' ? '✓ PAID' : 'PENDING'}</div>
       </div>
     </header>
@@ -302,11 +335,14 @@ export const buildInvoiceHtml = (order) => {
       <table class="items-table">
         <thead>
           <tr>
-            <th style="width: 40px; text-align: center;">#</th>
+            <th style="width: 30px; text-align: center;">#</th>
             <th>Item &amp; Description</th>
-            <th style="width: 70px; text-align: center;">Qty</th>
-            <th style="width: 120px; text-align: right;">Unit Price</th>
-            <th style="width: 130px; text-align: right;">Total Amount</th>
+            <th style="width: 55px; text-align: center;">HSN</th>
+            <th style="width: 85px; text-align: right;">Base Price</th>
+            <th style="width: 50px; text-align: center;">GST</th>
+            <th style="width: 85px; text-align: right;">MRP Rate</th>
+            <th style="width: 45px; text-align: center;">Qty</th>
+            <th style="width: 95px; text-align: right;">Total</th>
           </tr>
         </thead>
         <tbody>
@@ -325,12 +361,12 @@ export const buildInvoiceHtml = (order) => {
         ${order.balance_amount !== undefined && order.balance_amount !== '' ? `<div>Balance / Change: <strong>₹ ${Number(order.balance_amount).toLocaleString('en-IN')}</strong></div>` : ''}
         <div>Order Status: <strong>${escapeHtml((order.order_status || 'delivered').toUpperCase())}</strong></div>
         ${order.tracking_id ? `<div>Courier AWB: <strong>${escapeHtml(order.tracking_id)}</strong></div>` : ''}
-        <div style="margin-top: 6px; font-size: 10.5px; color: #88747F;">* All prices are inclusive of applicable GST. Items eligible for exchange within 7 days with original invoice &amp; tags intact.</div>
+        <div style="margin-top: 6px; font-size: 10.5px; color: #88747F;">* Tax breakdown: Rate ≤ ₹2,500 attracts 5% GST; Rate > ₹2,500 attracts 18% GST. Exchange within 7 days with original invoice &amp; tags intact.</div>
       </div>
 
       <div class="summary-box">
         <div class="summary-row">
-          <span>Items Subtotal</span>
+          <span>Items Subtotal (MRP)</span>
           <span>${money(subtotal)}</span>
         </div>
         ${discount > 0 ? `
@@ -346,6 +382,23 @@ export const buildInvoiceHtml = (order) => {
         <div class="summary-row">
           <span>Shipping</span>
           <span style="color: #059669; font-weight: 700;">FREE</span>
+        </div>`}
+        <div class="summary-row" style="border-top: 1px dashed #E0D0D8; padding-top: 4px; margin-top: 4px;">
+          <span>Taxable Value</span>
+          <span>${money(taxableAmount)}</span>
+        </div>
+        ${isInterstate ? `
+        <div class="summary-row">
+          <span>IGST</span>
+          <span>${money(igstAmount)}</span>
+        </div>` : `
+        <div class="summary-row">
+          <span>CGST</span>
+          <span>${money(cgstAmount)}</span>
+        </div>
+        <div class="summary-row">
+          <span>SGST</span>
+          <span>${money(sgstAmount)}</span>
         </div>`}
         <div class="summary-grand">
           <span>Grand Total</span>
@@ -382,31 +435,25 @@ export const buildThermalHtml = (order, customSettings = {}) => {
   const cfg = { ...getThermalSettings(), ...customSettings };
   const items = order.items || [];
   const totalQty = items.reduce((sum, it) => sum + (Number(it.quantity || it.qty) || 1), 0);
-  const subtotal = itemTotal(items);
   const discount = Number(order.discount_amount) || 0;
   const shipping = Number(order.shipping_amount) || 0;
-  const total = Number(order.total_amount) || Math.max(subtotal + shipping - discount, 0);
-  const gstRate = Number(
-    order.gst_rate !== undefined && order.gst_rate !== '' && order.gst_rate !== null
-      ? order.gst_rate
-      : (subtotal > 2500 || total > 2500 ? 18 : (cfg.defaultGstRate !== undefined ? cfg.defaultGstRate : 5))
-  );
   const isGstInclusive = order.is_gst_inclusive !== undefined ? !!order.is_gst_inclusive : cfg.isGstInclusive !== false;
 
-  let taxableAmount = 0;
-  let totalGst = 0;
+  const orderTax = calculateOrderTax({
+    items,
+    discountAmount: discount,
+    shippingAmount: shipping,
+    isGstInclusive,
+    shippingState: order.shipping_address || order.place_of_supply,
+  });
 
-  if (isGstInclusive) {
-    taxableAmount = Math.round((total / (1 + gstRate / 100)) * 100) / 100;
-    totalGst = Math.round((total - taxableAmount) * 100) / 100;
-  } else {
-    taxableAmount = Math.round((subtotal - discount) * 100) / 100;
-    totalGst = Math.round((taxableAmount * (gstRate / 100)) * 100) / 100;
-  }
-
-  const halfGstRate = (gstRate / 2).toFixed(1).replace(/\.0$/, '');
-  const cgst = Math.round((totalGst / 2) * 100) / 100;
-  const sgst = Math.round((totalGst / 2) * 100) / 100;
+  const subtotal = orderTax.subtotal;
+  const total = Number(order.total_amount) || orderTax.grandTotal;
+  const taxableAmount = order.taxable_amount !== null && order.taxable_amount !== undefined ? Number(order.taxable_amount) : orderTax.taxableAmount;
+  const cgst = order.cgst_amount !== null && order.cgst_amount !== undefined ? Number(order.cgst_amount) : orderTax.cgstAmount;
+  const sgst = order.sgst_amount !== null && order.sgst_amount !== undefined ? Number(order.sgst_amount) : orderTax.sgstAmount;
+  const igst = order.igst_amount !== null && order.igst_amount !== undefined ? Number(order.igst_amount) : orderTax.igstAmount;
+  const isInterstate = orderTax.isInterState;
 
   const orderNum = order.order_number || order.id || '1833';
   const orderDate = formatReceiptDate(order.created_at || new Date());
@@ -430,18 +477,22 @@ export const buildThermalHtml = (order, customSettings = {}) => {
     ? Number(order.balance_amount)
     : Math.max(0, receivedAmount - total);
 
-  const rows = items
+  const rows = orderTax.items
     .map((it, idx) => {
       const qty = Number(it.quantity || it.qty) || 1;
       const price = Number(it.price) || 0;
-      const itemGst = Number(it.gst_rate !== undefined ? it.gst_rate : gstRate);
-      const itemTaxableRate = (price / (1 + itemGst / 100)).toFixed(2);
+      const itemGst = Number(it.gstRate) || 5;
+      const hsn = it.hsnCode || '6204';
+      const unitBase = isGstInclusive
+        ? Math.round((price / (1 + itemGst / 100)) * 100) / 100
+        : price;
 
       const variantParts = [];
       if (cfg.showItemSku && it.sku) {
         variantParts.push(it.sku);
       }
       const variantText = variantParts.join(', ');
+      const showTaxLine = cfg.showItemTaxDetails !== false && (cfg.showItemTaxDetails || cfg.showItemGstRate);
 
       return `
       <div class="item-line">
@@ -449,10 +500,10 @@ export const buildThermalHtml = (order, customSettings = {}) => {
         <div class="col-desc">
           <div class="item-title">${escapeHtml(it.product_name || it.name || 'Item')}</div>
           ${variantText ? `<div class="item-sub">${escapeHtml(variantText)}</div>` : ''}
-          ${cfg.showItemGstRate ? `<div class="item-sub">GST: ${itemGst}%</div>` : ''}
+          ${showTaxLine ? `<div class="item-sub">HSN: ${hsn} | Base: ₹${unitBase.toFixed(2)} | GST: ${itemGst}%</div>` : ''}
         </div>
         <div class="col-qty">${qty} ${escapeHtml(it.unit || 'Qty')}</div>
-        ${cfg.showItemRate ? `<div class="col-rate">${itemTaxableRate}</div>` : ''}
+        ${cfg.showItemRate ? `<div class="col-rate">${price}</div>` : ''}
         <div class="col-amt">${price * qty}</div>
       </div>`;
     })
@@ -734,14 +785,20 @@ ${baseOrigin ? `<base href="${baseOrigin}/" />` : ''}
       <span>Taxable Amount</span>
       <span>₹ ${taxableAmount.toFixed(2)}</span>
     </div>
+    ${isInterstate ? `
     <div class="calc-row">
-      <span>CGST @${halfGstRate}%</span>
+      <span>IGST (Interstate)</span>
+      <span>₹ ${igst.toFixed(1)}</span>
+    </div>` : `
+    <div class="calc-row">
+      <span>CGST</span>
       <span>₹ ${cgst.toFixed(1)}</span>
     </div>
     <div class="calc-row">
-      <span>SGST @${halfGstRate}%</span>
+      <span>SGST</span>
       <span>₹ ${sgst.toFixed(1)}</span>
-    </div>` : ''}
+    </div>`}
+    ` : ''}
 
     <div class="grand-row">
       <span>Total</span>
@@ -798,28 +855,10 @@ ${baseOrigin ? `<base href="${baseOrigin}/" />` : ''}
 export const printThermalReceipt = (order, customSettings = {}) => {
   try {
     const html = buildThermalHtml(order, customSettings);
-    const win = window.open('', '_blank', 'width=440,height=720');
-    if (win) {
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
-      win.focus();
-      setTimeout(() => {
-        try {
-          win.print();
-        } catch (e) {
-          console.warn('win.print error:', e);
-        }
-      }, 250);
-      return;
-    }
-
-    // Fallback to hidden iframe if popups blocked
     let iframe = document.getElementById('thermal-print-iframe');
     if (!iframe) {
       iframe = document.createElement('iframe');
       iframe.id = 'thermal-print-iframe';
-      iframe.name = 'thermal-print-iframe';
       iframe.style.position = 'fixed';
       iframe.style.right = '0';
       iframe.style.bottom = '0';
@@ -846,33 +885,15 @@ export const printThermalReceipt = (order, customSettings = {}) => {
 };
 
 /**
- * Trigger Instant Luxury Tax Invoice Print (A4 Format)
+ * Trigger Instant A4 Luxury Tax Invoice Print
  */
 export const printTaxInvoice = (order) => {
   try {
     const html = buildInvoiceHtml(order);
-    const win = window.open('', '_blank', 'width=880,height=960');
-    if (win) {
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
-      win.focus();
-      setTimeout(() => {
-        try {
-          win.print();
-        } catch (e) {
-          console.warn('win.print error:', e);
-        }
-      }, 250);
-      return;
-    }
-
-    // Fallback to hidden iframe if popups blocked
     let iframe = document.getElementById('tax-invoice-print-iframe');
     if (!iframe) {
       iframe = document.createElement('iframe');
       iframe.id = 'tax-invoice-print-iframe';
-      iframe.name = 'tax-invoice-print-iframe';
       iframe.style.position = 'fixed';
       iframe.style.right = '0';
       iframe.style.bottom = '0';
@@ -905,16 +926,25 @@ export const printTaxInvoice = (order) => {
 export const formatLuxuryWhatsAppInvoice = (order, options = {}) => {
   const cfg = getThermalSettings();
   const items = order.items || [];
-  const subtotal = itemTotal(items);
   const discount = Number(order.discount_amount) || 0;
   const shipping = Number(order.shipping_amount) || 0;
-  const total = Number(order.total_amount) || Math.max(subtotal + shipping - discount, 0);
-  
-  // Tax Slab: 18% if > 2500, else 5%
-  const gstRate = total > 2500 ? 18 : (Number(cfg.defaultGstRate) || 5);
-  const taxable = Math.round((total / (1 + gstRate / 100)) * 100) / 100;
-  const totalGst = Math.round((total - taxable) * 100) / 100;
-  const halfGst = Math.round((totalGst / 2) * 100) / 100;
+  const isGstInclusive = order.is_gst_inclusive !== undefined ? !!order.is_gst_inclusive : true;
+
+  const orderTax = calculateOrderTax({
+    items,
+    discountAmount: discount,
+    shippingAmount: shipping,
+    isGstInclusive,
+    shippingState: order.shipping_address || order.place_of_supply,
+  });
+
+  const subtotal = orderTax.subtotal;
+  const total = Number(order.total_amount) || orderTax.grandTotal;
+  const taxable = order.taxable_amount !== null && order.taxable_amount !== undefined ? Number(order.taxable_amount) : orderTax.taxableAmount;
+  const cgst = order.cgst_amount !== null && order.cgst_amount !== undefined ? Number(order.cgst_amount) : orderTax.cgstAmount;
+  const sgst = order.sgst_amount !== null && order.sgst_amount !== undefined ? Number(order.sgst_amount) : orderTax.sgstAmount;
+  const igst = order.igst_amount !== null && order.igst_amount !== undefined ? Number(order.igst_amount) : orderTax.igstAmount;
+  const isInterstate = orderTax.isInterState;
 
   const paymentMethod = String(order.payment_method || 'Cash').toUpperCase();
   const paymentStatus = String(order.payment_status || 'PAID').toUpperCase();
@@ -942,21 +972,31 @@ export const formatLuxuryWhatsAppInvoice = (order, options = {}) => {
     ``,
     `🛍️ *ITEMIZED PARTICULARS:*`,
     `──────────────────────`,
-    ...items.map((it, idx) => {
+    ...orderTax.items.map((it, idx) => {
       const qty = Number(it.quantity || it.qty) || 1;
       const price = Number(it.price) || 0;
       const lineTotal = price * qty;
+      const itemGst = Number(it.gstRate) || 5;
+      const hsn = it.hsnCode || '6204';
+      const unitBase = isGstInclusive
+        ? Math.round((price / (1 + itemGst / 100)) * 100) / 100
+        : price;
       const variantParts = [it.size && `Size: ${it.size}`, it.color && `Color: ${it.color}`].filter(Boolean);
       const vText = variantParts.length > 0 ? ` (${variantParts.join(', ')})` : '';
-      return `${idx + 1}. *${it.product_name || 'Item'}*${vText}\n   └ ${qty} pcs × ₹${price.toLocaleString('en-IN')} = *₹${lineTotal.toLocaleString('en-IN')}*`;
+      return `${idx + 1}. *${it.product_name || 'Item'}*${vText}\n   └ ${qty} pcs × ₹${price.toLocaleString('en-IN')} [HSN:${hsn}, Base: ₹${unitBase.toLocaleString('en-IN', { minimumFractionDigits: 2 })}, GST:${itemGst}%] = *₹${lineTotal.toLocaleString('en-IN')}*`;
     }),
     `──────────────────────`,
     `*Subtotal:* ₹${subtotal.toLocaleString('en-IN')}`,
     ...(discount > 0 ? [`*Special Discount:* −₹${discount.toLocaleString('en-IN')}`] : []),
     ...(shipping > 0 ? [`*Shipping Charges:* +₹${shipping.toLocaleString('en-IN')}`] : []),
     `*Taxable Value:* ₹${taxable.toLocaleString('en-IN')}`,
-    `*CGST (${gstRate / 2}%):* ₹${halfGst.toLocaleString('en-IN')}`,
-    `*SGST (${gstRate / 2}%):* ₹${halfGst.toLocaleString('en-IN')}`,
+    ...(isInterstate
+      ? [`*IGST:* ₹${igst.toLocaleString('en-IN')}`]
+      : [
+          `*CGST:* ₹${cgst.toLocaleString('en-IN')}`,
+          `*SGST:* ₹${sgst.toLocaleString('en-IN')}`
+        ]
+    ),
     `━━━━━━━━━━━━━━━━━━━━━━`,
     `💰 *GRAND TOTAL:* *₹${total.toLocaleString('en-IN')}*`,
     `━━━━━━━━━━━━━━━━━━━━━━`,

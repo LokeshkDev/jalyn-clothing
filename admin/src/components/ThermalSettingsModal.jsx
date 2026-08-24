@@ -335,7 +335,7 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
                       { key: 'showShipTo', label: 'Ship To (Business Name)' },
                       { key: 'showItemSku', label: 'Item Code / SKU (e.g. JLN-XX)' },
                       { key: 'showItemRate', label: 'Item Rate Column (Taxable Rate)' },
-                      { key: 'showItemGstRate', label: 'Item GST % Line (e.g. "GST: 18%")' },
+                      { key: 'showItemTaxDetails', label: 'Item Tax Details Line (HSN, Base Price & GST %)' },
                       { key: 'showTaxBreakdown', label: 'Tax Breakdown (Taxable, CGST, SGST)' },
                       { key: 'showYouSaved', label: '"You Saved" Discount Line' },
                       { key: 'showReceivedBalance', label: 'Received & Balance Amount' },
@@ -646,15 +646,17 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
                     <div className="flex justify-between items-start">
                       <span className="w-4 font-bold text-gray-600">1</span>
                       <div className="flex-1 px-1">
-                        <div className="font-bold text-gray-800">LUCKNOWI CHIKANKARI COTTON KURTI</div>
+                        <div className="font-bold text-gray-800">FLORAL MIDI DRESS</div>
                         {settings.showItemSku && (
-                          <div className="text-[9.5px] text-gray-500 font-semibold">SKU: JLN-18</div>
+                          <div className="text-[9.5px] text-gray-500 font-semibold">SKU: JLN-1</div>
                         )}
-                        {settings.showItemGstRate && <div className="text-[9.5px] text-gray-500 font-semibold">GST: 18%</div>}
+                        {(settings.showItemTaxDetails !== false && (settings.showItemTaxDetails || settings.showItemGstRate)) && (
+                          <div className="text-[9.5px] text-gray-500 font-semibold">HSN: 6204 | Base: ₹2,599.15 | GST: 18%</div>
+                        )}
                       </div>
                       <span className="w-10 text-center font-semibold">1 Qty</span>
-                      {settings.showItemRate && <span className="w-14 text-right font-semibold">1948.31</span>}
-                      <span className="w-12 text-right font-bold text-gray-800">2299</span>
+                      {settings.showItemRate && <span className="w-14 text-right font-semibold">3067</span>}
+                      <span className="w-12 text-right font-bold text-gray-800">3067</span>
                     </div>
                   </div>
 
@@ -663,15 +665,17 @@ export default function ThermalSettingsModal({ isOpen, onClose, onSaved }) {
                     <div className="flex justify-between items-start">
                       <span className="w-4 font-bold text-gray-600">2</span>
                       <div className="flex-1 px-1">
-                        <div className="font-bold text-gray-800">LUCKNOWI CHIKANKARI COTTON KURTI</div>
+                        <div className="font-bold text-gray-800">LUCKNOWI CHIKANKARI KURTI</div>
                         {settings.showItemSku && (
                           <div className="text-[9.5px] text-gray-500 font-semibold">SKU: JLN-18</div>
                         )}
-                        {settings.showItemGstRate && <div className="text-[9.5px] text-gray-500 font-semibold">GST: 18%</div>}
+                        {(settings.showItemTaxDetails !== false && (settings.showItemTaxDetails || settings.showItemGstRate)) && (
+                          <div className="text-[9.5px] text-gray-500 font-semibold">HSN: 6204 | Base: ₹1,948.31 | GST: 5%</div>
+                        )}
                       </div>
                       <span className="w-10 text-center font-semibold">1 Qty</span>
-                      {settings.showItemRate && <span className="w-14 text-right font-semibold">1948.31</span>}
-                      <span className="w-12 text-right font-bold text-gray-800">2299</span>
+                      {settings.showItemRate && <span className="w-14 text-right font-semibold">2045</span>}
+                      <span className="w-12 text-right font-bold text-gray-800">2045</span>
                     </div>
                   </div>
                 </div>
