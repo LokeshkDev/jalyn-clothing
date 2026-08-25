@@ -1,4 +1,31 @@
+# Robots.txt for JALYN E-Commerce (https://jalyn.in)
 User-agent: *
 Allow: /
+Allow: /shop
+Allow: /collections/
+Allow: /products/
+Allow: /about
+Allow: /contact
+Allow: /shipping-delivery
+Allow: /returns-exchanges
+Allow: /privacy-policy
+Allow: /terms-of-service
+Allow: /images/
+Allow: /assets/
 
+# Disallow private user states, dynamic facets, and transaction endpoints
+Disallow: /admin/
+Disallow: /checkout
+Disallow: /cart
+Disallow: /profile/
+Disallow: /account/
+Disallow: /login
+Disallow: /register
+Disallow: /api/
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*price=
+Disallow: /*?*page=
+
+# Sitemap index
 Sitemap: https://jalyn.in/sitemap.xml

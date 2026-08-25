@@ -58,7 +58,7 @@ export default function HelpSupport() {
           className="rounded-[6px] border border-emerald-200 bg-emerald-50/40 p-5 shadow-xs hover:shadow-soft transition text-center block space-y-2 group"
         >
           <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#25D366]/20 text-[#25D366] group-hover:bg-[#25D366] group-hover:text-white transition">
-            <FaWhatsapp className="h-5 w-5" />
+            <WhatsAppIcon className="h-5 w-5" />
           </div>
           <h4 className="font-bold text-ink text-sm">WhatsApp Support</h4>
           <p className="text-[11px] text-ink-muted">{whatsapp} (10 AM – 7 PM IST)</p>

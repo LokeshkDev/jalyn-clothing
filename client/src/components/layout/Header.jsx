@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, lazy, Suspense } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Search, User, ShoppingBag, ChevronDown, Menu, X, ChevronRight, MapPin } from 'lucide-react'
-import logo from '@/assets/jalyn-logo.png'
+import logo from '@/assets/jalyn-logo.webp'
 import { NAV_LINKS } from '@/constants/data'
 import { cn } from '@/lib/utils'
 import { useCartStore, useUIStore } from '@/store'

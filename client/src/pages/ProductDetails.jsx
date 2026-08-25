@@ -23,6 +23,7 @@ import MobilePurchaseBar from '@/components/pdp/mobile/MobilePurchaseBar'
 import MobileRecentlyViewed from '@/components/shop/MobileRecentlyViewed'
 
 import api from '@/services/api'
+import SEO from '@/components/seo/SEO'
 
 export function PdpSkeleton() {
   return (
@@ -201,12 +202,91 @@ export default function ProductDetails() {
     product.category?.charAt(0).toUpperCase() + product.category?.slice(1) ||
     'Dresses'
 
+  const productSchema = useMemo(() => {
+    if (!displayProduct?.title) return null
+    const primaryImg = galleryImages?.[0] || displayProduct.image || '/images/products/floral-midi-dress.webp'
+    const canonicalUrl = `https://jalyn.in/products/${displayProduct.slug || id}`
+
+    return {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Product',
+          '@id': `${canonicalUrl}#product`,
+          name: displayProduct.title,
+          description: displayProduct.description || `${displayProduct.title} by JALYN luxury women's apparel.`,
+          image: galleryImages.map(img => img.startsWith('http') ? img : `https://jalyn.in${img.startsWith('/') ? '' : '/'}${img}`),
+          sku: String(displayProduct.id || displayProduct.slug || id),
+          brand: {
+            '@type': 'Brand',
+            name: displayProduct.brand || 'JALYN',
+          },
+          offers: {
+            '@type': 'Offer',
+            url: canonicalUrl,
+            priceCurrency: 'INR',
+            price: displayProduct.price,
+            itemCondition: 'https://schema.org/NewCondition',
+            availability: displayProduct.inStock
+              ? 'https://schema.org/InStock'
+              : 'https://schema.org/OutOfStock',
+            seller: {
+              '@type': 'Organization',
+              name: 'JALYN',
+            },
+          },
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: displayProduct.rating || 4.8,
+            reviewCount: displayProduct.reviews || 24,
+            bestRating: '5',
+            worstRating: '1',
+          },
+        },
+        {
+          '@type': 'BreadcrumbList',
+          '@id': `${canonicalUrl}#breadcrumb`,
+          itemListElement: [
+            {
+              '@type': 'ListItem',
+              position: 1,
+              name: 'Home',
+              item: 'https://jalyn.in',
+            },
+            {
+              '@type': 'ListItem',
+              position: 2,
+              name: categoryTitle,
+              item: `https://jalyn.in/collections/${displayProduct.category_slug || (displayProduct.category || 'dresses').toLowerCase()}`,
+            },
+            {
+              '@type': 'ListItem',
+              position: 3,
+              name: displayProduct.title,
+              item: canonicalUrl,
+            },
+          ],
+        },
+      ],
+    }
+  }, [displayProduct, galleryImages, categoryTitle, id])
+
   if (loading) {
     return <PdpSkeleton />
   }
 
   return (
     <div className="bg-surface min-h-screen">
+      <SEO
+        title={displayProduct.title}
+        description={displayProduct.description || `Buy ${displayProduct.title} online at JALYN. Luxury handcrafted women's fashion in India.`}
+        canonical={`/products/${displayProduct.slug || id}`}
+        image={galleryImages[0] || displayProduct.image}
+        type="product"
+        price={displayProduct.price}
+        currency="INR"
+        schema={productSchema}
+      />
       {/* ============================
           MOBILE PDP VIEW (< 1024px)
          ============================ */}

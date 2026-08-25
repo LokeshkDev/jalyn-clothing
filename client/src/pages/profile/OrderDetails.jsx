@@ -16,7 +16,7 @@ import { useOrderStore, useUserStore } from '@/store'
 import { formatINR, cn } from '@/lib/utils'
 import { calculateOrderTax, getApparelGstRate } from '@/lib/taxUtils'
 import api from '@/services/api'
-import logo from '@/assets/jalyn-logo-login.png'
+import logo from '@/assets/jalyn-logo-login.webp'
 
 export default function OrderDetails() {
   const { id } = useParams()

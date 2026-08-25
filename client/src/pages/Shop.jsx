@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useDeferredValue } from 'react'
 import ShopHero from '@/components/shop/ShopHero'
 import ProductToolbar from '@/components/shop/ProductToolbar'
 import ProductGrid from '@/components/shop/ProductGrid'
@@ -21,16 +21,15 @@ import MobileSortSheet from '@/components/shop/MobileSortSheet'
 import MobileFloatingBar from '@/components/shop/MobileFloatingBar'
 import MobileRecentlyViewed from '@/components/shop/MobileRecentlyViewed'
 import { Swiper, SwiperSlide } from 'swiper/react'
-import { Navigation } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/navigation'
+import SEO from '@/components/seo/SEO'
 
 import {
   SHOP_PRODUCTS,
   PRICE_BOUNDS,
 } from '@/constants/shopProducts'
 import { useProductsApi } from '@/hooks/useProductsApi'
-
 
 const initialFilters = () => ({
   categories: [],
@@ -60,6 +59,9 @@ export default function Shop() {
   const [sortSheetOpen, setSortSheetOpen] = useState(false)
   const [quickView, setQuickView] = useState(null)
 
+  const deferredFilters = useDeferredValue(filters)
+  const deferredSort = useDeferredValue(sort)
+
   useEffect(() => {
     setPage(1)
   }, [filters, sort])
@@ -82,69 +84,69 @@ export default function Shop() {
     const rawList = apiProducts && apiProducts.length > 0 ? apiProducts : SHOP_PRODUCTS
     let list = rawList.filter((p) => p.is_online !== 0 && p.is_online !== false)
 
-    if (filters.categories.length) {
+    if (deferredFilters.categories.length) {
       list = list.filter((p) => {
         const pCat = (p.category || '').toLowerCase().trim()
         const pSlug = (p.category_slug || '').toLowerCase().trim()
-        return filters.categories.some((cat) => {
+        return deferredFilters.categories.some((cat) => {
           const target = cat.toLowerCase().trim()
           return pCat === target || pSlug === target || pCat.includes(target) || target.includes(pCat)
         })
       })
     }
     list = list.filter(
-      (p) => p.price >= filters.price[0] && p.price <= filters.price[1],
+      (p) => p.price >= deferredFilters.price[0] && p.price <= deferredFilters.price[1],
     )
-    if (filters.sizes.length) {
-      list = list.filter((p) => p.sizes.some((s) => filters.sizes.includes(s)))
+    if (deferredFilters.sizes.length) {
+      list = list.filter((p) => p.sizes.some((s) => deferredFilters.sizes.includes(s)))
     }
-    if (filters.colors.length) {
+    if (deferredFilters.colors.length) {
       list = list.filter((p) =>
-        p.colors.some((c) => filters.colors.includes(c)),
+        p.colors.some((c) => deferredFilters.colors.includes(c)),
       )
     }
-    if (filters.fabric.length) {
-      list = list.filter((p) => filters.fabric.includes(p.fabric))
+    if (deferredFilters.fabric.length) {
+      list = list.filter((p) => deferredFilters.fabric.includes(p.fabric))
     }
-    if (filters.sleeve.length) {
-      list = list.filter((p) => filters.sleeve.includes(p.sleeve))
+    if (deferredFilters.sleeve.length) {
+      list = list.filter((p) => deferredFilters.sleeve.includes(p.sleeve))
     }
-    if (filters.occasion.length) {
-      list = list.filter((p) => filters.occasion.includes(p.occasion))
+    if (deferredFilters.occasion.length) {
+      list = list.filter((p) => deferredFilters.occasion.includes(p.occasion))
     }
-    if (filters.fit.length) {
-      list = list.filter((p) => filters.fit.includes(p.fit))
+    if (deferredFilters.fit.length) {
+      list = list.filter((p) => deferredFilters.fit.includes(p.fit))
     }
-    if (filters.pattern.length) {
-      list = list.filter((p) => filters.pattern.includes(p.pattern))
+    if (deferredFilters.pattern.length) {
+      list = list.filter((p) => deferredFilters.pattern.includes(p.pattern))
     }
-    if (filters.season.length) {
-      list = list.filter((p) => filters.season.includes(p.season))
+    if (deferredFilters.season.length) {
+      list = list.filter((p) => deferredFilters.season.includes(p.season))
     }
-    if (filters.brand.length) {
-      list = list.filter((p) => filters.brand.includes(p.brand))
+    if (deferredFilters.brand.length) {
+      list = list.filter((p) => deferredFilters.brand.includes(p.brand))
     }
-    if (filters.discount.length) {
+    if (deferredFilters.discount.length) {
       list = list.filter((p) =>
-        filters.discount.some((d) => {
+        deferredFilters.discount.some((d) => {
           const min = parseInt(d, 10)
           return p.discount >= min
         }),
       )
     }
-    if (filters.ratings.length) {
+    if (deferredFilters.ratings.length) {
       list = list.filter((p) =>
-        filters.ratings.some((r) => {
+        deferredFilters.ratings.some((r) => {
           const min = parseFloat(r)
           return p.rating >= min
         }),
       )
     }
-    if (filters.availability.includes('In Stock')) {
+    if (deferredFilters.availability.includes('In Stock')) {
       list = list.filter((p) => p.stock > 0)
     }
 
-    switch (sort) {
+    switch (deferredSort) {
       case 'price-asc':
         list.sort((a, b) => a.price - b.price)
         break
@@ -162,7 +164,7 @@ export default function Shop() {
     }
 
     return list
-  }, [filters, sort, apiProducts])
+  }, [deferredFilters, deferredSort, apiProducts])
 
   // Show exactly 3 rows of data per page dynamically based on grid view (e.g. 4 cols x 3 rows = 12 items per page)
   const itemsPerRow = typeof view === 'number' ? view : 4
@@ -189,6 +191,11 @@ export default function Shop() {
 
   return (
     <div className="bg-surface pb-12 lg:pb-0">
+      <SEO
+        title="Shop All Women's Fashion & Silk Outfits"
+        description="Explore the complete collection of luxury silk dresses, co-ord sets, tops, and festive ethnic wear at JALYN. Nationwide delivery."
+        canonical="/shop"
+      />
       {/* MOBILE SHOP VIEW (< 1024px / lg) */}
       <div className="block lg:hidden">
         {/* 1. Mobile Shop Hero */}

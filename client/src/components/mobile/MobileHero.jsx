@@ -8,6 +8,20 @@ import { useCmsData } from '@/hooks/useCmsData'
 import 'swiper/css'
 import 'swiper/css/pagination'
 
+function getMobileHeroSrcSet(imgUrl) {
+  if (!imgUrl || typeof imgUrl !== 'string') return undefined;
+  if (imgUrl.includes('/images/home/hero/hero-slide-1')) {
+    return '/images/home/hero/hero-slide-1-480.webp 480w, /images/home/hero/hero-slide-1-768.webp 768w';
+  }
+  if (imgUrl.includes('/images/home/hero/hero-slide-2')) {
+    return '/images/home/hero/hero-slide-2-480.webp 480w, /images/home/hero/hero-slide-2-768.webp 768w';
+  }
+  if (imgUrl.includes('/images/home/hero/hero-slide-3')) {
+    return '/images/home/hero/hero-slide-3-480.webp 480w, /images/home/hero/hero-slide-3-768.webp 768w';
+  }
+  return undefined;
+}
+
 export default function MobileHero() {
   const { heroSlides } = useCmsData()
   const slides = heroSlides?.length ? heroSlides : HERO_SLIDES
@@ -15,7 +29,8 @@ export default function MobileHero() {
   // Inject dynamic preload for the first hero image to reduce mobile LCP Resource Load Delay
   useEffect(() => {
     if (slides?.[0]) {
-      const imgUrl = slides[0].image || slides[0].banner_image || slides[0].image_url
+      const rawImgUrl = slides[0].image || slides[0].banner_image || slides[0].image_url
+      const imgUrl = rawImgUrl?.includes('/images/home/hero/hero-slide-') ? rawImgUrl.replace('.webp', '-768.webp') : rawImgUrl
       if (imgUrl && !document.querySelector(`link[rel="preload"][href="${CSS.escape(imgUrl)}"]`)) {
         const link = document.createElement('link')
         link.rel = 'preload'
@@ -52,7 +67,11 @@ export default function MobileHero() {
           const hasContent = hasEyebrow || hasTitle || hasHighlight || hasSubtitle || hasCta
           const slideLink = slide.href || slide.cta_link || '/shop'
 
-          const slideImg = slide.image || slide.banner_image || slide.image_url || '/images/home/hero/hero-slide-1.webp'
+          const rawSlideImg = slide.image || slide.banner_image || slide.image_url || '/images/home/hero/hero-slide-1.webp'
+          const slideImg = rawSlideImg.includes('/images/home/hero/hero-slide-') && !rawSlideImg.includes('-768.webp') && !rawSlideImg.includes('-480.webp')
+            ? rawSlideImg.replace('.webp', '-768.webp')
+            : rawSlideImg
+          const mobileSrcSet = getMobileHeroSrcSet(rawSlideImg)
 
           if (!hasContent) {
             return (
@@ -64,6 +83,8 @@ export default function MobileHero() {
                 >
                   <img
                     src={slideImg}
+                    srcSet={mobileSrcSet}
+                    sizes="(max-width: 480px) 480px, 768px"
                     alt={slide.alt || slide.title || 'Featured Banner'}
                     className="h-full w-full object-cover object-center"
                     fetchPriority={index === 0 ? 'high' : 'auto'}
@@ -72,7 +93,7 @@ export default function MobileHero() {
                     width="768"
                     height="384"
                     onError={(e) => {
-                      e.currentTarget.src = '/images/home/hero/hero-slide-1.webp'
+                      e.currentTarget.src = '/images/home/hero/hero-slide-1-768.webp'
                     }}
                   />
                 </Link>
@@ -86,6 +107,8 @@ export default function MobileHero() {
                 {/* Full-bleed background image */}
                 <img
                   src={slideImg}
+                  srcSet={mobileSrcSet}
+                  sizes="(max-width: 480px) 480px, 768px"
                   alt={slide.alt || slide.title || 'Featured collection'}
                   className="absolute inset-0 h-full w-full object-cover object-center"
                   fetchPriority={index === 0 ? 'high' : 'auto'}
@@ -94,7 +117,7 @@ export default function MobileHero() {
                   width="768"
                   height="384"
                   onError={(e) => {
-                    e.currentTarget.src = '/images/home/hero/hero-slide-1.webp'
+                    e.currentTarget.src = '/images/home/hero/hero-slide-1-768.webp'
                   }}
                 />
 

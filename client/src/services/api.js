@@ -1,11 +1,12 @@
 import axios from 'axios';
 
 const getApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
-  }
+  // If running locally in browser on localhost or 127.0.0.1, connect to local backend
   if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
     return 'http://localhost:5000/api';
+  }
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
   }
   return 'https://api.jalyn.in/api';
 };
@@ -17,6 +18,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 15000,
 });
 
 // Request Interceptor to attach JWT token from Zustand store
@@ -47,7 +49,10 @@ api.interceptors.response.use(
     const isAuthEndpoint =
       url.includes('/auth/login') ||
       url.includes('/auth/register') ||
-      url.includes('/auth/google');
+      url.includes('/auth/google') ||
+      url.includes('/auth/forgot-password') ||
+      url.includes('/auth/reset-password') ||
+      url.includes('/auth/change-password');
     if (error.response?.status === 401 && !isAuthEndpoint) {
       localStorage.removeItem('jalyn-user');
       window.dispatchEvent(new Event('jalyn-session-expired'));

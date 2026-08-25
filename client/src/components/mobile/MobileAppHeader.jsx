@@ -1,7 +1,7 @@
 import { useState, lazy, Suspense } from 'react'
 import { Link } from 'react-router-dom'
 import { Menu, Search, Heart, MapPin } from 'lucide-react'
-import logo from '@/assets/jalyn-logo.png'
+import logo from '@/assets/jalyn-logo.webp'
 import { useUIStore, useWishlistStore } from '@/store'
 import { getSavedLocation } from '@/lib/locationUtils'
 

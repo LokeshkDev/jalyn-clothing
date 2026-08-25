@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useDeferredValue } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { Search, X, Sparkles, ArrowRight, ShoppingBag } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -12,12 +12,13 @@ export default function SearchModal() {
   const { searchOpen, setSearchOpen } = useUIStore()
   const { products } = useProductsApi()
   const [query, setQuery] = useState('')
+  const deferredQuery = useDeferredValue(query)
   const navigate = useNavigate()
 
-  // Filter matching suggestions dynamically as user types
+  // Filter matching suggestions dynamically as user types with deferredQuery
   const suggestions = useMemo(() => {
-    if (!query.trim()) return []
-    const q = query.toLowerCase().trim()
+    if (!deferredQuery.trim()) return []
+    const q = deferredQuery.toLowerCase().trim()
     return products.filter((p) => {
       const matchTitle = p.title?.toLowerCase().includes(q)
       const matchCat = p.category?.toLowerCase().includes(q) || p.category_slug?.toLowerCase().includes(q)
@@ -25,7 +26,7 @@ export default function SearchModal() {
       const matchBrand = p.brand?.toLowerCase().includes(q)
       return matchTitle || matchCat || matchDesc || matchBrand
     }).slice(0, 6) // Top 6 live suggestions
-  }, [query, products])
+  }, [deferredQuery, products])
 
   const handleSelectProduct = (slug) => {
     setSearchOpen(false)

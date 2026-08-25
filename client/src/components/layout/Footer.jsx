@@ -11,7 +11,7 @@ import {
   MapPin,
   ChevronDown,
 } from 'lucide-react'
-import logo from '@/assets/jalyn-logo.png'
+import logo from '@/assets/jalyn-logo.webp'
 import { FOOTER_LINKS } from '@/constants/data'
 import { useCmsData } from '@/hooks/useCmsData'
 import {
@@ -225,11 +225,11 @@ export default function Footer() {
       </div>
 
       {/* Footer Bottom Bar */}
-      <div className="border-t border-white/10 py-6 bg-[#160E12]">
-        <div className="container-luxury max-w-7xl px-4 sm:px-6 flex flex-col items-center justify-between gap-4 text-xs text-white/50 sm:flex-row">
+      <div className="border-t border-white/15 py-6 bg-[#160E12]">
+        <div className="container-luxury max-w-7xl px-4 sm:px-6 flex flex-col items-center justify-between gap-4 text-xs text-white/75 sm:flex-row">
           <p>{footerSettings?.copyright_text || `© ${new Date().getFullYear()} JALYN Apparels. All rights reserved.`}</p>
-          <div className="flex flex-wrap items-center gap-3 text-white/80 text-lg">
-            <span className="text-[11px] font-semibold text-white/50 mr-1">100% SECURE PAYMENTS:</span>
+          <div className="flex flex-wrap items-center gap-3 text-white/90 text-lg">
+            <span className="text-[11px] font-semibold text-white/70 mr-1">100% SECURE PAYMENTS:</span>
             <RazorpayIcon className="w-6 h-6 hover:text-[#D4A373] transition cursor-pointer" title="Razorpay" />
             <PhonePeIcon className="w-5 h-5 hover:text-[#D4A373] transition cursor-pointer" title="PhonePe" />
             <GooglePayIcon className="w-6 h-6 hover:text-[#D4A373] transition cursor-pointer" title="Google Pay" />

@@ -15,8 +15,16 @@ import {
   X,
   ChevronRight,
   ShieldCheck,
+  KeyRound,
+  Lock,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react'
 import { useUserStore } from '@/store'
+import { authAPI } from '@/services/api'
 import { cn } from '@/lib/utils'
 
 export default function ProfileLayout() {
@@ -28,6 +36,19 @@ export default function ProfileLayout() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  })
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSuccess, setPasswordSuccess] = useState('')
+  const [showCurrentPw, setShowCurrentPw] = useState(false)
+  const [showNewPw, setShowNewPw] = useState(false)
+  const [showConfirmPw, setShowConfirmPw] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -53,6 +74,49 @@ export default function ProfileLayout() {
     e.preventDefault()
     updateProfile(editForm)
     setIsEditModalOpen(false)
+  }
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault()
+    setPasswordError('')
+    setPasswordSuccess('')
+
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setPasswordError('Please fill in all password fields.')
+      return
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters long.')
+      return
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('New passwords do not match. Please re-enter.')
+      return
+    }
+
+    setPasswordSubmitting(true)
+    try {
+      const res = await authAPI.changePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      })
+      if (res.data?.success) {
+        setPasswordSuccess(res.data.message || 'Password changed successfully! Please use your new password next time you sign in.')
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+        setTimeout(() => {
+          setIsPasswordModalOpen(false)
+          setPasswordSuccess('')
+        }, 2200)
+      } else {
+        throw new Error(res.data?.message || 'Failed to change password')
+      }
+    } catch (err) {
+      setPasswordError(err.response?.data?.message || 'Current password is incorrect. Please verify and try again.')
+    } finally {
+      setPasswordSubmitting(false)
+    }
   }
 
   const handleLogout = () => {
@@ -178,6 +242,23 @@ export default function ProfileLayout() {
                 )
               })}
 
+              {/* Change Password Item */}
+              <button
+                type="button"
+                onClick={() => setIsPasswordModalOpen(true)}
+                className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left active:bg-[#FAF8F8] transition"
+                style={{ minHeight: '52px' }}
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EFD7E3]/50 text-primary">
+                  <KeyRound className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-[#222222]">Change Password</p>
+                  <p className="text-[11px] text-[#666666] truncate">Update your account login password</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-[#666666]/60 shrink-0" />
+              </button>
+
               {/* Logout Item */}
               <button
                 type="button"
@@ -246,13 +327,23 @@ export default function ProfileLayout() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setIsEditModalOpen(true)}
-                className="rounded-xl border border-white/30 bg-white/10 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white backdrop-blur-sm transition hover:bg-white hover:text-primary"
-              >
-                Edit Profile
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsPasswordModalOpen(true)}
+                  className="rounded-xl border border-white/30 bg-white/10 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white backdrop-blur-sm transition hover:bg-white hover:text-primary flex items-center gap-1.5 cursor-pointer"
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  <span>Change Password</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="rounded-xl border border-white/30 bg-white/10 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white backdrop-blur-sm transition hover:bg-white hover:text-primary cursor-pointer"
+                >
+                  Edit Profile
+                </button>
+              </div>
             </div>
           </div>
 
@@ -302,11 +393,21 @@ export default function ProfileLayout() {
                     )
                   })}
 
+                  {/* Change Password in Desktop Sidebar */}
+                  <button
+                    type="button"
+                    onClick={() => setIsPasswordModalOpen(true)}
+                    className="flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-xs font-bold text-ink-muted hover:bg-surface hover:text-ink transition cursor-pointer"
+                  >
+                    <KeyRound className="h-4 w-4 shrink-0" />
+                    <span>Change Password</span>
+                  </button>
+
                   <div className="pt-2 border-t border-primary/10 mt-2">
                     <button
                       type="button"
                       onClick={() => setIsLogoutModalOpen(true)}
-                      className="flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-xs font-bold text-red-500 hover:bg-red-50 transition"
+                      className="flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-xs font-bold text-red-500 hover:bg-red-50 transition cursor-pointer"
                     >
                       <LogOut className="h-4 w-4 shrink-0" />
                       <span>Logout</span>
@@ -400,12 +501,173 @@ export default function ProfileLayout() {
                   </button>
                   <button
                     type="submit"
-                    className="rounded-xl bg-primary px-5 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-soft"
+                    className="rounded-xl bg-primary px-5 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-soft hover:bg-primary-deep transition cursor-pointer"
                   >
                     Save Changes
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Change Password Modal */}
+      <AnimatePresence>
+        {isPasswordModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                setIsPasswordModalOpen(false)
+                setPasswordError('')
+                setPasswordSuccess('')
+              }}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-lift"
+            >
+              <div className="flex items-center justify-between border-b border-primary/10 px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-light/40 text-primary">
+                    <KeyRound className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-heading text-base font-bold text-ink">Change Password</h3>
+                    <p className="text-[11px] text-ink-muted">Set a new password for your account</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPasswordModalOpen(false)
+                    setPasswordError('')
+                    setPasswordSuccess('')
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-surface text-ink-muted hover:text-primary transition cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {passwordSuccess ? (
+                <div className="p-6 text-center space-y-4">
+                  <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+                  </div>
+                  <h4 className="font-heading text-base font-bold text-ink">Success!</h4>
+                  <p className="text-xs text-ink-muted leading-relaxed">{passwordSuccess}</p>
+                </div>
+              ) : (
+                <form onSubmit={handlePasswordChange} className="p-6 space-y-4 text-xs">
+                  {passwordError && (
+                    <div className="rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-700 border border-red-200 flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      <span>{passwordError}</span>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="mb-1 block font-semibold text-ink">Current Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted/60" />
+                      <input
+                        type={showCurrentPw ? 'text' : 'password'}
+                        required
+                        value={passwordForm.currentPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                        placeholder="Enter current password"
+                        className="w-full rounded-xl border border-primary/15 pl-10 pr-10 py-2.5 text-xs font-medium outline-none focus:border-primary transition"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPw(!showCurrentPw)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-muted hover:text-ink cursor-pointer"
+                      >
+                        {showCurrentPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block font-semibold text-ink">New Password</label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted/60" />
+                      <input
+                        type={showNewPw ? 'text' : 'password'}
+                        required
+                        value={passwordForm.newPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                        placeholder="Min. 6 characters"
+                        className="w-full rounded-xl border border-primary/15 pl-10 pr-10 py-2.5 text-xs font-medium outline-none focus:border-primary transition"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPw(!showNewPw)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-muted hover:text-ink cursor-pointer"
+                      >
+                        {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block font-semibold text-ink">Confirm New Password</label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted/60" />
+                      <input
+                        type={showConfirmPw ? 'text' : 'password'}
+                        required
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                        placeholder="Re-enter new password"
+                        className="w-full rounded-xl border border-primary/15 pl-10 pr-10 py-2.5 text-xs font-medium outline-none focus:border-primary transition"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPw(!showConfirmPw)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-muted hover:text-ink cursor-pointer"
+                      >
+                        {showConfirmPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 border-t border-primary/10 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPasswordModalOpen(false)
+                        setPasswordError('')
+                        setPasswordSuccess('')
+                      }}
+                      className="rounded-xl border border-primary/20 px-4 py-2 text-xs font-bold text-ink cursor-pointer hover:bg-surface"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={passwordSubmitting}
+                      className="rounded-xl bg-primary px-5 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-soft hover:bg-primary-deep transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {passwordSubmitting ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <span>Updating...</span>
+                        </>
+                      ) : (
+                        <span>Update Password</span>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
             </motion.div>
           </div>
         )}

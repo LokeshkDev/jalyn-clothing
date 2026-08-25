@@ -11,6 +11,7 @@ import ProductToolbar from '@/components/shop/ProductToolbar'
 import { PRICE_BOUNDS } from '@/constants/shopProducts'
 import Services from '@/components/home/Services'
 import { cn } from '@/lib/utils'
+import SEO from '@/components/seo/SEO'
 
 const CATEGORY_OPTIONS = [
   { label: 'Dresses', slug: 'dresses' },
@@ -226,6 +227,12 @@ export default function Sale() {
 
   return (
     <div className="min-h-screen bg-[#FFF6F9]/10 pb-16 text-ink">
+      <SEO
+        title="Exclusive Sale — Special Offers & Discounts on Women's Fashion"
+        description="Enjoy limited-time discounts on luxury women's dresses, designer tops, co-ords, and ethnic wear at JALYN."
+        canonical="/collections/sale"
+        image={pageData.bg_image || '/images/home/hero/hero-slide-1.webp'}
+      />
       
       {/* Editorial Hero Banner (Full-Width with Background Image) */}
       <div 

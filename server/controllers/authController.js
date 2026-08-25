@@ -19,22 +19,45 @@ export const loginUser = async (req, res) => {
     });
   }
 
+  const cleanEmail = String(email).trim().toLowerCase();
+  const cleanPassword = String(password);
+
   try {
     let user = null;
     let isMatch = false;
 
     try {
-      const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+      const [rows] = await pool.query('SELECT * FROM users WHERE LOWER(TRIM(email)) = ?', [cleanEmail]);
       if (rows.length > 0) {
         user = rows[0];
-        isMatch = await bcrypt.compare(password, user.password);
+        if (user.password) {
+          const isBcrypt = user.password.startsWith('$2a$') || user.password.startsWith('$2b$') || user.password.startsWith('$2y$');
+          if (isBcrypt) {
+            isMatch = await bcrypt.compare(cleanPassword, user.password);
+            if (!isMatch && cleanPassword.trim() !== cleanPassword) {
+              isMatch = await bcrypt.compare(cleanPassword.trim(), user.password);
+            }
+          } else {
+            // Legacy / plaintext support with seamless auto-upgrade to bcrypt
+            isMatch = (cleanPassword === user.password || cleanPassword.trim() === user.password);
+            if (isMatch) {
+              try {
+                const upgradedHash = await bcrypt.hash(cleanPassword.trim(), 10);
+                await pool.query('UPDATE users SET password = ? WHERE id = ?', [upgradedHash, user.id]);
+                console.log(`🔒 [Security Auto-Upgrade] Upgraded password for user ${user.email} to bcrypt.`);
+              } catch (upgradeErr) {
+                console.warn('Failed to auto-upgrade legacy password hash:', upgradeErr.message);
+              }
+            }
+          }
+        }
       }
     } catch (dbErr) {
       console.warn('DB query failed in login, falling back to default admin check:', dbErr.message);
     }
 
     // Default super admin check fallback if DB table not seeded
-    if (!user && email === 'admin@jalyn.com' && password === 'admin123') {
+    if (!user && cleanEmail === 'admin@jalyn.com' && (cleanPassword === 'admin123' || cleanPassword.trim() === 'admin123')) {
       user = {
         id: 1,
         name: 'Super Admin',
@@ -415,7 +438,10 @@ export const changePassword = async (req, res) => {
     });
   }
 
-  if (newPassword.length < 6) {
+  const cleanCurrent = String(currentPassword);
+  const cleanNew = String(newPassword).trim();
+
+  if (cleanNew.length < 6) {
     return res.status(400).json({
       success: false,
       message: 'New password must be at least 6 characters long.',
@@ -429,7 +455,20 @@ export const changePassword = async (req, res) => {
     }
 
     const user = rows[0];
-    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    let isMatch = false;
+
+    if (user.password) {
+      const isBcrypt = user.password.startsWith('$2a$') || user.password.startsWith('$2b$') || user.password.startsWith('$2y$');
+      if (isBcrypt) {
+        isMatch = await bcrypt.compare(cleanCurrent, user.password);
+        if (!isMatch && cleanCurrent.trim() !== cleanCurrent) {
+          isMatch = await bcrypt.compare(cleanCurrent.trim(), user.password);
+        }
+      } else {
+        isMatch = (cleanCurrent === user.password || cleanCurrent.trim() === user.password);
+      }
+    }
+
     if (!isMatch) {
       return res.status(400).json({
         success: false,
@@ -437,7 +476,7 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    const hashedNewPassword = await bcrypt.hash(cleanNew, 10);
     await pool.query('UPDATE users SET password = ? WHERE id = ?', [hashedNewPassword, req.user.id]);
 
     return res.json({
@@ -665,13 +704,15 @@ export const forgotPassword = async (req, res) => {
   if (!email) {
     return res.status(400).json({
       success: false,
-      message: 'Please provide your registered email address.',
+      message: 'Please provide a valid email address.',
     });
   }
 
+  const cleanEmail = String(email).trim().toLowerCase();
+
   try {
-    const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
-    
+    const [rows] = await pool.query('SELECT * FROM users WHERE LOWER(TRIM(email)) = ?', [cleanEmail]);
+
     if (rows.length === 0) {
       return res.json({
         success: true,
@@ -685,11 +726,11 @@ export const forgotPassword = async (req, res) => {
 
     await pool.query(
       'INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)',
-      [email, resetToken, expiresAt]
+      [cleanEmail, resetToken, expiresAt]
     );
 
     const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
-    await sendPasswordResetEmail(email, resetLink, user.name);
+    await sendPasswordResetEmail(cleanEmail, resetLink, user.name);
 
     return res.json({
       success: true,
@@ -714,7 +755,9 @@ export const resetPassword = async (req, res) => {
     });
   }
 
-  if (password.length < 6) {
+  const cleanPassword = String(password).trim();
+
+  if (cleanPassword.length < 6) {
     return res.status(400).json({
       success: false,
       message: 'Password must be at least 6 characters long.',
@@ -724,7 +767,7 @@ export const resetPassword = async (req, res) => {
   try {
     const [rows] = await pool.query(
       'SELECT * FROM password_resets WHERE token = ? AND used = 0 AND expires_at > NOW()',
-      [token]
+      [String(token).trim()]
     );
 
     if (rows.length === 0) {
@@ -735,9 +778,9 @@ export const resetPassword = async (req, res) => {
     }
 
     const resetRecord = rows[0];
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(cleanPassword, 10);
 
-    await pool.query('UPDATE users SET password = ? WHERE email = ?', [hashedPassword, resetRecord.email]);
+    await pool.query('UPDATE users SET password = ? WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))', [hashedPassword, resetRecord.email]);
     await pool.query('UPDATE password_resets SET used = 1 WHERE id = ?', [resetRecord.id]);
 
     return res.json({

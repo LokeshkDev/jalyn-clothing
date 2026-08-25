@@ -146,23 +146,27 @@ function MobileShopProductCard({ product }) {
         </div>
 
         {/* Color Swatches Row */}
-        <div className="mt-2 flex items-center gap-1.5 z-10">
+        <div className="mt-2 flex items-center gap-1.5 z-10" role="group" aria-label="Color options">
           {colorsList.slice(0, 3).map((cObj, idx) => {
             const colorId = typeof cObj === 'string' ? cObj : cObj.id || cObj.name
             const hex = typeof cObj === 'object' && cObj.hex ? cObj.hex : colorMap[colorId]?.hex || '#AD4A85'
             const isSelected = selectedColor === colorId || (!selectedColor && idx === 0)
+            const colorLabel = typeof cObj === 'object' ? cObj.name : colorMap[colorId]?.label || colorId
             return (
               <button
                 key={colorId + idx}
                 type="button"
-                title={typeof cObj === 'object' ? cObj.name : colorMap[colorId]?.label || colorId}
+                role="button"
+                aria-label={`Select color ${colorLabel}`}
+                aria-pressed={isSelected}
+                title={colorLabel}
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
                   setSelectedColor(colorId)
                 }}
                 className={cn(
-                  'h-3.5 w-3.5 rounded-full border border-black/10 transition-transform active:scale-90 cursor-pointer',
+                  'h-3.5 w-3.5 rounded-full border border-black/10 transition-transform active:scale-90 cursor-pointer focus-visible:outline-2 focus-visible:outline-primary',
                   isSelected && 'ring-1 ring-primary ring-offset-1 scale-110',
                 )}
                 style={{ backgroundColor: hex }}

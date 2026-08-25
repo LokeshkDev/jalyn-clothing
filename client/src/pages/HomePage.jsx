@@ -8,10 +8,38 @@ import WhyJalyn from '@/components/home/WhyJalyn'
 import InstagramFeed from '@/components/home/InstagramFeed'
 import Newsletter from '@/components/home/Newsletter'
 import MobileHome from '@/components/mobile/MobileHome'
-import MobileRecentlyViewed from '@/components/shop/MobileRecentlyViewed'
 import { NewArrivalsCarousel, SaleCarousel } from '@/components/home/HomeCarousels'
 import HomePageSkeleton from '@/components/home/HomePageSkeleton'
 import { useCmsData } from '@/hooks/useCmsData'
+import SEO from '@/components/seo/SEO'
+
+const homeSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': 'https://jalyn.in/#organization',
+      name: 'JALYN',
+      url: 'https://jalyn.in',
+      logo: 'https://jalyn.in/images/home/hero/hero-slide-1.webp',
+      sameAs: ['https://www.instagram.com/jalynclothing'],
+    },
+    {
+      '@type': 'WebSite',
+      '@id': 'https://jalyn.in/#website',
+      url: 'https://jalyn.in',
+      name: 'JALYN',
+      publisher: {
+        '@id': 'https://jalyn.in/#organization',
+      },
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: 'https://jalyn.in/shop?search={search_term_string}',
+        'query-input': 'required name=search_term_string',
+      },
+    },
+  ],
+}
 
 export default function HomePage() {
   const { cmsData, loading } = useCmsData()
@@ -78,9 +106,13 @@ export default function HomePage() {
 
   return (
     <>
-      {loading ? (
-        <HomePageSkeleton />
-      ) : isMobile ? (
+      <SEO
+        title="JALYN — Luxury Women's Fashion & Silk Apparel"
+        description="Explore JALYN's luxury women's fashion collection featuring handcrafted silk midi dresses, contemporary co-ord sets, designer sarees, and modern ethnic wear."
+        canonical="/"
+        schema={homeSchema}
+      />
+      {isMobile ? (
         /* App-style layout — mobile & tablet */
         <div className="lg:hidden">
           <MobileHome />

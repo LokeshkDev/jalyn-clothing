@@ -23,7 +23,7 @@ import {
 import { useUserStore } from '@/store'
 import { useCmsData } from '@/hooks/useCmsData'
 import { authAPI } from '@/services/api'
-import jalynLogoLogin from '@/assets/jalyn-logo-login.png'
+import jalynLogoLogin from '@/assets/jalyn-logo-login.webp'
 
 export default function AuthPage({ initialMode = 'login' }) {
   const navigate = useNavigate()
@@ -108,7 +108,10 @@ export default function AuthPage({ initialMode = 'login' }) {
     setErrorMessage('')
     setSuccessMessage('')
 
-    if (!email || !password) {
+    const cleanEmail = String(email || '').trim()
+    const cleanPassword = String(password || '')
+
+    if (!cleanEmail || !cleanPassword) {
       setErrorMessage('Please fill in both email and password.')
       return
     }
@@ -116,7 +119,7 @@ export default function AuthPage({ initialMode = 'login' }) {
     setIsSubmitting(true)
 
     try {
-      const response = await api.post('/auth/login', { email, password })
+      const response = await authAPI.login({ email: cleanEmail, password: cleanPassword })
 
       if (response.data?.success) {
         const { user, token } = response.data
@@ -130,7 +133,12 @@ export default function AuthPage({ initialMode = 'login' }) {
       }
     } catch (err) {
       console.warn('API login error:', err.message)
-      setErrorMessage(err.response?.data?.message || 'Invalid email or password. Please try again.')
+      const errorMsg =
+        err.response?.data?.message ||
+        (err.code === 'ERR_NETWORK' || !err.response
+          ? 'Unable to reach backend server. Please verify the server is running or check your connection.'
+          : 'Invalid email or password. Please try again.')
+      setErrorMessage(errorMsg)
     } finally {
       setIsSubmitting(false)
     }
@@ -141,17 +149,22 @@ export default function AuthPage({ initialMode = 'login' }) {
     setErrorMessage('')
     setSuccessMessage('')
 
-    if (!name || !email || !phone || !password) {
+    const cleanName = String(name || '').trim()
+    const cleanEmail = String(email || '').trim()
+    const cleanPhone = String(phone || '').trim()
+    const cleanPassword = String(password || '').trim()
+
+    if (!cleanName || !cleanEmail || !cleanPhone || !cleanPassword) {
       setErrorMessage('Please fill in all required fields including your 10-digit phone number.')
       return
     }
 
-    if (phone.replace(/\D/g, '').length < 10) {
+    if (cleanPhone.replace(/\D/g, '').length < 10) {
       setErrorMessage('Please enter a valid 10-digit phone number.')
       return
     }
 
-    if (password.length < 6) {
+    if (cleanPassword.length < 6) {
       setErrorMessage('Password must be at least 6 characters long.')
       return
     }
@@ -164,11 +177,11 @@ export default function AuthPage({ initialMode = 'login' }) {
     setIsSubmitting(true)
 
     try {
-      const response = await api.post('/auth/register', {
-        name,
-        email,
-        phone,
-        password,
+      const response = await authAPI.register({
+        name: cleanName,
+        email: cleanEmail,
+        phone: cleanPhone,
+        password: cleanPassword,
       })
 
       if (response.data?.success) {
@@ -183,7 +196,12 @@ export default function AuthPage({ initialMode = 'login' }) {
       }
     } catch (err) {
       console.warn('API register error:', err.message)
-      setErrorMessage(err.response?.data?.message || 'Registration failed. Please check your inputs and try again.')
+      const errorMsg =
+        err.response?.data?.message ||
+        (err.code === 'ERR_NETWORK' || !err.response
+          ? 'Unable to reach backend server. Please verify your connection and try again.'
+          : 'Registration failed. Please check your inputs and try again.')
+      setErrorMessage(errorMsg)
     } finally {
       setIsSubmitting(false)
     }

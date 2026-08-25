@@ -10,6 +10,20 @@ import 'swiper/css'
 import 'swiper/css/effect-fade'
 import 'swiper/css/pagination'
 
+function getHeroSrcSet(imgUrl) {
+  if (!imgUrl || typeof imgUrl !== 'string') return undefined;
+  if (imgUrl.includes('/images/home/hero/hero-slide-1')) {
+    return '/images/home/hero/hero-slide-1-480.webp 480w, /images/home/hero/hero-slide-1-768.webp 768w, /images/home/hero/hero-slide-1-1080.webp 1080w, /images/home/hero/hero-slide-1-1440.webp 1440w';
+  }
+  if (imgUrl.includes('/images/home/hero/hero-slide-2')) {
+    return '/images/home/hero/hero-slide-2-480.webp 480w, /images/home/hero/hero-slide-2-768.webp 768w, /images/home/hero/hero-slide-2-1080.webp 1080w, /images/home/hero/hero-slide-2-1440.webp 1440w';
+  }
+  if (imgUrl.includes('/images/home/hero/hero-slide-3')) {
+    return '/images/home/hero/hero-slide-3-480.webp 480w, /images/home/hero/hero-slide-3-768.webp 768w, /images/home/hero/hero-slide-3-1080.webp 1080w, /images/home/hero/hero-slide-3-1440.webp 1440w';
+  }
+  return undefined;
+}
+
 export default function Hero() {
   const { heroSlides } = useCmsData()
   const slides = heroSlides?.length ? heroSlides : HERO_SLIDES
@@ -57,22 +71,7 @@ export default function Hero() {
           const hasContent = hasEyebrow || hasTitle || hasHighlight || hasSubtitle || hasCta
           const slideLink = slide.href || slide.cta_link || '/shop'
           const slideImg = slide.image || slide.banner_image || slide.image_url || '/images/home/hero/hero-slide-1.webp'
-
-          const imageElement = (
-            <img
-              src={slideImg}
-              alt={slide.alt || slide.title || 'Hero Banner'}
-              className="h-full w-full object-cover object-center"
-              fetchPriority={index === 0 ? 'high' : 'auto'}
-              loading={index === 0 ? 'eager' : 'lazy'}
-              decoding="async"
-              width="1440"
-              height="720"
-              onError={(e) => {
-                e.currentTarget.src = '/images/home/hero/hero-slide-1.webp'
-              }}
-            />
-          )
+          const heroSrcSet = getHeroSrcSet(slideImg)
 
           return (
             <SwiperSlide key={slide.id || index}>
@@ -86,6 +85,8 @@ export default function Hero() {
                   >
                     <img
                       src={slideImg}
+                      srcSet={heroSrcSet}
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1440px"
                       alt={slide.alt || slide.title || 'Hero Banner'}
                       className="h-full w-full object-cover object-center"
                       fetchPriority={index === 0 ? 'high' : 'auto'}
@@ -103,6 +104,8 @@ export default function Hero() {
                   <div className="relative min-h-[380px] sm:min-h-[420px] lg:min-h-[460px] xl:min-h-[480px] w-full">
                     <img
                       src={slideImg}
+                      srcSet={heroSrcSet}
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1440px"
                       alt={slide.alt || slide.title || 'Hero Banner'}
                       className="absolute inset-0 h-full w-full object-cover object-center"
                       fetchPriority={index === 0 ? 'high' : 'auto'}

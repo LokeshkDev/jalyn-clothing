@@ -130,18 +130,22 @@ export default function ProductInfoPanel({
             Color: <span className="font-bold text-ink">{colorName}</span>
           </span>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5" role="radiogroup" aria-label="Select color">
           {currentCategoryColors.map((colorId) => {
             const colorObj = colorMap[colorId]
             const isSelected = selectedColor === colorId
+            const colorLabel = colorObj?.label || (typeof colorId === 'string' ? colorId : 'Color')
             return (
               <button
                 key={colorId}
                 type="button"
-                title={colorObj?.label || colorId}
+                role="radio"
+                aria-checked={isSelected}
+                aria-label={`Color ${colorLabel}`}
+                title={colorLabel}
                 onClick={() => setSelectedColor(colorId)}
                 className={cn(
-                  'h-8 w-8 rounded-full border border-black/10 transition-all active:scale-95 cursor-pointer',
+                  'h-8 w-8 rounded-full border border-black/10 transition-all active:scale-95 cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
                   isSelected && 'ring-2 ring-primary ring-offset-2 scale-110',
                 )}
                 style={{ backgroundColor: colorObj?.hex || '#ccc' }}
@@ -167,7 +171,7 @@ export default function ProductInfoPanel({
           </button>
         </div>
 
-        <div className="grid grid-cols-6 gap-2">
+        <div className="grid grid-cols-6 gap-2" role="radiogroup" aria-label="Select size">
           {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((sz) => {
             const available = isSizeAvailable(product, selectedColor, sz)
             const isSelected = selectedSize === sz
@@ -175,10 +179,13 @@ export default function ProductInfoPanel({
               <button
                 key={sz}
                 type="button"
+                role="radio"
+                aria-checked={isSelected}
+                aria-label={`Size ${sz}${!available ? ' (Out of stock)' : ''}`}
                 disabled={!available}
                 onClick={() => setSelectedSize(sz)}
                 className={cn(
-                  'flex h-11 items-center justify-center rounded-xl font-label text-xs font-bold transition-all active:scale-95 cursor-pointer',
+                  'flex h-11 items-center justify-center rounded-xl font-label text-xs font-bold transition-all active:scale-95 cursor-pointer focus-visible:ring-2 focus-visible:ring-primary',
                   isSelected && available
                     ? 'bg-primary text-white shadow-soft'
                     : isSelected && !available

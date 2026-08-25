@@ -12,10 +12,68 @@ async function fetchCmsHomepage() {
   }
 }
 
+const DEFAULT_CMS_DATA = {
+  hero_banner: {
+    slides: HERO_SLIDES,
+  },
+  category_grid: {
+    categories: COLLECTIONS,
+  },
+  services_strip: {
+    promises: SERVICES,
+  },
+  menu_arrangement: {
+    nav_links: NAV_LINKS,
+  },
+  homepage_layout: {
+    order: [
+      'hero_banner',
+      'category_grid',
+      'new_arrivals',
+      'exclusive_sale',
+      'our_products',
+      'promo_banner',
+      'why_jalyn',
+      'services_strip',
+      'instagram_feed',
+    ],
+    visibility: {},
+  },
+  desktop_homepage_layout: {
+    order: [
+      'hero_banner',
+      'category_grid',
+      'new_arrivals',
+      'exclusive_sale',
+      'our_products',
+      'promo_banner',
+      'why_jalyn',
+      'services_strip',
+      'instagram_feed',
+    ],
+    visibility: {},
+  },
+  mobile_homepage_layout: {
+    order: [
+      'hero_banner',
+      'category_grid',
+      'new_arrivals',
+      'exclusive_sale',
+      'our_products',
+      'promo_banner',
+      'why_jalyn',
+      'services_strip',
+      'instagram_feed',
+    ],
+    visibility: {},
+  },
+};
+
 export function useCmsData() {
-  const { data: cmsData = null, isLoading: loading } = useQuery({
+  const { data: cmsData = DEFAULT_CMS_DATA, isLoading: loading } = useQuery({
     queryKey: ['cms', 'homepage'],
     queryFn: fetchCmsHomepage,
+    placeholderData: DEFAULT_CMS_DATA,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });

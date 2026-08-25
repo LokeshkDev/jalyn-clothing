@@ -23,6 +23,7 @@ import MobileRecentlyViewed from '@/components/shop/MobileRecentlyViewed'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import 'swiper/css'
 import 'swiper/css/navigation'
+import SEO from '@/components/seo/SEO'
 
 import {
   SHOP_PRODUCTS,
@@ -226,8 +227,64 @@ export default function CategoryPage() {
   const recentlyViewed = SHOP_PRODUCTS.slice(0, 6)
   const alsoLike = SHOP_PRODUCTS.slice(6, 10)
 
+  const categorySchema = useMemo(() => {
+    const canonicalUrl = `https://jalyn.in/collections/${slug || ''}`
+    return {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'CollectionPage',
+          '@id': `${canonicalUrl}#collection`,
+          url: canonicalUrl,
+          name: `${categoryTitle} Collection | JALYN`,
+          description: categoryDescription,
+          mainEntity: {
+            '@type': 'ItemList',
+            itemListElement: pageItems.slice(0, 12).map((p, idx) => ({
+              '@type': 'ListItem',
+              position: idx + 1,
+              url: `https://jalyn.in/products/${p.slug || p.id}`,
+              name: p.title,
+            })),
+          },
+        },
+        {
+          '@type': 'BreadcrumbList',
+          '@id': `${canonicalUrl}#breadcrumb`,
+          itemListElement: [
+            {
+              '@type': 'ListItem',
+              position: 1,
+              name: 'Home',
+              item: 'https://jalyn.in',
+            },
+            {
+              '@type': 'ListItem',
+              position: 2,
+              name: 'Shop',
+              item: 'https://jalyn.in/shop',
+            },
+            {
+              '@type': 'ListItem',
+              position: 3,
+              name: categoryTitle,
+              item: canonicalUrl,
+            },
+          ],
+        },
+      ],
+    }
+  }, [slug, categoryTitle, categoryDescription, pageItems])
+
   return (
     <div className="bg-surface pb-12 lg:pb-0 min-h-screen">
+      <SEO
+        title={`${categoryTitle} Collection — Women's Designer Apparel`}
+        description={categoryDescription}
+        canonical={`/collections/${slug}`}
+        image={categoryBanner}
+        schema={categorySchema}
+      />
       
       {/* MOBILE CATEGORY VIEW (< 1024px / lg) */}
       <div className="block lg:hidden">

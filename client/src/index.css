@@ -22,14 +22,6 @@
   --font-label: 'Plus Jakarta Sans', sans-serif;
   --ease-luxury: cubic-bezier(0.22, 1, 0.36, 1);
   accent-color: #ad4a85;
-
-  /* Override Bootstrap blues */
-  --bs-primary: #ad4a85;
-  --bs-link-color: #ad4a85;
-  --bs-link-hover-color: #8e3466;
-  --bs-info: #c57ba3;
-  --bs-blue: #ad4a85;
-  --bs-focus-ring-color: rgba(173, 74, 133, 0.35);
 }
 
 /* Global Custom Luxury Theme Scrollbar */
@@ -120,23 +112,6 @@ textarea,
 select,
 button {
   accent-color: var(--color-primary);
-}
-
-/* Bootstrap utility class overrides if present */
-.text-primary,
-.link-primary {
-  color: var(--color-primary) !important;
-}
-
-.bg-primary {
-  background-color: var(--color-primary) !important;
-}
-
-.btn-primary,
-.btn-info {
-  background-color: var(--color-primary) !important;
-  border-color: var(--color-primary) !important;
-  color: #fff !important;
 }
 
 h1,
@@ -255,9 +230,4 @@ input:-webkit-autofill:focus {
   background: var(--color-primary) !important;
   width: 24px !important;
   border-radius: 999px !important;
-}
-
-.row > * {
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
 }

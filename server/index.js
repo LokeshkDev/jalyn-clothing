@@ -23,6 +23,8 @@ import vendorRoutes from './routes/vendorRoutes.js';
 import rackRoutes from './routes/rackRoutes.js';
 import godownRoutes from './routes/godownRoutes.js';
 
+import compression from 'compression';
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -30,6 +32,16 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Enable Gzip & Deflate response compression for all responses > 1KB
+app.use(compression({
+  level: 6,
+  threshold: 1024,
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  },
+}));
 
 // CORS configuration
 const allowedOrigins = [
@@ -62,11 +74,28 @@ app.use(
   })
 );
 
+// Cache-Control middleware for idempotent read-only catalog API endpoints
+app.use('/api', (req, res, next) => {
+  if (req.method === 'GET') {
+    const url = req.path;
+    if (
+      url.startsWith('/products') ||
+      url.startsWith('/categories') ||
+      url.startsWith('/cms') ||
+      url.startsWith('/filter-options')
+    ) {
+      // Cache for 3 minutes in browser, serve stale while revalidating for 5 minutes
+      res.set('Cache-Control', 'public, max-age=180, stale-while-revalidate=300');
+    }
+  }
+  next();
+});
+
 // Body Parsing Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static directory for uploaded images
+// Static directory for uploaded images with 1-year immutable caching
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   maxAge: '365d',
   immutable: true,

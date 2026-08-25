@@ -21,6 +21,7 @@ const PolicyPage = lazy(() => import('@/pages/PolicyPage'))
 // Standalone Auth Pages (No Header / No Footer)
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const RegisterPage = lazy(() => import('@/pages/RegisterPage'))
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'))
 
 // Profile & Account Pages Lazy Loaded
 const ProfileLayout = lazy(() => import('@/pages/profile/ProfileLayout'))
@@ -35,7 +36,7 @@ const Returns = lazy(() => import('@/pages/profile/Returns'))
 const HelpSupport = lazy(() => import('@/pages/profile/HelpSupport'))
 
 import { useSmoothScroll } from '@/hooks/useSmoothScroll'
-import loginLogo from '@/assets/jalyn-logo-login.png'
+import loginLogo from '@/assets/jalyn-logo-login.webp'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +84,7 @@ function AppRoutes() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/signup" element={<RegisterPage />} />
         <Route path="/create-account" element={<RegisterPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* MAIN STORE ROUTES (WITH HEADER & FOOTER) */}
         <Route element={<MainLayout />}>

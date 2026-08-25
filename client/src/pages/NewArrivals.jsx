@@ -11,6 +11,7 @@ import ProductToolbar from '@/components/shop/ProductToolbar'
 import { PRICE_BOUNDS } from '@/constants/shopProducts'
 import Services from '@/components/home/Services'
 import { cn } from '@/lib/utils'
+import SEO from '@/components/seo/SEO'
 
 const CATEGORY_OPTIONS = [
   { label: 'Dresses', slug: 'dresses' },
@@ -226,6 +227,12 @@ export default function NewArrivals() {
 
   return (
     <div className="min-h-screen bg-[#FFF6F9]/10 pb-16 text-ink">
+      <SEO
+        title="New Arrivals — Latest Women's Fashion & Fresh Drops"
+        description="Discover the newest collection of women's silk dresses, co-ords, and festive designer wear fresh off the design studio at JALYN."
+        canonical="/collections/new-arrivals"
+        image={pageData.bg_image || '/images/home/hero/hero-slide-1.webp'}
+      />
       
       {/* Editorial Hero Banner (Full-Width with Background Image) */}
       <div 
