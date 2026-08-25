@@ -23,8 +23,6 @@ import vendorRoutes from './routes/vendorRoutes.js';
 import rackRoutes from './routes/rackRoutes.js';
 import godownRoutes from './routes/godownRoutes.js';
 
-import compression from 'compression';
-
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -33,15 +31,24 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable Gzip & Deflate response compression for all responses > 1KB
-app.use(compression({
-  level: 6,
-  threshold: 1024,
-  filter: (req, res) => {
-    if (req.headers['x-no-compression']) return false;
-    return compression.filter(req, res);
-  },
-}));
+// Safely enable Gzip response compression if package exists
+try {
+  const { default: compression } = await import('compression');
+  if (compression) {
+    app.use(
+      compression({
+        level: 6,
+        threshold: 1024,
+        filter: (req, res) => {
+          if (req.headers['x-no-compression']) return false;
+          return compression.filter(req, res);
+        },
+      })
+    );
+  }
+} catch (e) {
+  console.log('ℹ️ Running without compression package');
+}
 
 // CORS configuration
 const allowedOrigins = [
