@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { X, Star } from 'lucide-react'
+import { X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatINR, cn } from '@/lib/utils'
 import { SHOP_COLORS } from '@/constants/shopProducts'
@@ -59,9 +59,16 @@ function isSizeAvailable(product, selectedColor, sz) {
 
 export default function QuickViewModal({ product, open, onClose }) {
   const colorMap = useMemo(() => Object.fromEntries(SHOP_COLORS.map((c) => [c.id, c])), [])
+  const scrollContainerRef = useRef(null)
 
   const [selectedColor, setSelectedColor] = useState(null)
   const [selectedSize, setSelectedSize] = useState(null)
+
+  const handleWheel = useCallback((e) => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop += e.deltaY
+    }
+  }, [])
 
   useEffect(() => {
     if (product) {
@@ -120,10 +127,12 @@ export default function QuickViewModal({ product, open, onClose }) {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[80] bg-[#2A1A22]/50 backdrop-blur-sm transition-opacity" />
         
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[90] flex flex-col md:flex-row max-h-[88vh] w-[min(960px,calc(100%-1.5rem))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl bg-white shadow-2xl outline-none border border-primary/10">
-          
+        <Dialog.Content
+          onWheel={handleWheel}
+          className="fixed left-1/2 top-1/2 z-[90] flex flex-col md:flex-row h-[88vh] max-h-[88vh] w-[min(960px,calc(100%-1.5rem))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl bg-white shadow-2xl outline-none border border-primary/10"
+        >
           {/* Left Column: Fixed Product Gallery Image */}
-          <div className="relative w-full md:w-1/2 bg-rose-light/20 aspect-[4/5] md:aspect-auto flex-shrink-0 overflow-hidden">
+          <div className="relative w-full md:w-1/2 h-64 md:h-full bg-rose-light/20 flex-shrink-0 overflow-hidden">
             <img
               src={displayImg}
               alt={title}
@@ -144,7 +153,15 @@ export default function QuickViewModal({ product, open, onClose }) {
           </div>
 
           {/* Right Column: Scrollable Details & Actions Container */}
-          <div className="relative w-full md:w-1/2 flex flex-col max-h-[85vh] md:max-h-[88vh] overflow-y-auto p-5 sm:p-6 space-y-4 theme-scrollbar min-w-0 bg-white">
+          <div
+            ref={scrollContainerRef}
+            tabIndex={0}
+            className="relative w-full md:w-1/2 flex-1 flex flex-col h-full overflow-y-auto overscroll-contain touch-pan-y p-5 sm:p-6 space-y-4 min-w-0 bg-white focus:outline-none"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#AD4A85 #FAF8F8',
+            }}
+          >
             
             {/* Desktop Top Header Bar */}
             <div className="flex items-start justify-between gap-3 border-b border-primary/10 pb-3">
@@ -176,12 +193,6 @@ export default function QuickViewModal({ product, open, onClose }) {
                     {formatINR(originalPrice)}
                   </span>
                 )}
-              </div>
-
-              <div className="flex items-center gap-1 text-xs text-ink-muted bg-surface px-2.5 py-1 rounded-full border border-primary/10">
-                <Star className="h-3.5 w-3.5 fill-primary text-primary" />
-                <span className="font-bold text-ink">{rating}</span>
-                <span>({reviewsCount})</span>
               </div>
             </div>
 

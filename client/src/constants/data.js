@@ -327,7 +327,9 @@ export const FOOTER_LINKS = {
   ],
   column3: [
     { label: 'Privacy Policy', href: '/privacy-policy' },
+    { label: 'Cookie Policy', href: '/cookie-policy' },
     { label: 'Terms of Service', href: '/terms-of-service' },
     { label: 'Refund Policy', href: '/refund-policy' },
+    { label: 'Cookie Settings', isCookieSettings: true },
   ],
 }

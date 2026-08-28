@@ -205,7 +205,7 @@ export default function ProductDetails() {
   const productSchema = useMemo(() => {
     if (!displayProduct?.title) return null
     const primaryImg = galleryImages?.[0] || displayProduct.image || '/images/products/floral-midi-dress.webp'
-    const canonicalUrl = `https://jalyn.in/products/${displayProduct.slug || id}`
+    const canonicalUrl = `https://jalyn.in/products/${displayProduct.slug || displayProduct.id}`
 
     return {
       '@context': 'https://schema.org',
@@ -216,7 +216,7 @@ export default function ProductDetails() {
           name: displayProduct.title,
           description: displayProduct.description || `${displayProduct.title} by JALYN luxury women's apparel.`,
           image: galleryImages.map(img => img.startsWith('http') ? img : `https://jalyn.in${img.startsWith('/') ? '' : '/'}${img}`),
-          sku: String(displayProduct.id || displayProduct.slug || id),
+          sku: String(displayProduct.id || displayProduct.slug),
           brand: {
             '@type': 'Brand',
             name: displayProduct.brand || 'JALYN',
@@ -269,7 +269,7 @@ export default function ProductDetails() {
         },
       ],
     }
-  }, [displayProduct, galleryImages, categoryTitle, id])
+  }, [displayProduct, galleryImages, categoryTitle])
 
   if (loading) {
     return <PdpSkeleton />
@@ -280,8 +280,9 @@ export default function ProductDetails() {
       <SEO
         title={displayProduct.title}
         description={displayProduct.description || `Buy ${displayProduct.title} online at JALYN. Luxury handcrafted women's fashion in India.`}
-        canonical={`/products/${displayProduct.slug || id}`}
+        canonical={`/products/${displayProduct.slug || displayProduct.id}`}
         image={galleryImages[0] || displayProduct.image}
+        preloadImage={galleryImages[0] || displayProduct.image}
         type="product"
         price={displayProduct.price}
         currency="INR"

@@ -22,6 +22,7 @@ import newsletterRoutes from './routes/newsletterRoutes.js';
 import vendorRoutes from './routes/vendorRoutes.js';
 import rackRoutes from './routes/rackRoutes.js';
 import godownRoutes from './routes/godownRoutes.js';
+import consentRoutes from './routes/consentRoutes.js';
 
 dotenv.config();
 
@@ -154,6 +155,7 @@ app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api/racks', rackRoutes);
 app.use('/api/godowns', godownRoutes);
+app.use('/api/consent', consentRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

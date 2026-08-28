@@ -34,6 +34,7 @@ import { formatINR, cn } from '@/lib/utils'
 import AddressModal from '@/components/profile/AddressModal'
 import MobileAddressSheet from '@/components/checkout/MobileAddressSheet'
 import MobileCouponSheet from '@/components/checkout/MobileCouponSheet'
+import SEO from '@/components/seo/SEO'
 
 export default function Checkout() {
   const navigate = useNavigate()
@@ -597,6 +598,11 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen bg-[#FAF6F8]">
+      <SEO
+        title="Secure Checkout"
+        description="Complete your luxury fashion order securely with JALYN. Fast delivery across India."
+        canonical="/checkout"
+      />
       {/* Global Toast */}
       <AnimatePresence>
         {toastMessage && (

@@ -8,6 +8,9 @@ import ScrollToTop from '@/components/layout/ScrollToTop'
 import ScrollToTopButton from '@/components/layout/ScrollToTopButton'
 import { Outlet } from 'react-router-dom'
 import { useCartStore, useUIStore } from '@/store'
+import CookieConsentBanner from '@/components/common/CookieConsentBanner'
+import CookiePreferencesModal from '@/components/common/CookiePreferencesModal'
+import ConsentScriptLoader from '@/components/common/ConsentScriptLoader'
 
 const CartDrawer = lazy(() => import('@/components/layout/CartDrawer'))
 const SearchModal = lazy(() => import('@/components/layout/SearchModal'))
@@ -48,6 +51,11 @@ export default function MainLayout() {
 
       <MobileNav />
       <ScrollToTopButton />
+
+      {/* Self-Hosted Privacy & Cookie Consent Engine */}
+      <ConsentScriptLoader />
+      <CookieConsentBanner />
+      <CookiePreferencesModal />
     </div>
   )
 }

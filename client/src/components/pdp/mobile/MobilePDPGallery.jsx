@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Share2, Check } from 'lucide-react'
 import ProductBadge from '@/components/shop/ProductBadge'
 import WishlistButton from '@/components/shop/WishlistButton'
@@ -72,28 +71,22 @@ export default function MobilePDPGallery({ product, images = [] }) {
         onMouseDown={handleTouchStart}
         onMouseUp={handleTouchEnd}
       >
-        {/* Product Image with crossfade */}
-        <AnimatePresence mode="wait">
-          <motion.img
-            key={currentIndex}
-            src={imageList[currentIndex]}
-            alt={`${product.title} — view ${currentIndex + 1}`}
-            fetchPriority={currentIndex === 0 ? 'high' : 'auto'}
-            loading={currentIndex === 0 ? 'eager' : 'lazy'}
-            decoding="async"
-            width="480"
-            height="600"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="h-full w-full object-cover object-top select-none"
-            draggable={false}
-            onError={(e) => {
-              e.currentTarget.src = '/images/products/floral-midi-dress.webp'
-            }}
-          />
-        </AnimatePresence>
+        {/* Product Image with instant paint and smooth change */}
+        <img
+          key={currentIndex}
+          src={imageList[currentIndex]}
+          alt={`${product.title} — view ${currentIndex + 1}`}
+          fetchPriority={currentIndex === 0 ? 'high' : 'auto'}
+          loading={currentIndex === 0 ? 'eager' : 'lazy'}
+          decoding="async"
+          width="480"
+          height="600"
+          className="h-full w-full object-cover object-top select-none transition-opacity duration-200"
+          draggable={false}
+          onError={(e) => {
+            e.currentTarget.src = '/images/products/floral-midi-dress.webp'
+          }}
+        />
 
         {/* Top-Left Badge */}
         {primaryBadge && (

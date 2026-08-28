@@ -311,6 +311,60 @@ export const testConnection = async () => {
       );
     } catch (e) {}
 
+    // Ensure cookie_consents_log table exists for GDPR Article 7 audit trail
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS cookie_consents_log (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+          consent_uuid VARCHAR(64) NOT NULL,
+          user_id INT NULL,
+          ip_hash VARCHAR(64) NOT NULL COMMENT 'Salted SHA-256 hash of user IP',
+          user_agent VARCHAR(255) NULL,
+          policy_version VARCHAR(20) NOT NULL DEFAULT '1.0.0',
+          necessary TINYINT(1) NOT NULL DEFAULT 1,
+          preferences TINYINT(1) NOT NULL DEFAULT 0,
+          analytics TINYINT(1) NOT NULL DEFAULT 0,
+          marketing TINYINT(1) NOT NULL DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_consent_uuid (consent_uuid),
+          INDEX idx_created_at (created_at),
+          INDEX idx_policy_version (policy_version)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+    } catch (e) {
+      console.warn('⚠️ Warning creating cookie_consents_log table: ' + e.message);
+    }
+
+    // Ensure cookie_consent_settings table exists for admin customization
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS cookie_consent_settings (
+          id INT PRIMARY KEY DEFAULT 1,
+          banner_title VARCHAR(255) NOT NULL DEFAULT 'We Value Your Privacy & Shopping Experience',
+          banner_description TEXT NOT NULL,
+          policy_url VARCHAR(255) NOT NULL DEFAULT '/privacy-policy',
+          current_version VARCHAR(20) NOT NULL DEFAULT '1.0.0',
+          is_enabled TINYINT(1) NOT NULL DEFAULT 1,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+
+      // Seed initial banner settings if not present
+      await connection.query(`
+        INSERT INTO cookie_consent_settings (id, banner_title, banner_description, policy_url, current_version, is_enabled)
+        VALUES (
+          1,
+          'We Value Your Privacy & Shopping Experience',
+          'We use essential cookies to keep your cart and checkout secure. With your permission, we also use functional and analytics cookies to personalize your style recommendations.',
+          '/privacy-policy',
+          '1.0.0',
+          1
+        ) ON DUPLICATE KEY UPDATE id=1
+      `);
+    } catch (e) {
+      console.warn('⚠️ Warning creating cookie_consent_settings table: ' + e.message);
+    }
+
     connection.release();
     return true;
   } catch (error) {

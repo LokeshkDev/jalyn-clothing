@@ -14,6 +14,7 @@ import {
 import logo from '@/assets/jalyn-logo.webp'
 import { FOOTER_LINKS } from '@/constants/data'
 import { useCmsData } from '@/hooks/useCmsData'
+import { useConsentStore } from '@/store'
 import {
   WhatsAppIcon,
   VisaIcon,
@@ -173,15 +174,25 @@ export default function Footer() {
                       <div className="overflow-hidden">
                         <ul className="pb-5 space-y-2.5 text-xs sm:text-sm text-white/75 font-normal tracking-wide">
                           {col.links
-                            ?.filter((link) => link.href)
+                            ?.filter((link) => link.href || link.isCookieSettings)
                             .map((link, lnkIdx) => (
                               <li key={link.label || lnkIdx}>
-                                <Link
-                                  to={link.href}
-                                  className="transition-colors hover:text-[#E8C5A8] hover:underline underline-offset-4"
-                                >
-                                  {link.label}
-                                </Link>
+                                {link.isCookieSettings ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => useConsentStore.getState().openPreferencesModal()}
+                                    className="transition-colors hover:text-[#E8C5A8] hover:underline underline-offset-4 text-left cursor-pointer"
+                                  >
+                                    {link.label}
+                                  </button>
+                                ) : (
+                                  <Link
+                                    to={link.href}
+                                    className="transition-colors hover:text-[#E8C5A8] hover:underline underline-offset-4"
+                                  >
+                                    {link.label}
+                                  </Link>
+                                )}
                               </li>
                             ))}
                         </ul>
@@ -207,15 +218,25 @@ export default function Footer() {
               ) : null}
               <ul className="space-y-2.5 text-xs sm:text-sm text-white/75 font-normal tracking-wide">
                 {col.links
-                  ?.filter((link) => link.href)
+                  ?.filter((link) => link.href || link.isCookieSettings)
                   .map((link, lnkIdx) => (
                     <li key={link.label || lnkIdx}>
-                      <Link
-                        to={link.href}
-                        className="transition-colors hover:text-[#E8C5A8] hover:underline underline-offset-4"
-                      >
-                        {link.label}
-                      </Link>
+                      {link.isCookieSettings ? (
+                        <button
+                          type="button"
+                          onClick={() => useConsentStore.getState().openPreferencesModal()}
+                          className="transition-colors hover:text-[#E8C5A8] hover:underline underline-offset-4 text-left cursor-pointer"
+                        >
+                          {link.label}
+                        </button>
+                      ) : (
+                        <Link
+                          to={link.href}
+                          className="transition-colors hover:text-[#E8C5A8] hover:underline underline-offset-4"
+                        >
+                          {link.label}
+                        </Link>
+                      )}
                     </li>
                   ))}
               </ul>

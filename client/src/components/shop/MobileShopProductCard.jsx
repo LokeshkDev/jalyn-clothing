@@ -1,6 +1,5 @@
 import { memo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Star } from 'lucide-react'
 import ProductBadge from '@/components/shop/ProductBadge'
 import WishlistButton from '@/components/shop/WishlistButton'
 import { SHOP_COLORS } from '@/constants/shopProducts'
@@ -58,7 +57,7 @@ function MobileShopProductCard({ product }) {
     <article className="flex flex-col rounded-[16px] border border-primary/5 bg-white overflow-hidden shadow-none transition-shadow">
       {/* Product Image Area */}
       <div className="relative aspect-[4/5] w-full bg-[#F7F1F2] overflow-hidden rounded-t-[16px]">
-        <Link to={`/products/${product.slug}`} className="block h-full w-full">
+        <Link to={product.href || `/products/${product.slug || product.id}`} className="block h-full w-full">
           <img
             src={displayImg}
             alt={product.title}
@@ -87,6 +86,11 @@ function MobileShopProductCard({ product }) {
               LIMITED
             </ProductBadge>
           )}
+          {product.discount >= 20 && !product.badges?.includes('sale') && (
+            <ProductBadge type="discount" className="!rounded-md !px-2 !py-0.5 !text-[10px] !font-bold">
+              -{product.discount}%
+            </ProductBadge>
+          )}
         </div>
 
         {/* Top-Right Wishlist Button */}
@@ -99,50 +103,37 @@ function MobileShopProductCard({ product }) {
       </div>
 
       {/* Product Details Area */}
-      <div className="flex flex-1 flex-col p-3 pt-2.5">
+      <div className="flex flex-1 flex-col p-3 pt-2">
+        {/* Category */}
+        {product.category && (
+          <p className="font-label text-[10px] font-bold uppercase tracking-[0.16em] text-primary/85 mb-0.5">
+            {product.category}
+          </p>
+        )}
+
         {/* Title */}
         <Link
-          to={`/products/${product.slug}`}
-          className="line-clamp-1 font-label text-[14px] font-semibold text-[#222222] transition hover:text-primary"
+          to={product.href || `/products/${product.slug || product.id}`}
+          className="line-clamp-1 font-heading text-[15px] sm:text-[16px] font-semibold text-[#2A1A22] transition hover:text-primary leading-snug tracking-tight"
         >
           {product.title}
         </Link>
 
         {/* Price Row */}
         <div className="mt-1 flex flex-wrap items-baseline gap-1.5 text-xs">
-          <span className="font-heading text-[15px] font-bold text-[#222222]">
+          <span className="font-heading text-[15px] sm:text-[16px] font-bold text-[#222222]">
             {formatINR(product.price)}
           </span>
           {product.originalPrice > product.price && (
             <>
-              <span className="text-[11px] text-ink-muted line-through">
+              <span className="font-sans text-[11px] text-ink-muted line-through font-normal">
                 {formatINR(product.originalPrice)}
               </span>
-              <span className="text-[11px] font-bold text-primary">
+              <span className="font-label text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
                 {product.discount}% OFF
               </span>
             </>
           )}
-        </div>
-
-        {/* Rating Row */}
-        <div className="mt-1.5 flex items-center gap-1 text-[11px] text-ink-muted">
-          <div className="flex items-center gap-0.5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star
-                key={i}
-                className={cn(
-                  'h-3 w-3',
-                  i < Math.round(product.rating)
-                    ? 'fill-primary text-primary'
-                    : 'fill-rose-light/50 text-rose-light',
-                )}
-              />
-            ))}
-          </div>
-          <span className="text-[11px] font-medium text-ink-muted">
-            ({product.reviews})
-          </span>
         </div>
 
         {/* Color Swatches Row */}

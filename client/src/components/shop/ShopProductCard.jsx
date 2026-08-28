@@ -1,7 +1,6 @@
 import { memo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, ShoppingBag, Star, Loader2, Check } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { Eye, ShoppingBag, Loader2, Check } from 'lucide-react'
 import ProductBadge from '@/components/shop/ProductBadge'
 import WishlistButton from '@/components/shop/WishlistButton'
 import { SHOP_COLORS } from '@/constants/shopProducts'
@@ -88,12 +87,8 @@ function ShopProductCard({ product, listView = false, onQuickView }) {
 
   if (listView) {
     return (
-      <motion.article
-        layout
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="flex gap-4 rounded-[6px] bg-white p-3 shadow-soft ring-1 ring-primary/5 sm:gap-5 sm:p-4"
+      <article
+        className="flex gap-4 rounded-[6px] bg-white p-3 shadow-soft ring-1 ring-primary/5 sm:gap-5 sm:p-4 transition-all duration-300"
       >
         <Link
           to={`/products/${product.slug || product.id}`}
@@ -147,12 +142,7 @@ function ShopProductCard({ product, listView = false, onQuickView }) {
             {product.description || 'Thoughtfully crafted with premium quality materials.'}
           </p>
 
-          <div className="mt-auto flex items-center justify-between pt-3 border-t border-primary/5">
-            <div className="flex items-center gap-1 text-xs text-ink-muted">
-              <Star className="h-3.5 w-3.5 fill-primary text-primary" />
-              <span className="font-semibold text-ink">{rating}</span>
-              <span>({reviewsCount})</span>
-            </div>
+          <div className="mt-auto flex items-center justify-end pt-3 border-t border-primary/5">
             <button
               onClick={() => onQuickView?.(product)}
               className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary hover:text-white cursor-pointer"
@@ -162,7 +152,7 @@ function ShopProductCard({ product, listView = false, onQuickView }) {
             </button>
           </div>
         </div>
-      </motion.article>
+      </article>
     )
   }
 
@@ -243,9 +233,9 @@ function ShopProductCard({ product, listView = false, onQuickView }) {
         </div>
       </div>
 
-      <div className="mt-3 space-y-1 px-0.5">
+      <div className="mt-3 space-y-1.5 px-0.5">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] font-medium capitalize text-ink-muted">
+          <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em] text-primary/85">
             {category}
           </p>
 
@@ -284,24 +274,26 @@ function ShopProductCard({ product, listView = false, onQuickView }) {
 
         <Link
           to={`/products/${product.slug || product.id}`}
-          className="block font-heading text-base font-medium text-ink transition hover:text-primary line-clamp-1"
+          className="block font-heading text-[16px] sm:text-[17px] font-semibold text-[#2A1A22] transition-colors hover:text-primary line-clamp-1 leading-snug tracking-tight"
         >
           {title}
         </Link>
-        <div className="flex items-baseline gap-2">
-          <span className="font-heading text-base font-semibold text-primary">
+        <div className="flex items-baseline gap-2 pt-0.5">
+          <span className="font-heading text-[16px] sm:text-[18px] font-bold text-[#2A1A22]">
             {formatINR(product.price)}
           </span>
           {originalPrice > product.price && (
-            <span className="text-xs text-ink-muted line-through">
-              {formatINR(originalPrice)}
-            </span>
+            <>
+              <span className="font-sans text-[12px] text-ink-muted line-through font-normal">
+                {formatINR(originalPrice)}
+              </span>
+              {product.discount > 0 && (
+                <span className="font-label text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                  {product.discount}% OFF
+                </span>
+              )}
+            </>
           )}
-        </div>
-        <div className="flex items-center gap-1 text-xs text-ink-muted">
-          <Star className="h-3.5 w-3.5 fill-primary text-primary" />
-          <span className="font-semibold text-ink">{rating}</span>
-          <span>({reviewsCount})</span>
         </div>
       </div>
     </article>

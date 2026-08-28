@@ -10,6 +10,8 @@ export default function SEO({
   description = DEFAULT_DESCRIPTION,
   canonical,
   image = DEFAULT_IMAGE,
+  preloadImage,
+  preloadImages,
   type = 'website',
   schema,
   price,
@@ -70,7 +72,34 @@ export default function SEO({
     setMetaTag('meta[name="twitter:description"]', 'content', description)
     setMetaTag('meta[name="twitter:image"]', 'content', image.startsWith('http') ? image : `${BASE_URL}${image.startsWith('/') ? '' : '/'}${image}`)
 
-    // 5. JSON-LD Structured Data Schema
+    // 5. Preload LCP Images (Dynamic High-Priority Preload for instant discovery)
+    const imagesToPreload = []
+    if (preloadImage) {
+      imagesToPreload.push(preloadImage)
+    }
+    if (Array.isArray(preloadImages)) {
+      imagesToPreload.push(...preloadImages)
+    }
+
+    const createdPreloadLinks = []
+    imagesToPreload.forEach((imgUrl) => {
+      if (imgUrl && typeof imgUrl === 'string') {
+        const fullUrl = imgUrl.startsWith('http') ? imgUrl : imgUrl.startsWith('/') ? imgUrl : `/${imgUrl}`
+        let existing = document.querySelector(`link[rel="preload"][as="image"][href="${CSS.escape(fullUrl)}"]`)
+        if (!existing) {
+          const link = document.createElement('link')
+          link.rel = 'preload'
+          link.as = 'image'
+          link.href = fullUrl
+          link.fetchPriority = 'high'
+          link.setAttribute('data-dynamic-preload', 'true')
+          document.head.appendChild(link)
+          createdPreloadLinks.push(link)
+        }
+      }
+    })
+
+    // 6. JSON-LD Structured Data Schema
     let scriptTag = document.getElementById('seo-jsonld-schema')
     if (schema) {
       if (!scriptTag) {
@@ -85,9 +114,9 @@ export default function SEO({
     }
 
     return () => {
-      // Optional cleanup on unmount
+      // Clean up dynamic preloads on navigation if needed
     }
-  }, [title, description, canonical, image, type, schema, price, currency])
+  }, [title, description, canonical, image, preloadImage, preloadImages, type, schema, price, currency])
 
   return null
 }

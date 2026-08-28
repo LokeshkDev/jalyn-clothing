@@ -232,15 +232,26 @@ export default function Sale() {
         description="Enjoy limited-time discounts on luxury women's dresses, designer tops, co-ords, and ethnic wear at JALYN."
         canonical="/collections/sale"
         image={pageData.bg_image || '/images/home/hero/hero-slide-1.webp'}
+        preloadImage={pageData.bg_image || '/images/banners/sale-hero.webp'}
       />
       
-      {/* Editorial Hero Banner (Full-Width with Background Image) */}
-      <div 
-        className="relative w-full bg-cover bg-center flex flex-col justify-center py-8 md:py-10 mb-8 overflow-hidden"
-        style={{ backgroundImage: `url(${pageData.bg_image || '/images/banners/sale-hero.webp'})` }}
-      >
+      {/* Editorial Hero Banner (Full-Width with High-Priority Discoverable Image) */}
+      <div className="relative w-full flex flex-col justify-center py-8 md:py-10 mb-8 overflow-hidden bg-[#2A1A22]">
+        <img
+          src={pageData.bg_image || '/images/banners/sale-hero.webp'}
+          alt={pageData.title || 'Exclusive Sale'}
+          fetchPriority="high"
+          loading="eager"
+          decoding="async"
+          width="1440"
+          height="400"
+          className="absolute inset-0 h-full w-full object-cover object-center pointer-events-none"
+          onError={(e) => {
+            e.currentTarget.src = '/images/home/hero/hero-slide-1.webp'
+          }}
+        />
         {/* Dark linear gradient mask overlay for pristine legibility */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#2A1A22]/90 via-[#2A1A22]/65 to-transparent z-[1]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#2A1A22]/90 via-[#2A1A22]/65 to-transparent z-[1] pointer-events-none" />
         
         {/* Content Container */}
         <div className="relative z-10 container-luxury max-w-7xl px-0 sm:px-6 w-full space-y-3">

@@ -195,6 +195,8 @@ export default function Shop() {
         title="Shop All Women's Fashion & Silk Outfits"
         description="Explore the complete collection of luxury silk dresses, co-ord sets, tops, and festive ethnic wear at JALYN. Nationwide delivery."
         canonical="/shop"
+        preloadImage="/images/home/hero/hero-slide-1-768.webp"
+        image="/images/home/hero/hero-slide-1.webp"
       />
       {/* MOBILE SHOP VIEW (< 1024px / lg) */}
       <div className="block lg:hidden">

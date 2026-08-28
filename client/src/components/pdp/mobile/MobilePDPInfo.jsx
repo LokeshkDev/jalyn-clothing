@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Star, Ruler, Sparkles, Check, MapPin, CheckCircle2, AlertCircle, Lock, Edit2 } from 'lucide-react'
+import { Ruler, Sparkles, Check, MapPin, CheckCircle2, AlertCircle, Lock, Edit2 } from 'lucide-react'
 import { SHOP_COLORS } from '@/constants/shopProducts'
 import { cn, formatINR } from '@/lib/utils'
 import { useDeliveryStore } from '@/store'
@@ -79,35 +79,6 @@ export default function MobilePDPInfo({
         <h1 className="font-display text-[22px] font-semibold leading-tight tracking-tight text-[#222222] sm:text-[24px]">
           {product.title}
         </h1>
-
-        {/* Rating & Sold */}
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[#666666]">
-          <div className="flex items-center gap-0.5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star
-                key={i}
-                className={cn(
-                  'h-3.5 w-3.5',
-                  i < Math.floor(product.rating)
-                    ? 'fill-primary text-primary'
-                    : 'fill-[#EFD7E3] text-[#EFD7E3]',
-                )}
-              />
-            ))}
-          </div>
-          <span className="font-semibold text-[#222222]">{product.rating}</span>
-          <button
-            type="button"
-            onClick={onScrollToReviews}
-            className="underline decoration-primary/30 transition-colors hover:text-primary"
-          >
-            ({product.reviews} reviews)
-          </button>
-          <span className="text-primary/30" aria-hidden>|</span>
-          <span>
-            Sold <span className="font-semibold text-[#222222]">372</span>
-          </span>
-        </div>
       </div>
 
       {/* Price */}

@@ -1,19 +1,31 @@
 import { memo } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 
 export default memo(function MobileShopHero() {
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="relative w-full bg-cover bg-center flex flex-col justify-center py-6 px-4 mb-4 overflow-hidden"
-      style={{ backgroundImage: `url('/images/home/hero/hero-slide-1.webp')` }}
+    <section
+      className="relative w-full flex flex-col justify-center py-6 px-4 mb-4 overflow-hidden bg-[#2A1A22]"
       aria-labelledby="mobile-shop-heading"
     >
+      {/* High-priority Discoverable LCP Hero Image */}
+      <img
+        src="/images/home/hero/hero-slide-1-768.webp"
+        srcSet="/images/home/hero/hero-slide-1-480.webp 480w, /images/home/hero/hero-slide-1-768.webp 768w"
+        sizes="(max-width: 480px) 480px, 768px"
+        alt="JALYN Luxury All Products Collection"
+        fetchPriority="high"
+        loading="eager"
+        decoding="async"
+        width="768"
+        height="384"
+        className="absolute inset-0 h-full w-full object-cover object-center pointer-events-none"
+        onError={(e) => {
+          e.currentTarget.src = '/images/home/hero/hero-slide-1.webp'
+        }}
+      />
+
       {/* Dark linear gradient mask overlay for pristine legibility */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#2A1A22]/90 via-[#2A1A22]/65 to-transparent z-[1]" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#2A1A22]/90 via-[#2A1A22]/65 to-transparent z-[1] pointer-events-none" />
 
       {/* Content Container */}
       <div className="relative z-10 container-luxury max-w-7xl px-2 w-full space-y-2">
@@ -40,6 +52,7 @@ export default memo(function MobileShopHero() {
           </p>
         </div>
       </div>
-    </motion.section>
+    </section>
   )
 })
+

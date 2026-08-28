@@ -2,192 +2,6 @@ import pool from '../config/db.js';
 import { processAndStoreImage } from '../services/imageService.js';
 import { generateUniqueBarcodeNumber } from './barcodeController.js';
 
-// Rich seed product catalog used across server DB seeding & in-memory fallbacks
-export const SEED_PRODUCTS = [
-  {
-    id: 1, slug: 'floral-midi-dress', title: 'Floral Midi Dress', category_slug: 'dresses',
-    price: 1899, original_price: 2499, discount: 24, rating: 4.8, reviews_count: 124, stock: 18,
-    is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Charming floral print midi dress crafted with soft, breathable crepe fabric and tiered ruffled hem.',
-    fabric: 'Cotton', sleeve: 'Short Sleeve', occasion: 'Casual', fit: 'Regular', pattern: 'Floral', season: 'Summer',
-    sizes: ['XS', 'S', 'M', 'L', 'XL'], colors: ['rose', 'cream', 'black'],
-    primary_image: 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 2, slug: 'satin-wrap-blouse', title: 'Satin Wrap Blouse', category_slug: 'tops',
-    price: 1299, original_price: 1799, discount: 28, rating: 4.6, reviews_count: 86, stock: 25,
-    is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Luxurious silk-satin blend wrap blouse featuring elegant bishop sleeves and side waist tie.',
-    fabric: 'Satin', sleeve: 'Full Sleeve', occasion: 'Work', fit: 'Slim', pattern: 'Solid', season: 'All Season',
-    sizes: ['S', 'M', 'L', 'XL'], colors: ['mauve', 'cream'],
-    primary_image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 3, slug: 'linen-coord-set', title: 'Linen Casual Co-ord Set', category_slug: 'coords',
-    price: 2499, original_price: 3299, discount: 24, rating: 4.9, reviews_count: 142, stock: 12,
-    is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Relaxed fit 100% pure linen top and high-waisted wide leg trousers set for effortless summer elegance.',
-    fabric: 'Linen', sleeve: 'Short Sleeve', occasion: 'Casual', fit: 'Relaxed', pattern: 'Solid', season: 'Summer',
-    sizes: ['S', 'M', 'L', 'XXL'], colors: ['beige', 'sage'],
-    primary_image: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 4, slug: 'embroidered-chanderi-kurta-set', title: 'Embroidered Chanderi Kurta Set', category_slug: 'ethnic',
-    price: 3899, original_price: 4999, discount: 22, rating: 4.9, reviews_count: 98, stock: 15,
-    is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Festive hand-embroidered Chanderi silk kurta with matching pants and organza sheer dupatta.',
-    fabric: 'Silk Blend', sleeve: 'Full Sleeve', occasion: 'Festive', fit: 'Regular', pattern: 'Embroidered', season: 'All Season',
-    sizes: ['S', 'M', 'L', 'XL'], colors: ['wine', 'rose'],
-    primary_image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 5, slug: 'tiered-maxi-dress', title: 'Boho Tiered Sun Maxi Dress', category_slug: 'dresses',
-    price: 2199, original_price: 2899, discount: 24, rating: 4.7, reviews_count: 65, stock: 20,
-    is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Flowy tiered maxi dress with adjustable tie shoulders and smocked back panel.',
-    fabric: 'Cotton', sleeve: 'Sleeveless', occasion: 'Casual', fit: 'Relaxed', pattern: 'Floral', season: 'Summer',
-    sizes: ['XS', 'S', 'M', 'L'], colors: ['blush', 'cream'],
-    primary_image: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 6, slug: 'sequin-evening-gown', title: 'Sequin Shimmer Evening Gown', category_slug: 'dresses',
-    price: 4999, original_price: 6499, discount: 23, rating: 5.0, reviews_count: 210, stock: 6,
-    is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Showstopper full-sequin evening gown with deep V neckline and dramatic train.',
-    fabric: 'Georgette', sleeve: 'Sleeveless', occasion: 'Party', fit: 'Slim', pattern: 'Solid', season: 'Winter',
-    sizes: ['S', 'M', 'L'], colors: ['rose', 'black', 'wine'],
-    primary_image: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 7, slug: 'smocked-crop-top', title: 'Smocked Puff-Sleeve Crop Top', category_slug: 'tops',
-    price: 899, original_price: 1299, discount: 30, rating: 4.5, reviews_count: 42, stock: 30,
-    is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'On-trend smocked crop top with puff sleeves and elastic shirred bodice.',
-    fabric: 'Cotton', sleeve: 'Short Sleeve', occasion: 'Casual', fit: 'Regular', pattern: 'Solid', season: 'Summer',
-    sizes: ['XS', 'S', 'M', 'L', 'XL'], colors: ['cream', 'sage', 'mauve'],
-    primary_image: 'https://images.unsplash.com/photo-1564257631407-4deb1f99d992?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 8, slug: 'palazzo-coord-set', title: 'Printed Palazzo Co-ord Set', category_slug: 'coords',
-    price: 2299, original_price: 2999, discount: 23, rating: 4.8, reviews_count: 90, stock: 18,
-    is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Abstract printed peplum top and palazzo pants set with matching belt.',
-    fabric: 'Rayon', sleeve: 'Short Sleeve', occasion: 'Work', fit: 'Regular', pattern: 'Printed', season: 'Monsoon',
-    sizes: ['S', 'M', 'L', 'XL'], colors: ['beige', 'rose', 'black'],
-    primary_image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 9, slug: 'velvet-lounge-set', title: 'Velvet Touch Lounge Set', category_slug: 'lounge',
-    price: 1799, original_price: 2199, discount: 18, rating: 4.7, reviews_count: 55, stock: 14,
-    is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Buttery-soft stretch velvet lounge top and jogger set for cozy evenings.',
-    fabric: 'Velvet', sleeve: 'Full Sleeve', occasion: 'Lounge', fit: 'Relaxed', pattern: 'Solid', season: 'Winter',
-    sizes: ['S', 'M', 'L', 'XL'], colors: ['mauve', 'sage', 'cream'],
-    primary_image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 10, slug: 'anarkali-festive-kurta', title: 'Festive Anarkali Kurta Set', category_slug: 'kurtis',
-    price: 3499, original_price: 4499, discount: 22, rating: 4.9, reviews_count: 130, stock: 10,
-    is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Floor-length Anarkali kurta with heavy zari work and matching churidar pants.',
-    fabric: 'Silk Blend', sleeve: 'Full Sleeve', occasion: 'Festive', fit: 'Regular', pattern: 'Embroidered', season: 'All Season',
-    sizes: ['S', 'M', 'L', 'XL'], colors: ['wine', 'black', 'rose'],
-    primary_image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 11, slug: 'tailored-linen-shrug', title: 'Tailored Linen Blazer Shrug', category_slug: 'outerwear',
-    price: 2799, original_price: 3499, discount: 20, rating: 4.7, reviews_count: 45, stock: 12,
-    is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Lightweight open-front linen blazer shrug tailored for modern workwear layering.',
-    fabric: 'Linen', sleeve: 'Full Sleeve', occasion: 'Work', fit: 'Slim', pattern: 'Solid', season: 'All Season',
-    sizes: ['S', 'M', 'L'], colors: ['cream', 'beige', 'black'],
-    primary_image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1551163943-3f6fa0d40dc1?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 12, slug: 'sculpting-active-set', title: 'Sculpting Seamless Active Set', category_slug: 'activewear',
-    price: 2199, original_price: 2799, discount: 21, rating: 4.9, reviews_count: 112, stock: 22,
-    is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Ultra-stretch seamless sports bra and high-rise workout leggings set.',
-    fabric: 'Rayon', sleeve: 'Sleeveless', occasion: 'Casual', fit: 'Slim', pattern: 'Solid', season: 'All Season',
-    sizes: ['XS', 'S', 'M', 'L'], colors: ['mauve', 'sage', 'black'],
-    primary_image: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1506152983158-b4a74a01c721?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 13, slug: 'handcrafted-leather-jutti', title: 'Handcrafted Leather Juttis', category_slug: 'footwear',
-    price: 1899, original_price: 2299, discount: 17, rating: 4.8, reviews_count: 74, stock: 16,
-    is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Traditional Punjabi juttis handcrafted with genuine leather and dabka embroidery.',
-    fabric: 'Rayon', sleeve: 'Sleeveless', occasion: 'Festive', fit: 'Regular', pattern: 'Embroidered', season: 'All Season',
-    sizes: ['36', '37', '38', '39', '40'], colors: ['rose', 'cream', 'beige'],
-    primary_image: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1560343090-f0409e92791a?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 14, slug: 'satin-cowl-slip-dress', title: 'Satin Bias Cut Slip Dress', category_slug: 'dresses',
-    price: 2299, original_price: 2899, discount: 20, rating: 4.9, reviews_count: 88, stock: 10,
-    is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Minimalist cowl-neck satin slip dress with adjustable straps and midi length.',
-    fabric: 'Satin', sleeve: 'Sleeveless', occasion: 'Party', fit: 'Slim', pattern: 'Solid', season: 'Summer',
-    sizes: ['XS', 'S', 'M', 'L', 'XL'], colors: ['mauve', 'cream', 'black'],
-    primary_image: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 15, slug: 'handloom-chanderi-suit', title: 'Handloom Chanderi Kurta Set', category_slug: 'ethnic',
-    price: 3699, original_price: 4499, discount: 17, rating: 4.9, reviews_count: 92, stock: 14,
-    is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Handwoven Chanderi silk kurta with gota patti detailing and matching chiffon dupatta.',
-    fabric: 'Silk Blend', sleeve: 'Full Sleeve', occasion: 'Festive', fit: 'Regular', pattern: 'Embroidered', season: 'All Season',
-    sizes: ['S', 'M', 'L', 'XL'], colors: ['cream', 'sage', 'rose'],
-    primary_image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 16, slug: 'boho-printed-coord-set', title: 'Bohemian Printed Co-ord Set', category_slug: 'coords',
-    price: 2599, original_price: 3199, discount: 18, rating: 4.8, reviews_count: 78, stock: 16,
-    is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Vibrant Bohemian motif crop top and flared palazzo pants co-ord set.',
-    fabric: 'Rayon', sleeve: 'Short Sleeve', occasion: 'Casual', fit: 'Regular', pattern: 'Printed', season: 'Monsoon',
-    sizes: ['S', 'M', 'L'], colors: ['rose', 'mauve', 'beige'],
-    primary_image: 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 17, slug: 'banarasi-zari-saree', title: 'Silk Zari Border Banarasi Saree', category_slug: 'sarees',
-    price: 5499, original_price: 6999, discount: 21, rating: 5.0, reviews_count: 140, stock: 8,
-    is_featured: 1, is_active: 1, is_new_arrival: 1, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Traditional pure silk Banarasi saree woven with gold zari kadwa motifs.',
-    fabric: 'Silk Blend', sleeve: 'Sleeveless', occasion: 'Festive', fit: 'Regular', pattern: 'Embroidered', season: 'All Season',
-    sizes: ['Free Size'], colors: ['wine', 'rose', 'cream'],
-    primary_image: 'https://images.unsplash.com/photo-1610030469668-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 18, slug: 'chikankari-straight-kurti', title: 'Lucknowi Chikankari Cotton Kurti', category_slug: 'kurtis',
-    price: 1799, original_price: 2299, discount: 21, rating: 4.8, reviews_count: 165, stock: 24,
-    is_featured: 0, is_active: 1, is_new_arrival: 0, is_online: 1, is_offline: 1, brand: 'JALYN',
-    description: 'Authentic hand-embroidered Lucknowi Chikankari pure cotton straight kurti.',
-    fabric: 'Cotton', sleeve: 'Full Sleeve', occasion: 'Casual', fit: 'Regular', pattern: 'Embroidered', season: 'Summer',
-    sizes: ['S', 'M', 'L', 'XL', 'XXL'], colors: ['cream', 'blush', 'sage'],
-    primary_image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
-    hover_image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-  },
-];
-
-let inMemoryProductsStore = [...SEED_PRODUCTS];
-
 // Helper to safely parse JSON fields from DB rows
 function safeJsonParse(value, fallback) {
   if (value === null || value === undefined || value === '') return fallback;
@@ -200,8 +14,9 @@ function safeJsonParse(value, fallback) {
   }
 }
 
-// Helper to safely parse JSON fields from DB rows
+// Helper to parse all JSON fields on a product object
 function parseJsonFields(product) {
+  if (!product) return null;
   return {
     ...product,
     sizes: safeJsonParse(product.sizes, []),
@@ -212,11 +27,10 @@ function parseJsonFields(product) {
   };
 }
 
-// Dynamic stock resolution — the products.stock column alone can be stale/zeroed,
-// so the effective balance is computed live at read time from the richest source:
-//   1. Godown distribution sum (product_godown_stock) — authoritative when it exists
-//   2. Variant matrix stock sum — authoritative when variants carry the stock
-//   3. Fallback: the stored products.stock value
+// Dynamic effective stock resolution live at read time from richest available source:
+// 1. Godown distribution sum (product_godown_stock) — authoritative when present
+// 2. Variant matrix sum — authoritative when variants carry stock
+// 3. Fallback: stored products.stock value
 function computeEffectiveStock(product) {
   const godownTotal = parseInt(product.godown_total, 10) || 0;
   if (godownTotal > 0) return godownTotal;
@@ -230,9 +44,10 @@ function computeEffectiveStock(product) {
   return parseInt(product.stock, 10) || 0;
 }
 
-// Apply computeEffectiveStock to a raw DB row (also injects godown totals for display)
+// Apply parseJsonFields and computeEffectiveStock to a raw DB row
 function withEffectiveStock(row) {
   const product = parseJsonFields(row);
+  if (!product) return null;
   product.godown_total = parseInt(row.godown_total, 10) || 0;
   product.godown_count = parseInt(row.godown_count, 10) || 0;
   product.effective_stock = computeEffectiveStock(product);
@@ -240,7 +55,7 @@ function withEffectiveStock(row) {
   return product;
 }
 
-// Auto seed table in MySQL if connected
+// Ensure products and categories schema tables/columns exist in MySQL
 export const ensureProductsTable = async () => {
   try {
     await pool.query(`
@@ -260,6 +75,7 @@ export const ensureProductsTable = async () => {
       CREATE TABLE IF NOT EXISTS products (
         id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
+        barcode_short_name VARCHAR(150) NULL,
         slug VARCHAR(255) NOT NULL UNIQUE,
         product_code VARCHAR(100),
         base_sku VARCHAR(100),
@@ -267,13 +83,20 @@ export const ensureProductsTable = async () => {
         category_slug VARCHAR(100) DEFAULT 'dresses',
         price DECIMAL(10,2) NOT NULL,
         original_price DECIMAL(10,2) DEFAULT NULL,
+        base_price DECIMAL(10,2) NULL,
+        hsn_code VARCHAR(50) DEFAULT '6204',
         discount INT DEFAULT 0,
         rating DECIMAL(3,2) DEFAULT 4.8,
-        reviews_count INT DEFAULT 12,
-        stock INT DEFAULT 15,
+        reviews_count INT DEFAULT 0,
+        stock INT DEFAULT 0,
         is_featured TINYINT DEFAULT 0,
         is_active TINYINT DEFAULT 1,
         is_new_arrival TINYINT DEFAULT 1,
+        new_arrival_order INT DEFAULT 0,
+        new_arrival_published TINYINT DEFAULT 1,
+        is_sale TINYINT DEFAULT 0,
+        sale_order INT DEFAULT 0,
+        sale_published TINYINT DEFAULT 1,
         is_online TINYINT DEFAULT 1,
         is_offline TINYINT DEFAULT 1,
         low_stock_threshold INT DEFAULT 5,
@@ -292,12 +115,14 @@ export const ensureProductsTable = async () => {
         season VARCHAR(100),
         primary_image VARCHAR(500),
         hover_image VARCHAR(500),
+        vendor_id INT NULL,
+        rack_id INT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
 
-    // Add new columns to existing tables (MySQL-safe: check information_schema first)
+    // Ensure columns exist on products table (MySQL-safe check)
     const ensureColumn = async (columnName, columnSql) => {
       const [cols] = await pool.query(
         `SELECT COUNT(*) as count FROM information_schema.COLUMNS
@@ -305,10 +130,11 @@ export const ensureProductsTable = async () => {
         [columnName]
       );
       if (cols[0].count === 0) {
-        try { await pool.query(columnSql); } catch (_) { /* ignore race conditions */ }
+        try { await pool.query(columnSql); } catch (_) {}
       }
     };
 
+    await ensureColumn('barcode_short_name', 'ALTER TABLE products ADD COLUMN barcode_short_name VARCHAR(150) NULL');
     await ensureColumn('base_price', 'ALTER TABLE products ADD COLUMN base_price DECIMAL(10,2) NULL');
     await ensureColumn('hsn_code', "ALTER TABLE products ADD COLUMN hsn_code VARCHAR(50) DEFAULT '6204'");
     await ensureColumn('product_code', 'ALTER TABLE products ADD COLUMN product_code VARCHAR(100)');
@@ -335,7 +161,7 @@ export const ensureProductsTable = async () => {
     await ensureColumn('season', 'ALTER TABLE products ADD COLUMN season VARCHAR(100)');
     await ensureColumn('updated_at', 'ALTER TABLE products ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 
-    // Create inventory_transactions audit log table
+    // Create inventory_transactions table if not exists
     await pool.query(`
       CREATE TABLE IF NOT EXISTS inventory_transactions (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -349,90 +175,13 @@ export const ensureProductsTable = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-
-    const [rows] = await pool.query('SELECT COUNT(*) as count FROM products');
-    if (rows[0].count === 0) {
-      for (const prod of SEED_PRODUCTS) {
-        await pool.query(
-          `INSERT INTO products 
-          (title, slug, category_slug, price, original_price, discount, rating, reviews_count, stock, is_featured, is_active, is_new_arrival, is_online, is_offline, brand, description, sizes, colors, primary_image, hover_image, fabric, sleeve, occasion, fit, pattern, season)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            prod.title, prod.slug, prod.category_slug, prod.price,
-            prod.original_price || prod.price, prod.discount || 0,
-            prod.rating || 4.8, prod.reviews_count || 12, prod.stock || 15,
-            prod.is_featured || 0, 1, prod.is_new_arrival || 0,
-            prod.is_online ?? 1, prod.is_offline ?? 1, prod.brand || 'JALYN',
-            prod.description || '',
-            JSON.stringify(prod.sizes || ['S', 'M', 'L']),
-            JSON.stringify(prod.colors || ['rose', 'cream']),
-            prod.primary_image, prod.hover_image || prod.primary_image,
-            prod.fabric || '', prod.sleeve || '', prod.occasion || '',
-            prod.fit || '', prod.pattern || '', prod.season || '',
-          ]
-        );
-      }
-      console.log('✅ MySQL products table seeded with 18 products!');
-    }
-
-    // Backfill filter attributes for existing products (idempotent - only fills empty values)
-    const [fabricCol] = await pool.query(
-      `SELECT COUNT(*) as count FROM information_schema.COLUMNS
-       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'fabric'`
-    );
-    if (fabricCol[0].count > 0) {
-      const attributeBackfill = [
-      ['floral-midi-dress', 'Cotton', 'Short Sleeve', 'Casual', 'Regular', 'Floral', 'Summer'],
-      ['satin-wrap-blouse', 'Satin', 'Full Sleeve', 'Work', 'Slim', 'Solid', 'All Season'],
-      ['linen-coord-set', 'Linen', 'Short Sleeve', 'Casual', 'Relaxed', 'Solid', 'Summer'],
-      ['embroidered-chanderi-kurta-set', 'Silk Blend', 'Full Sleeve', 'Festive', 'Regular', 'Embroidered', 'All Season'],
-      ['tiered-maxi-dress', 'Cotton', 'Sleeveless', 'Casual', 'Relaxed', 'Floral', 'Summer'],
-      ['sequin-evening-gown', 'Georgette', 'Sleeveless', 'Party', 'Slim', 'Solid', 'Winter'],
-      ['smocked-crop-top', 'Cotton', 'Short Sleeve', 'Casual', 'Regular', 'Solid', 'Summer'],
-      ['palazzo-coord-set', 'Rayon', 'Short Sleeve', 'Work', 'Regular', 'Printed', 'Monsoon'],
-      ['velvet-lounge-set', 'Velvet', 'Full Sleeve', 'Lounge', 'Relaxed', 'Solid', 'Winter'],
-      ['anarkali-festive-kurta', 'Silk Blend', 'Full Sleeve', 'Festive', 'Regular', 'Embroidered', 'All Season'],
-      ['tailored-linen-shrug', 'Linen', 'Full Sleeve', 'Work', 'Slim', 'Solid', 'All Season'],
-      ['sculpting-active-set', 'Rayon', 'Sleeveless', 'Casual', 'Slim', 'Solid', 'All Season'],
-      ['handcrafted-leather-jutti', 'Rayon', 'Sleeveless', 'Festive', 'Regular', 'Embroidered', 'All Season'],
-      ['satin-cowl-slip-dress', 'Satin', 'Sleeveless', 'Party', 'Slim', 'Solid', 'Summer'],
-      ['handloom-chanderi-suit', 'Silk Blend', 'Full Sleeve', 'Festive', 'Regular', 'Embroidered', 'All Season'],
-      ['boho-printed-coord-set', 'Rayon', 'Short Sleeve', 'Casual', 'Regular', 'Printed', 'Monsoon'],
-      ['banarasi-zari-saree', 'Silk Blend', 'Sleeveless', 'Festive', 'Regular', 'Embroidered', 'All Season'],
-      ['chikankari-straight-kurti', 'Cotton', 'Full Sleeve', 'Casual', 'Regular', 'Embroidered', 'Summer'],
-      ];
-      for (const [slug, fabric, sleeve, occasion, fit, pattern, season] of attributeBackfill) {
-        await pool.query(
-          `UPDATE products SET fabric = ?, sleeve = ?, occasion = ?, fit = ?, pattern = ?, season = ?
-           WHERE slug = ? AND (fabric IS NULL OR fabric = '')`,
-          [fabric, sleeve, occasion, fit, pattern, season, slug]
-        );
-      }
-    }
   } catch (err) {
-    console.log('ℹ️ MySQL database products table check:', err.message);
+    console.warn('ℹ️ MySQL database products table check:', err.message);
   }
 };
 
-// Immediately invoke table check
+// Immediately initialize schema tables
 ensureProductsTable();
-
-function filterAndSortMockProducts(list, category, search, sort, includeOffline = false) {
-  let filtered = list.filter((p) => includeOffline || (p.is_online !== 0 && p.is_online !== false));
-  if (category && category !== 'all') {
-    filtered = filtered.filter((p) => p.category_slug === category || p.category === category);
-  }
-  if (search) {
-    const s = search.toLowerCase();
-    filtered = filtered.filter(
-      (p) => p.title.toLowerCase().includes(s) || p.description?.toLowerCase().includes(s)
-    );
-  }
-  if (sort === 'price-low') filtered.sort((a, b) => a.price - b.price);
-  else if (sort === 'price-high') filtered.sort((a, b) => b.price - a.price);
-  else filtered.sort((a, b) => b.id - a.id);
-  return filtered;
-}
 
 // ─── GET /products ───
 export const getProducts = async (req, res) => {
@@ -443,12 +192,12 @@ export const getProducts = async (req, res) => {
     let query = 'SELECT p.*, '
       + '(SELECT COALESCE(SUM(stock), 0) FROM product_godown_stock WHERE product_id = p.id) as godown_total, '
       + '(SELECT COUNT(*) FROM product_godown_stock WHERE product_id = p.id) as godown_count '
-      + 'FROM products p WHERE p.is_active = 1';
+      + 'FROM products p WHERE 1=1';
     const params = [];
 
-    // Filter out products turned OFF for online website unless admin explicitly passes include_offline=1
+    // For public online store, only show active products that have online publishing turned ON
     if (!isIncludeOffline) {
-      query += ' AND (p.is_online = 1 OR p.is_online IS NULL)';
+      query += ' AND p.is_active = 1 AND (p.is_online = 1 OR p.is_online IS NULL)';
     }
 
     if (new_arrivals === '1') {
@@ -462,9 +211,12 @@ export const getProducts = async (req, res) => {
       params.push(category);
     }
     if (search) {
-      query += ' AND (p.title LIKE ? OR p.description LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`);
+      query += ' AND (p.title LIKE ? OR p.description LIKE ? OR p.base_sku LIKE ? OR p.barcode_short_name LIKE ? OR p.product_code LIKE ?)';
+      const s = `%${search}%`;
+      params.push(s, s, s, s, s);
     }
+
+    // Dynamic sorting
     if (sort === 'price-low' || sort === 'price_asc') query += ' ORDER BY p.price ASC';
     else if (sort === 'price-high' || sort === 'price_desc') query += ' ORDER BY p.price DESC';
     else if (sort === 'top-rated' || sort === 'rating') query += ' ORDER BY p.rating DESC';
@@ -475,20 +227,11 @@ export const getProducts = async (req, res) => {
     else query += ' ORDER BY p.created_at DESC';
 
     const [rows] = await pool.query(query, params);
-    if (!rows || rows.length === 0) {
-      return res.json({
-        success: true,
-        products: filterAndSortMockProducts(inMemoryProductsStore, category, search, sort, isIncludeOffline),
-      });
-    }
-    const products = rows.map(withEffectiveStock);
+    const products = rows && rows.length > 0 ? rows.map(withEffectiveStock).filter(Boolean) : [];
     return res.json({ success: true, products });
   } catch (error) {
-    return res.json({
-      success: true,
-      products: filterAndSortMockProducts(inMemoryProductsStore, category, search, sort, isIncludeOffline),
-      isFallback: true,
-    });
+    console.error('getProducts query error:', error);
+    return res.status(500).json({ success: false, message: error.message, products: [] });
   }
 };
 
@@ -500,27 +243,18 @@ export const getProductBySlug = async (req, res) => {
       `SELECT p.*,
         (SELECT COALESCE(SUM(stock), 0) FROM product_godown_stock WHERE product_id = p.id) as godown_total,
         (SELECT COUNT(*) FROM product_godown_stock WHERE product_id = p.id) as godown_count
-       FROM products p WHERE (p.slug = ? OR p.id = ?) AND p.is_active = 1`,
+       FROM products p WHERE p.slug = ? OR p.id = ?`,
       [slug, slug]
     );
-    if (rows && rows.length > 0) {
-      const prod = withEffectiveStock(rows[0]);
-      if (prod.is_online === 0 || prod.is_online === false) {
-        return res.status(404).json({ success: false, message: 'Product is currently not available online.' });
-      }
-      return res.json({ success: true, product: prod });
+
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Product not found.' });
     }
-    const mock = inMemoryProductsStore.find((p) => p.slug === slug || String(p.id) === String(slug));
-    if (mock) {
-      if (mock.is_online === 0 || mock.is_online === false) {
-        return res.status(404).json({ success: false, message: 'Product is currently not available online.' });
-      }
-      return res.json({ success: true, product: mock });
-    }
-    return res.status(404).json({ success: false, message: 'Product not found' });
+
+    const prod = withEffectiveStock(rows[0]);
+    return res.json({ success: true, product: prod });
   } catch (error) {
-    const mock = inMemoryProductsStore.find((p) => p.slug === slug || String(p.id) === String(slug));
-    if (mock) return res.json({ success: true, product: mock });
+    console.error('getProductBySlug error:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -551,22 +285,33 @@ export const createProduct = async (req, res) => {
     }
   }
 
-  const productSlug = slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const primaryImg = primary_image || 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80';
+  let productSlug = slug ? slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-') : (title ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : `product-${Date.now()}`);
+
+  // Guarantee slug uniqueness in MySQL
+  try {
+    const [existing] = await pool.query('SELECT id FROM products WHERE slug = ?', [productSlug]);
+    if (existing && existing.length > 0) {
+      productSlug = `${productSlug}-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+  } catch (e) {}
+
+  const primaryImg = primary_image || '';
   const hoverImg = hover_image || primaryImg;
 
   const parsedSizes = safeJsonParse(sizes, ['S', 'M', 'L']);
-  const parsedColors = safeJsonParse(colors, ['rose', 'cream']);
+  const parsedColors = safeJsonParse(colors, ['Rose', 'Cream']);
   const parsedVariants = safeJsonParse(variants, []);
   const parsedColorImages = safeJsonParse(color_images, {});
   const parsedSizeGuide = safeJsonParse(size_guide, null);
 
-  const disc = original_price > price ? Math.round(((original_price - price) / original_price) * 100) : 0;
+  const origPrice = original_price !== undefined && original_price !== null && original_price !== '' ? parseFloat(original_price) : null;
+  const sellPrice = parseFloat(price) || 0;
+  const disc = origPrice && origPrice > sellPrice ? Math.round(((origPrice - sellPrice) / origPrice) * 100) : 0;
 
   // Compute total stock from variants if present
   let totalStock = parsedVariants.length > 0
     ? parsedVariants.reduce((sum, v) => sum + (parseInt(v.stock, 10) || 0), 0)
-    : parseInt(stock, 10) || 10;
+    : parseInt(stock, 10) || 0;
 
   // Parse godown stock (array of { godown_id, stock })
   const parsedGodownStock = Array.isArray(godown_stock)
@@ -578,37 +323,6 @@ export const createProduct = async (req, res) => {
     totalStock = parsedGodownStock.reduce((sum, g) => sum + g.stock, 0);
   }
 
-  const newProd = {
-    id: Date.now(), title, barcode_short_name: barcode_short_name || '', slug: productSlug,
-    category_slug: category_slug || 'dresses',
-    price: parseFloat(price) || 0,
-    original_price: parseFloat(original_price) || parseFloat(price) || 0,
-    base_price: base_price !== undefined && base_price !== null && base_price !== '' ? parseFloat(base_price) : null,
-    hsn_code: hsn_code || '6204',
-    discount: disc, rating: 4.8, reviews_count: 0,
-    stock: totalStock,
-    is_featured: is_featured ? 1 : 0,
-    is_active: 1,
-    is_new_arrival: is_new_arrival ? 1 : 0,
-    is_online: is_online !== undefined ? (is_online ? 1 : 0) : 1,
-    is_offline: is_offline !== undefined ? (is_offline ? 1 : 0) : 1,
-    low_stock_threshold: parseInt(low_stock_threshold, 10) || 5,
-    brand: brand || 'JALYN',
-    product_code: product_code || '',
-    base_sku: base_sku || '',
-    description: description || '',
-    short_description: short_description || '',
-    sizes: parsedSizes, colors: parsedColors,
-    variants: parsedVariants,
-    color_images: parsedColorImages,
-    size_guide: parsedSizeGuide,
-    primary_image: primaryImg, hover_image: hoverImg,
-    fabric: fabric || '', sleeve: sleeve || '', occasion: occasion || '',
-    fit: fit || '', pattern: pattern || '', season: season || '',
-  };
-
-  inMemoryProductsStore.unshift(newProd);
-
   try {
     const [result] = await pool.query(
       `INSERT INTO products 
@@ -619,21 +333,39 @@ export const createProduct = async (req, res) => {
        vendor_id, rack_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        title, barcode_short_name || null, productSlug, category_slug || 'dresses',
-        price, original_price || price, newProd.base_price, newProd.hsn_code, disc,
-        description || '', short_description || '',
-        JSON.stringify(parsedSizes), JSON.stringify(parsedColors),
-        primaryImg, hoverImg, totalStock,
-        brand || 'JALYN', product_code || '', base_sku || '',
-        is_featured ? 1 : 0, is_new_arrival ? 1 : 0,
+        title || 'Untitled Product',
+        barcode_short_name || null,
+        productSlug,
+        category_slug || 'dresses',
+        sellPrice,
+        origPrice || sellPrice,
+        base_price !== undefined && base_price !== null && base_price !== '' ? parseFloat(base_price) : null,
+        hsn_code || '6204',
+        disc,
+        description || '',
+        short_description || '',
+        JSON.stringify(parsedSizes),
+        JSON.stringify(parsedColors),
+        primaryImg,
+        hoverImg,
+        totalStock,
+        brand || 'JALYN',
+        product_code || '',
+        base_sku || '',
+        is_featured ? 1 : 0,
+        is_new_arrival !== undefined ? (is_new_arrival ? 1 : 0) : 1,
         is_online !== undefined ? (is_online ? 1 : 0) : 1,
         is_offline !== undefined ? (is_offline ? 1 : 0) : 1,
         parseInt(low_stock_threshold, 10) || 5,
         JSON.stringify(parsedVariants),
         JSON.stringify(parsedColorImages),
         parsedSizeGuide ? JSON.stringify(parsedSizeGuide) : null,
-        fabric || '', sleeve || '', occasion || '',
-        fit || '', pattern || '', season || '',
+        fabric || '',
+        sleeve || '',
+        occasion || '',
+        fit || '',
+        pattern || '',
+        season || '',
         vendor_id ? parseInt(vendor_id, 10) : null,
         rack_id ? parseInt(rack_id, 10) : null,
       ]
@@ -641,7 +373,7 @@ export const createProduct = async (req, res) => {
 
     const productId = result.insertId;
 
-    // Persist godown stock rows
+    // Persist godown stock distribution
     if (parsedGodownStock.length > 0) {
       for (const g of parsedGodownStock) {
         await pool.query(
@@ -653,13 +385,11 @@ export const createProduct = async (req, res) => {
 
     // Auto-generate barcodes for new product
     try {
-      // Generate primary barcode
       const primaryBarcode = await generateUniqueBarcodeNumber();
       await pool.query(
         'INSERT INTO product_barcodes (product_id, barcode, is_primary, created_by) VALUES (?, ?, 1, ?)',
         [productId, primaryBarcode, req.user?.id || null]
       );
-      // Generate variant barcodes
       if (parsedVariants && parsedVariants.length > 0) {
         for (const variant of parsedVariants) {
           const variantBarcode = await generateUniqueBarcodeNumber();
@@ -670,17 +400,28 @@ export const createProduct = async (req, res) => {
         }
       }
     } catch (barcodeError) {
-      console.warn('⚠️ Auto-barcode generation failed:', barcodeError.message);
-      // Don't block product creation
+      console.warn('⚠️ Auto-barcode generation note:', barcodeError.message);
     }
 
     return res.status(201).json({
-      success: true, message: 'Product created successfully!',
-      productId: result.insertId, product: { ...newProd, id: result.insertId },
+      success: true,
+      message: 'Product created successfully!',
+      productId,
+      product: {
+        id: productId,
+        title,
+        barcode_short_name,
+        slug: productSlug,
+        price: sellPrice,
+        original_price: origPrice,
+        stock: totalStock,
+      },
     });
   } catch (error) {
-    return res.status(201).json({
-      success: true, message: 'Product created in memory store!', product: newProd,
+    console.error('Create product MySQL error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to create product in database.',
     });
   }
 };
@@ -699,11 +440,11 @@ export const updateProduct = async (req, res) => {
   }
 
   // Parse JSON fields if they come as strings
-  if (typeof updates.sizes === 'string') updates.sizes = JSON.parse(updates.sizes);
-  if (typeof updates.colors === 'string') updates.colors = JSON.parse(updates.colors);
-  if (typeof updates.variants === 'string') updates.variants = JSON.parse(updates.variants);
-  if (typeof updates.color_images === 'string') updates.color_images = JSON.parse(updates.color_images);
-  if (typeof updates.size_guide === 'string') updates.size_guide = JSON.parse(updates.size_guide);
+  if (typeof updates.sizes === 'string') updates.sizes = safeJsonParse(updates.sizes, []);
+  if (typeof updates.colors === 'string') updates.colors = safeJsonParse(updates.colors, []);
+  if (typeof updates.variants === 'string') updates.variants = safeJsonParse(updates.variants, []);
+  if (typeof updates.color_images === 'string') updates.color_images = safeJsonParse(updates.color_images, {});
+  if (typeof updates.size_guide === 'string') updates.size_guide = safeJsonParse(updates.size_guide, null);
   if (updates.size_guide && typeof updates.size_guide !== 'object') updates.size_guide = null;
 
   // Recompute total stock from variants if provided
@@ -712,30 +453,42 @@ export const updateProduct = async (req, res) => {
   }
 
   // Recompute discount
-  if (updates.original_price && updates.price && updates.original_price > updates.price) {
-    updates.discount = Math.round(((updates.original_price - updates.price) / updates.original_price) * 100);
-  }
-
-  const idx = inMemoryProductsStore.findIndex((p) => String(p.id) === String(id) || p.slug === id);
-  if (idx !== -1) {
-    inMemoryProductsStore[idx] = { ...inMemoryProductsStore[idx], ...updates };
+  if (updates.original_price && updates.price && Number(updates.original_price) > Number(updates.price)) {
+    updates.discount = Math.round(((Number(updates.original_price) - Number(updates.price)) / Number(updates.original_price)) * 100);
   }
 
   try {
     const setClauses = [];
     const params = [];
     const fieldMap = {
-      title: 'title', barcode_short_name: 'barcode_short_name', price: 'price', original_price: 'original_price',
-      base_price: 'base_price', hsn_code: 'hsn_code',
-      discount: 'discount', stock: 'stock', category_slug: 'category_slug',
-      brand: 'brand', product_code: 'product_code', base_sku: 'base_sku',
-      description: 'description', short_description: 'short_description',
-      is_featured: 'is_featured', is_new_arrival: 'is_new_arrival',
-      is_online: 'is_online', is_offline: 'is_offline', is_active: 'is_active',
+      title: 'title',
+      barcode_short_name: 'barcode_short_name',
+      price: 'price',
+      original_price: 'original_price',
+      base_price: 'base_price',
+      hsn_code: 'hsn_code',
+      discount: 'discount',
+      stock: 'stock',
+      category_slug: 'category_slug',
+      brand: 'brand',
+      product_code: 'product_code',
+      base_sku: 'base_sku',
+      description: 'description',
+      short_description: 'short_description',
+      is_featured: 'is_featured',
+      is_new_arrival: 'is_new_arrival',
+      is_online: 'is_online',
+      is_offline: 'is_offline',
+      is_active: 'is_active',
       low_stock_threshold: 'low_stock_threshold',
-      primary_image: 'primary_image', hover_image: 'hover_image',
-      fabric: 'fabric', sleeve: 'sleeve', occasion: 'occasion',
-      fit: 'fit', pattern: 'pattern', season: 'season',
+      primary_image: 'primary_image',
+      hover_image: 'hover_image',
+      fabric: 'fabric',
+      sleeve: 'sleeve',
+      occasion: 'occasion',
+      fit: 'fit',
+      pattern: 'pattern',
+      season: 'season',
     };
 
     for (const [key, col] of Object.entries(fieldMap)) {
@@ -769,10 +522,7 @@ export const updateProduct = async (req, res) => {
       await pool.query(`UPDATE products SET ${setClauses.join(', ')} WHERE id = ? OR slug = ?`, params);
     }
 
-    // Persist godown stock rows (replace strategy: sync table to submitted values)
-    // IMPORTANT: only sync when the admin actually entered a distribution (at least one
-    // godown with stock > 0). The product form pre-fills 0 for every godown, so an
-    // all-zero/empty payload must NOT wipe existing godown rows or zero out products.stock.
+    // Persist godown stock distribution
     if (updates.godown_stock !== undefined && Array.isArray(updates.godown_stock)) {
       const parsedGodownStock = updates.godown_stock
         .map((g) => ({ godown_id: parseInt(g.godown_id, 10), stock: Math.max(0, parseInt(g.stock, 10) || 0) }))
@@ -794,7 +544,6 @@ export const updateProduct = async (req, res) => {
           }
         }
 
-        // Recompute product total stock from godown rows
         const [totals] = await pool.query(
           'SELECT COALESCE(SUM(stock), 0) as total FROM product_godown_stock WHERE product_id = ?',
           [realId]
@@ -806,19 +555,55 @@ export const updateProduct = async (req, res) => {
 
     return res.json({ success: true, message: 'Product updated successfully.' });
   } catch (error) {
-    return res.json({ success: true, message: 'Product updated in memory store.' });
+    console.error('Update product error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Failed to update product.' });
   }
 };
 
 // ─── DELETE /products/:id ───
 export const deleteProduct = async (req, res) => {
   const { id } = req.params;
-  inMemoryProductsStore = inMemoryProductsStore.filter((p) => String(p.id) !== String(id) && p.slug !== id);
   try {
-    await pool.query('DELETE FROM products WHERE id = ? OR slug = ?', [id, id]);
-    return res.json({ success: true, message: 'Product deleted successfully.' });
+    // 1. Resolve numeric ID and slug from DB
+    const [rows] = await pool.query('SELECT id, slug FROM products WHERE id = ? OR slug = ?', [id, id]);
+    if (!rows || rows.length === 0) {
+      // Idempotent: Product is already gone from MySQL
+      try {
+        await pool.query('DELETE FROM product_barcodes WHERE product_id = ?', [id]);
+        await pool.query('DELETE FROM product_godown_stock WHERE product_id = ?', [id]);
+      } catch (e) {}
+      return res.json({
+        success: true,
+        message: 'Product deleted from database.',
+        deletedId: id,
+      });
+    }
+
+    const targetId = rows[0].id;
+    const targetSlug = rows[0].slug;
+
+    // 2. Cascade delete all child foreign key records in order
+    try { await pool.query('DELETE FROM product_barcodes WHERE product_id = ?', [targetId]); } catch (e) {}
+    try { await pool.query('DELETE FROM product_godown_stock WHERE product_id = ?', [targetId]); } catch (e) {}
+    try { await pool.query('DELETE FROM product_images WHERE product_id = ?', [targetId]); } catch (e) {}
+    try { await pool.query('DELETE FROM inventory_transactions WHERE product_id = ?', [targetId]); } catch (e) {}
+    try { await pool.query('UPDATE order_items SET product_id = NULL WHERE product_id = ?', [targetId]); } catch (e) {}
+
+    // 3. Delete master product record
+    await pool.query('DELETE FROM products WHERE id = ?', [targetId]);
+
+    return res.json({
+      success: true,
+      message: 'Product and associated records permanently deleted from database.',
+      deletedId: targetId,
+      deletedSlug: targetSlug,
+    });
   } catch (error) {
-    return res.json({ success: true, message: 'Product deleted from memory store.' });
+    console.error('Delete product error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to delete product from database.',
+    });
   }
 };
 
@@ -858,7 +643,6 @@ export const recordOfflineSale = async (req, res) => {
       JSON.stringify(variants), totalStock, product.id,
     ]);
 
-    // Record inventory transaction
     await pool.query(
       'INSERT INTO inventory_transactions (product_id, variant_sku, type, change_qty, balance_after, reference, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [product.id, variant_sku, 'Offline Sale', -qty, variants[vIdx].stock, reference || `OFF-${Date.now()}`, `Offline sale of ${qty} units`]
@@ -947,10 +731,11 @@ export const getInventoryTransactions = async (req, res) => {
     const [rows] = await pool.query(query, params);
     return res.json({ success: true, transactions: rows || [] });
   } catch (error) {
-    return res.json({ success: true, transactions: [] });
+    return res.status(500).json({ success: false, message: error.message, transactions: [] });
   }
 };
 
+// ─── PATCH /products/:id/new-arrival ───
 export const updateNewArrivalStatus = async (req, res) => {
   const { id } = req.params;
   const { is_new_arrival, new_arrival_order, new_arrival_published } = req.body;
@@ -985,6 +770,7 @@ export const updateNewArrivalStatus = async (req, res) => {
   }
 };
 
+// ─── PATCH /products/new-arrivals/bulk ───
 export const updateNewArrivalsBulk = async (req, res) => {
   const { productIds, isNewArrival, newArrivalPublished } = req.body;
 
@@ -1010,9 +796,7 @@ export const updateNewArrivalsBulk = async (req, res) => {
     }
 
     params.push(productIds);
-
-    const query = `UPDATE products SET ${setClause.join(', ')} WHERE id IN (?)`;
-    await pool.query(query, params);
+    await pool.query(`UPDATE products SET ${setClause.join(', ')} WHERE id IN (?)`, params);
 
     return res.json({
       success: true,
@@ -1023,8 +807,9 @@ export const updateNewArrivalsBulk = async (req, res) => {
   }
 };
 
+// ─── PATCH /products/new-arrivals/reorder ───
 export const reorderNewArrivals = async (req, res) => {
-  const { orders } = req.body; // array of { id, new_arrival_order }
+  const { orders } = req.body;
 
   if (!Array.isArray(orders)) {
     return res.status(400).json({ success: false, message: 'Invalid orders array.' });
@@ -1040,6 +825,7 @@ export const reorderNewArrivals = async (req, res) => {
   }
 };
 
+// ─── PATCH /products/:id/sale ───
 export const updateSaleStatus = async (req, res) => {
   const { id } = req.params;
   const { is_sale, sale_order, sale_published } = req.body;
@@ -1074,6 +860,7 @@ export const updateSaleStatus = async (req, res) => {
   }
 };
 
+// ─── PATCH /products/sales/bulk ───
 export const updateSalesBulk = async (req, res) => {
   const { productIds, isSale, salePublished } = req.body;
 
@@ -1099,9 +886,7 @@ export const updateSalesBulk = async (req, res) => {
     }
 
     params.push(productIds);
-
-    const query = `UPDATE products SET ${setClause.join(', ')} WHERE id IN (?)`;
-    await pool.query(query, params);
+    await pool.query(`UPDATE products SET ${setClause.join(', ')} WHERE id IN (?)`, params);
 
     return res.json({
       success: true,
@@ -1112,8 +897,9 @@ export const updateSalesBulk = async (req, res) => {
   }
 };
 
+// ─── PATCH /products/sales/reorder ───
 export const reorderSales = async (req, res) => {
-  const { orders } = req.body; // array of { id, sale_order }
+  const { orders } = req.body;
 
   if (!Array.isArray(orders)) {
     return res.status(400).json({ success: false, message: 'Invalid orders array.' });

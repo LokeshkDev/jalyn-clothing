@@ -89,13 +89,12 @@ export default function MobilePurchaseBar({ product, selectedSize, selectedColor
       >
         <div className="flex items-center gap-2 px-3 py-3">
           {/* Wishlist Button */}
-          <motion.button
+          <button
             type="button"
             aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
             onClick={() => wishStore.toggle(product.id)}
-            whileTap={{ scale: 0.9 }}
             className={cn(
-              'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border-2 transition-all',
+              'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border-2 transition-all active:scale-90 cursor-pointer',
               isWishlisted
                 ? 'border-primary bg-primary/5'
                 : 'border-[#E5D8DE] bg-white',
@@ -107,15 +106,14 @@ export default function MobilePurchaseBar({ product, selectedSize, selectedColor
                 isWishlisted ? 'fill-primary text-primary' : 'text-[#222222]',
               )}
             />
-          </motion.button>
+          </button>
 
           {/* ENTER PINCODE / ADD TO BAG */}
-          <motion.button
+          <button
             type="button"
             onClick={handleAddBag}
-            whileTap={{ scale: 0.97 }}
             className={cn(
-              'flex h-12 flex-1 items-center justify-center gap-1.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all',
+              'flex h-12 flex-1 items-center justify-center gap-1.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer',
               isOutOfStock
                 ? 'bg-red-100 text-red-500 border border-red-300'
                 : deliveryStore.isVerified
@@ -139,15 +137,14 @@ export default function MobilePurchaseBar({ product, selectedSize, selectedColor
                 <span>ENTER PINCODE</span>
               </>
             )}
-          </motion.button>
+          </button>
 
           {/* BUY NOW */}
-          <motion.button
+          <button
             type="button"
             onClick={handleAddBag}
-            whileTap={{ scale: 0.97 }}
             className={cn(
-              'flex h-12 flex-1 items-center justify-center rounded-xl border-2 text-[11px] font-bold uppercase tracking-wider transition-all',
+              'flex h-12 flex-1 items-center justify-center rounded-xl border-2 text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer',
               isOutOfStock
                 ? 'border-red-200 bg-red-50 text-red-400'
                 : deliveryStore.isVerified
@@ -156,7 +153,7 @@ export default function MobilePurchaseBar({ product, selectedSize, selectedColor
             )}
           >
             <span>{isOutOfStock ? 'OUT OF STOCK' : 'BUY NOW'}</span>
-          </motion.button>
+          </button>
         </div>
       </div>
     </>

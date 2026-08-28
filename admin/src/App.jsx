@@ -15,6 +15,7 @@ import ScannerPage from './pages/ScannerPage';
 import BarcodesPage from './pages/BarcodesPage';
 import StockHistoryPage from './pages/StockHistoryPage';
 import NewsletterPage from './pages/NewsletterPage';
+import CookieConsentPage from './pages/CookieConsentPage';
 import VendorsPage from './pages/VendorsPage';
 import RacksPage from './pages/RacksPage';
 import GodownsPage from './pages/GodownsPage';
@@ -136,6 +137,14 @@ function ProtectedLayout({ user, onLogout }) {
             element={
               <RoleGuard user={user} allowedRoles={['superadmin', 'admin']}>
                 <SalePage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="/cookie-consent"
+            element={
+              <RoleGuard user={user} allowedRoles={['superadmin', 'admin']}>
+                <CookieConsentPage />
               </RoleGuard>
             }
           />

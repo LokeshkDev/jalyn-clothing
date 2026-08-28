@@ -8,13 +8,16 @@ import {
   CreditCard,
   ChevronRight,
   ChevronDown,
+  Cookie,
 } from 'lucide-react'
 import { useCmsData } from '@/hooks/useCmsData'
+import { useConsentStore } from '@/store'
 
 const POLICY_TABS = [
   { id: 'shipping-delivery', label: 'Shipping & Delivery', icon: Truck },
   { id: 'returns-exchanges', label: 'Returns & Exchanges', icon: RotateCcw },
   { id: 'privacy-policy', label: 'Privacy Policy', icon: ShieldCheck },
+  { id: 'cookie-policy', label: 'Cookie Policy', icon: Cookie },
   { id: 'terms-of-service', label: 'Terms of Service', icon: FileText },
   { id: 'refund-policy', label: 'Refund Policy', icon: CreditCard },
 ]
@@ -62,6 +65,31 @@ const DEFAULT_POLICY_CONTENT = {
     title: 'Privacy Policy',
     content_html: `
       <p>Your privacy is paramount to us. JALYN Apparels collects only necessary information required to process your orders, process payments securely, and deliver exceptional service. We never sell or share your personal data with third-party advertisers.</p>
+    `,
+  },
+  'cookie-policy': {
+    title: 'Cookie & Privacy Policy',
+    content_html: `
+      <p>This Cookie Policy explains how JALYN uses cookies and similar storage technologies to recognize you when you visit our website, remember your shopping preferences, and safeguard your account.</p>
+      <div class="space-y-4 my-6">
+        <div class="p-5 rounded-2xl bg-[#FAF7F5] border border-[#EFE8E2]">
+          <h4 class="font-semibold text-sm text-[#2C1C24]">1. Strictly Necessary Cookies</h4>
+          <p class="text-xs text-gray-600 mt-1 leading-relaxed">Essential for website security, user authentication, shopping bag persistence, and checkout. These cannot be switched off.</p>
+        </div>
+        <div class="p-5 rounded-2xl bg-[#FAF7F5] border border-[#EFE8E2]">
+          <h4 class="font-semibold text-sm text-[#2C1C24]">2. Functional &amp; Preferences Cookies</h4>
+          <p class="text-xs text-gray-600 mt-1 leading-relaxed">Enable enhanced functionality like remembering your saved wishlist items, location pincode, and preferred currency.</p>
+        </div>
+        <div class="p-5 rounded-2xl bg-[#FAF7F5] border border-[#EFE8E2]">
+          <h4 class="font-semibold text-sm text-[#2C1C24]">3. Analytics &amp; Performance Cookies</h4>
+          <p class="text-xs text-gray-600 mt-1 leading-relaxed">Allow us to measure visitor counts and traffic sources to evaluate and improve our fashion catalog performance anonymously.</p>
+        </div>
+        <div class="p-5 rounded-2xl bg-[#FAF7F5] border border-[#EFE8E2]">
+          <h4 class="font-semibold text-sm text-[#2C1C24]">4. Marketing &amp; Advertising Cookies</h4>
+          <p class="text-xs text-gray-600 mt-1 leading-relaxed">Used to deliver promotional banners and measure the effectiveness of our digital advertising campaigns.</p>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500">You can adjust or revoke your cookie choices at any time by clicking "Cookie Settings" in our footer.</p>
     `,
   },
   'terms-of-service': {
@@ -164,6 +192,18 @@ export default function PolicyPage({ initialTab }) {
                       className="text-xs sm:text-sm text-gray-600 leading-relaxed font-light space-y-3 [&_a]:text-[#C28E5C] [&_a]:underline [&_ul]:list-disc [&_ul]:list-inside [&_ul]:space-y-1.5"
                       dangerouslySetInnerHTML={{ __html: tabHtml }}
                     />
+                    {tab.id === 'cookie-policy' && (
+                      <div className="pt-3 border-t border-[#EFE8E2]">
+                        <button
+                          type="button"
+                          onClick={() => useConsentStore.getState().openPreferencesModal()}
+                          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#2C1C24] text-white text-xs font-semibold rounded-lg hover:bg-[#4A2F3C] shadow transition cursor-pointer"
+                        >
+                          <Cookie className="w-3.5 h-3.5 text-[#E8C5A8]" />
+                          Manage Cookie Preferences
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -206,6 +246,19 @@ export default function PolicyPage({ initialTab }) {
                 className="text-sm text-gray-600 leading-relaxed font-light space-y-4 [&_a]:text-[#C28E5C] [&_a]:underline [&_ul]:list-disc [&_ul]:list-inside [&_ul]:space-y-2"
                 dangerouslySetInnerHTML={{ __html: contentHtml }}
               />
+
+              {activeTabId === 'cookie-policy' && (
+                <div className="pt-4 border-t border-[#EFE8E2]">
+                  <button
+                    type="button"
+                    onClick={() => useConsentStore.getState().openPreferencesModal()}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#2C1C24] text-white text-xs font-semibold rounded-lg hover:bg-[#4A2F3C] shadow transition cursor-pointer"
+                  >
+                    <Cookie className="w-4 h-4 text-[#E8C5A8]" />
+                    Manage Cookie Preferences
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -1,6 +1,5 @@
 import pool from '../config/db.js';
 import { processAndStoreImage } from '../services/imageService.js';
-import { SEED_PRODUCTS } from './productController.js';
 
 export const MOCK_CATEGORIES = [
   { id: 1, slug: 'all', name: 'All Categories' },
@@ -43,10 +42,10 @@ export const ensureCategoriesTable = async () => {
           );
         }
       }
-      console.log('✅ MySQL categories table seeded with categories!');
+      console.log('✅ MySQL categories table verified!');
     }
   } catch (err) {
-    console.log('ℹ️ MySQL categories table check:', err.message);
+    console.warn('ℹ️ MySQL categories table check:', err.message);
   }
 };
 
@@ -68,9 +67,8 @@ export const getCategories = async (req, res) => {
           FROM products p 
           WHERE (
             p.category_slug = c.slug 
-            OR LOWER(TRIM(p.category)) = LOWER(TRIM(c.name))
-            OR LOWER(TRIM(p.category)) = LOWER(TRIM(c.slug))
-            OR p.category_id = c.id
+            OR LOWER(TRIM(p.category_slug)) = LOWER(TRIM(c.name))
+            OR LOWER(TRIM(p.category_slug)) = LOWER(TRIM(c.slug))
           )
           AND (p.is_active = 1 OR p.is_active IS NULL)
         ) AS item_count
@@ -79,39 +77,10 @@ export const getCategories = async (req, res) => {
       ORDER BY c.id ASC
     `);
 
-    if (!rows || rows.length === 0) {
-      const countsMap = {};
-      (SEED_PRODUCTS || []).forEach((p) => {
-        const s = (p.category_slug || p.category || '').toLowerCase().trim();
-        if (s) countsMap[s] = (countsMap[s] || 0) + 1;
-      });
-      const categoriesWithCount = MOCK_CATEGORIES.map((cat) => ({
-        ...cat,
-        item_count: countsMap[cat.slug] || 0,
-      }));
-      return res.json({ success: true, categories: categoriesWithCount, isFallback: true });
-    }
-    return res.json({ success: true, categories: rows });
+    return res.json({ success: true, categories: rows || [] });
   } catch (error) {
-    try {
-      const [basicRows] = await pool.query(`
-        SELECT c.*, 
-        (SELECT COUNT(*) FROM products p WHERE (p.category_slug = c.slug OR p.category = c.name) AND (p.is_active = 1 OR p.is_active IS NULL)) AS item_count 
-        FROM categories c WHERE is_active = 1 ORDER BY id ASC
-      `);
-      return res.json({ success: true, categories: basicRows });
-    } catch (err) {
-      const countsMap = {};
-      (SEED_PRODUCTS || []).forEach((p) => {
-        const s = (p.category_slug || p.category || '').toLowerCase().trim();
-        if (s) countsMap[s] = (countsMap[s] || 0) + 1;
-      });
-      const categoriesWithCount = MOCK_CATEGORIES.map((cat) => ({
-        ...cat,
-        item_count: countsMap[cat.slug] || 0,
-      }));
-      return res.json({ success: true, categories: categoriesWithCount, isFallback: true });
-    }
+    console.error('getCategories error:', error);
+    return res.status(500).json({ success: false, message: error.message, categories: [] });
   }
 };
 

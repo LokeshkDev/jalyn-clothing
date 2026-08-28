@@ -283,6 +283,7 @@ export default function CategoryPage() {
         description={categoryDescription}
         canonical={`/collections/${slug}`}
         image={categoryBanner}
+        preloadImage={categoryBanner}
         schema={categorySchema}
       />
       
@@ -290,10 +291,21 @@ export default function CategoryPage() {
       <div className="block lg:hidden">
         
         {/* Mobile Hero Header */}
-        <section className="relative w-full bg-cover bg-center flex flex-col justify-center py-6 px-4 mb-3 overflow-hidden"
-          style={{ backgroundImage: `url(${categoryBanner})` }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-[#2A1A22]/90 via-[#2A1A22]/70 to-transparent z-[1]" />
+        <section className="relative w-full flex flex-col justify-center py-6 px-4 mb-3 overflow-hidden bg-[#2A1A22]">
+          <img
+            src={categoryBanner}
+            alt={categoryTitle}
+            fetchPriority="high"
+            loading="eager"
+            decoding="async"
+            width="768"
+            height="320"
+            className="absolute inset-0 h-full w-full object-cover object-center pointer-events-none"
+            onError={(e) => {
+              e.currentTarget.src = '/images/home/hero/hero-slide-1.webp'
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#2A1A22]/90 via-[#2A1A22]/70 to-transparent z-[1] pointer-events-none" />
           <div className="relative z-10 space-y-1.5">
             <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-[11px] font-semibold text-rose-blush/80">
               <Link to="/" className="hover:text-white transition">Home</Link>
@@ -396,12 +408,22 @@ export default function CategoryPage() {
       {/* DESKTOP CATEGORY VIEW (>= 1024px / lg) */}
       <div className="hidden lg:block">
         
-        {/* Editorial Compact Header with Background Banner */}
-        <section
-          className="relative w-full bg-cover bg-center flex flex-col justify-center py-8 md:py-10 overflow-hidden"
-          style={{ backgroundImage: `url(${categoryBanner})` }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-[#2A1A22]/90 via-[#2A1A22]/65 to-transparent z-[1]" />
+        {/* Editorial Compact Header with High-Priority Background Banner Image */}
+        <section className="relative w-full flex flex-col justify-center py-8 md:py-10 overflow-hidden bg-[#2A1A22]">
+          <img
+            src={categoryBanner}
+            alt={categoryTitle}
+            fetchPriority="high"
+            loading="eager"
+            decoding="async"
+            width="1440"
+            height="400"
+            className="absolute inset-0 h-full w-full object-cover object-center pointer-events-none"
+            onError={(e) => {
+              e.currentTarget.src = '/images/home/hero/hero-slide-1.webp'
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#2A1A22]/90 via-[#2A1A22]/65 to-transparent z-[1] pointer-events-none" />
           <div className="relative z-10 container-luxury max-w-7xl px-0 sm:px-6 w-full space-y-2.5">
             {/* Minimal Breadcrumb */}
             <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-rose-blush/80 font-semibold">

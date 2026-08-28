@@ -158,6 +158,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
         {
           product_id: product.id,
           product_name: product.title || product.name || 'Untitled Item',
+          barcode_short_name: product.barcode_short_name || product.short_name || '',
           sku: sku,
           hsn_code: hsnCode,
           price: mrp,
@@ -182,7 +183,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     setSearchFocused(false);
   };
 
-  // Handle barcode / QR scan or manual barcode typing
+  // Handle barcode / QR scan or manual barcode/SKU/Short Name typing
   const handleBarcodeOrQrScanned = useCallback(
     async (code) => {
       if (!code || !isOpen) return false;
@@ -196,10 +197,11 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
       }
       lastScannedRef.current = { code: clean, timestamp: now };
 
-      // 1. Check in barcodesList (exact barcode match e.g. JN-12345 or 12345)
+      // 1. Check in barcodesList (exact barcode match e.g. JN-12345 or 12345, or barcode_short_name match)
       const matchedBarcode = barcodesList.find((b) => {
         const bCode = (b.barcode || '').toLowerCase();
-        return bCode === clean || bCode.replace('jn-', '') === clean || bCode.replace(/^0+/, '') === clean;
+        const bShort = (b.barcode_short_name || '').toLowerCase();
+        return bCode === clean || bCode.replace('jn-', '') === clean || bCode.replace(/^0+/, '') === clean || bShort === clean;
       });
 
       let matchedProduct = null;
@@ -212,14 +214,16 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
         selectedColor = matchedBarcode.color || null;
       }
 
-      // 2. Check in products array by barcode, SKU, product_code, or ID
+      // 2. Check in products array by barcode, SKU, barcode_short_name, product_code, title, or ID
       if (!matchedProduct) {
         matchedProduct = products.find((p) => {
           const b = (p.barcode || '').toLowerCase();
           const s = (p.base_sku || p.sku || '').toLowerCase();
+          const sn = (p.barcode_short_name || p.short_name || '').toLowerCase();
           const c = (p.product_code || '').toLowerCase();
+          const t = (p.title || p.name || '').toLowerCase();
           const idMatch = String(p.id) === clean;
-          return b === clean || s === clean || c === clean || idMatch;
+          return b === clean || s === clean || sn === clean || c === clean || t === clean || idMatch;
         });
       }
 
@@ -279,28 +283,29 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     }
   });
 
-  // Filtered Products for Live Search & SKU/Barcode Auto-populate
+  // Filtered Products for Live Search & SKU/Barcode/Short-Name Auto-populate
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return [];
 
-    // Find product IDs matching barcodes
+    // Find product IDs matching barcodes or barcode short names
     const matchingBarcodeProductIds = new Set(
       barcodesList
-        .filter((b) => (b.barcode || '').toLowerCase().includes(q))
+        .filter((b) => (b.barcode || '').toLowerCase().includes(q) || (b.barcode_short_name || '').toLowerCase().includes(q))
         .map((b) => b.product_id)
     );
 
     return products
       .filter((p) => {
         const titleMatch = (p.title || p.name || '').toLowerCase().includes(q);
+        const shortNameMatch = (p.barcode_short_name || p.short_name || '').toLowerCase().includes(q);
         const skuMatch = (p.base_sku || p.sku || '').toLowerCase().includes(q);
         const prodCodeMatch = (p.product_code || '').toLowerCase().includes(q);
         const barcodeMatch = (p.barcode || '').toLowerCase().includes(q) || matchingBarcodeProductIds.has(p.id);
         const catMatch = (p.category || p.category_name || p.category_slug || '').toLowerCase().includes(q);
-        return titleMatch || skuMatch || prodCodeMatch || barcodeMatch || catMatch;
+        return titleMatch || shortNameMatch || skuMatch || prodCodeMatch || barcodeMatch || catMatch;
       })
-      .slice(0, 8); // Top 8 matches
+      .slice(0, 10); // Top 10 matches
   }, [searchQuery, products, barcodesList]);
 
   // Add empty custom item
@@ -311,6 +316,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
       {
         product_id: null,
         product_name: '',
+        barcode_short_name: '',
         sku: `SKU-${randomHex}`,
         hsn_code: '6204',
         price: '',
@@ -327,10 +333,48 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     ]);
   };
 
-  // Update line item details (rate edits dynamically update item's GST rate slab + base price, and vice versa)
+  // Update line item details (rate edits dynamically update item's GST rate slab + base price, and auto-populates product by SKU/Short Name)
   const handleUpdateItem = (index, field, value) => {
     const updated = [...billItems];
     updated[index][field] = value;
+
+    // AUTO-POPULATE when user types or edits SKU or Barcode Short Name
+    if ((field === 'sku' || field === 'barcode_short_name') && value && value.trim().length >= 2) {
+      const cleanVal = value.trim().toLowerCase();
+      const matched = products.find((p) => {
+        const pSku = (p.base_sku || p.sku || '').toLowerCase();
+        const pShort = (p.barcode_short_name || p.short_name || '').toLowerCase();
+        const pBarcode = (p.barcode || '').toLowerCase();
+        const pCode = (p.product_code || '').toLowerCase();
+        return pSku === cleanVal || pShort === cleanVal || pBarcode === cleanVal || pCode === cleanVal;
+      });
+
+      if (matched) {
+        const mrp = Number(matched.original_price) || Number(matched.compare_price) || Number(matched.price) || 0;
+        const itemGstRate = getApparelGstRate(mrp);
+        const defaultSize = Array.isArray(matched.sizes) && matched.sizes.length > 0 ? matched.sizes[0] : (matched.size || 'Free Size');
+        const defaultColor = Array.isArray(matched.colors) && matched.colors.length > 0 ? matched.colors[0] : (matched.color || '');
+
+        updated[index].product_id = matched.id;
+        updated[index].product_name = matched.title || matched.name || 'Untitled Item';
+        updated[index].barcode_short_name = matched.barcode_short_name || matched.short_name || '';
+        updated[index].sku = matched.base_sku || matched.sku || updated[index].sku;
+        updated[index].hsn_code = matched.hsn_code || '6204';
+        updated[index].price = mrp;
+        updated[index].original_price = mrp;
+        updated[index].gst_rate = itemGstRate;
+        if (isGstInclusive) {
+          updated[index].base_price = mrp > 0 ? Math.round((mrp / (1 + itemGstRate / 100)) * 100) / 100 : '';
+        } else {
+          updated[index].base_price = mrp;
+        }
+        updated[index].size = updated[index].size || defaultSize;
+        updated[index].color = updated[index].color || defaultColor;
+        updated[index].image_url = matched.primary_image || matched.image || matched.image_url || '';
+        updated[index].available_sizes = Array.isArray(matched.sizes) ? matched.sizes : [];
+        updated[index].available_colors = Array.isArray(matched.colors) ? matched.colors : [];
+      }
+    }
 
     if (field === 'price') {
       // RATE (MRP) changed → recalculate base_price from MRP
@@ -758,6 +802,11 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                                 <span className="font-mono px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded font-bold border border-gray-200">
                                   {displaySku}
                                 </span>
+                                {prod.barcode_short_name && (
+                                  <span className="font-bold px-1.5 py-0.5 bg-pink-50 text-[#AD4A85] rounded border border-pink-200 text-[10px]">
+                                    🏷️ {prod.barcode_short_name}
+                                  </span>
+                                )}
                                 {matchedBarcode && (
                                   <span className="font-mono px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded font-bold border border-purple-200">
                                     🏷️ {matchedBarcode.barcode} {matchedBarcode.size ? `(${matchedBarcode.size})` : ''}
@@ -788,7 +837,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                                 e.stopPropagation();
                                 handleAddProduct(prod, matchedBarcode?.size || null, matchedBarcode?.color || null);
                               }}
-                              className="px-2.5 py-1.5 bg-[#2A1A22] hover:bg-[#3D2631] text-white text-[11px] font-bold rounded-lg transition shadow-xs flex items-center gap-1"
+                              className="px-2.5 py-1.5 bg-[#2A1A22] hover:bg-[#3D2631] text-white text-[11px] font-bold rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
                             >
                               <Plus className="w-3 h-3" /> Add
                             </button>
@@ -823,12 +872,12 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                   </div>
                   <p className="font-bold text-xs text-gray-800">No items added to the bill yet</p>
                   <p className="text-[11px] text-gray-500 mt-0.5 max-w-xs">
-                    Search product title or SKU above, or scan barcode to automatically add products.
+                    Search product title, Barcode Short Name, or SKU above, or scan barcode to automatically add products.
                   </p>
                   <button
                     type="button"
                     onClick={handleAddCustomItem}
-                    className="mt-3 px-3.5 py-1.5 bg-[#2A1A22] text-white hover:bg-[#3D2631] font-bold text-xs rounded-xl transition"
+                    className="mt-3 px-3.5 py-1.5 bg-[#2A1A22] text-white hover:bg-[#3D2631] font-bold text-xs rounded-xl transition cursor-pointer"
                   >
                     + Add Custom Item
                   </button>
@@ -840,7 +889,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                       key={idx}
                       className="p-3.5 bg-white rounded-xl border border-gray-200/90 shadow-xs flex flex-col gap-2.5 hover:border-pink-200 transition"
                     >
-                      {/* Top Row: Thumbnail + Product Name (Full Width) + SKU + Size */}
+                      {/* Top Row: Thumbnail + Product Name (Full Width) + Short Name + SKU + Size */}
                       <div className="flex items-start gap-3">
                         {item.image_url ? (
                           <img
@@ -864,14 +913,27 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                           />
 
                           <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                            <div className="flex items-center gap-1 bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
+                            {/* Barcode Short Name (On Barcode) */}
+                            <div className="flex items-center gap-1 bg-pink-50/80 px-2 py-0.5 rounded border border-pink-200" title="Barcode Short Name (printed on barcode label) — typing auto-populates product">
+                              <span className="text-[9px] text-[#AD4A85] font-extrabold uppercase tracking-wider">Short:</span>
+                              <input
+                                type="text"
+                                value={item.barcode_short_name || ''}
+                                onChange={(e) => handleUpdateItem(idx, 'barcode_short_name', e.target.value.toUpperCase())}
+                                placeholder="SHORT NAME"
+                                className="font-bold text-[10px] text-pink-950 bg-transparent w-24 outline-none uppercase placeholder:text-pink-300"
+                              />
+                            </div>
+
+                            {/* SKU Code */}
+                            <div className="flex items-center gap-1 bg-gray-50 px-2 py-0.5 rounded border border-gray-200" title="SKU Code — typing auto-populates product">
                               <Tag className="w-3 h-3 text-gray-400" />
                               <input
                                 type="text"
                                 value={item.sku || ''}
                                 onChange={(e) => handleUpdateItem(idx, 'sku', e.target.value.toUpperCase())}
                                 placeholder="SKU-0U02"
-                                className="font-mono text-[10px] font-bold text-gray-700 bg-transparent w-20 outline-none uppercase"
+                                className="font-mono text-[10px] font-bold text-gray-700 bg-transparent w-20 outline-none uppercase placeholder:text-gray-400"
                               />
                             </div>
 

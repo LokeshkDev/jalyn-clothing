@@ -116,6 +116,8 @@ function AppRoutes() {
           <Route path="returns-exchanges" element={<PolicyPage initialTab="returns-exchanges" />} />
           <Route path="return-policy" element={<PolicyPage initialTab="returns-exchanges" />} />
           <Route path="privacy-policy" element={<PolicyPage initialTab="privacy-policy" />} />
+          <Route path="cookie-policy" element={<PolicyPage initialTab="cookie-policy" />} />
+          <Route path="cookies-policy" element={<PolicyPage initialTab="cookie-policy" />} />
           <Route path="terms-of-service" element={<PolicyPage initialTab="terms-of-service" />} />
           <Route path="terms-and-conditions" element={<PolicyPage initialTab="terms-of-service" />} />
           <Route path="refund-policy" element={<PolicyPage initialTab="refund-policy" />} />

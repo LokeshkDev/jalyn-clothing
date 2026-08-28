@@ -361,3 +361,6 @@ export const useOrderStore = create(
     { name: 'jalyn-orders' },
   ),
 )
+
+export { useConsentStore } from './useConsentStore'
+

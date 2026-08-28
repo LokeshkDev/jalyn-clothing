@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Header from '../components/Header';
 import ImageUploader from '../components/ImageUploader';
 import BarcodeLabel from '../components/BarcodeLabel';
@@ -776,14 +776,31 @@ export default function ProductsPage() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
+  const handleDelete = async (id, title = '') => {
+    const displayName = title ? `"${title}"` : 'this product';
+    if (
+      !window.confirm(
+        `Are you sure you want to permanently delete ${displayName}?\nThis will remove the product and its associated barcodes and inventory records.`
+      )
+    )
+      return;
+
+    // Optimistic UI state removal
+    const prevProducts = [...products];
+    setProducts((prev) => prev.filter((p) => String(p.id) !== String(id) && p.slug !== id));
+
     try {
-      await api.delete(`/products/${id}`);
-      setProducts(products.filter((p) => p.id !== id));
-      showToast('Product deleted.');
+      const res = await api.delete(`/products/${id}`);
+      if (res.data?.success) {
+        showToast(res.data?.message || 'Product deleted successfully.');
+        loadData(); // Re-sync in background to ensure all KPI counts remain perfectly accurate
+      } else {
+        throw new Error(res.data?.message || 'Delete operation failed.');
+      }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to delete product', 'error');
+      // Rollback optimistic update on error
+      setProducts(prevProducts);
+      showToast(err.response?.data?.message || err.message || 'Failed to delete product', 'error');
     }
   };
 
@@ -801,11 +818,20 @@ export default function ProductsPage() {
     }
   };
 
-  const filteredProducts = products.filter((p) => {
-    const matchesSearch = p.title?.toLowerCase().includes(search.toLowerCase()) || p.base_sku?.toLowerCase().includes(search.toLowerCase());
-    const matchesCat = filterCat === 'all' || p.category_slug === filterCat;
-    return matchesSearch && matchesCat;
-  });
+  const filteredProducts = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    return products.filter((p) => {
+      const matchesSearch =
+        !s ||
+        (p.title && p.title.toLowerCase().includes(s)) ||
+        (p.barcode_short_name && p.barcode_short_name.toLowerCase().includes(s)) ||
+        (p.base_sku && p.base_sku.toLowerCase().includes(s)) ||
+        (p.sku && p.sku.toLowerCase().includes(s)) ||
+        (p.product_code && p.product_code.toLowerCase().includes(s));
+      const matchesCat = filterCat === 'all' || p.category_slug === filterCat;
+      return matchesSearch && matchesCat;
+    });
+  }, [products, search, filterCat]);
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -1078,14 +1104,14 @@ export default function ProductsPage() {
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => handleOpenEditModal(p)}
-                            className="p-1.5 rounded-lg text-gray-600 hover:text-brand-600 hover:bg-pink-50 transition"
+                            className="p-1.5 rounded-lg text-gray-600 hover:text-brand-600 hover:bg-pink-50 transition cursor-pointer"
                             title="Full Product Edit"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDelete(p.id)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                            onClick={() => handleDelete(p.id, p.title)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
                             title="Delete Product"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1115,7 +1141,7 @@ export default function ProductsPage() {
                   Configure basic details, online/offline switches, color-wise galleries, automated matrix &amp; size guides.
                 </p>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800">
+              <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>

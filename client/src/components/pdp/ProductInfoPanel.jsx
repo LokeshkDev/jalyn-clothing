@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Star, Ruler, Sparkles, Heart, Check } from 'lucide-react'
+import { Ruler, Sparkles, Heart, Check } from 'lucide-react'
 import { SHOP_COLORS } from '@/constants/shopProducts'
 import { cn, formatINR } from '@/lib/utils'
 
@@ -56,40 +56,6 @@ export default function ProductInfoPanel({
         <h1 className="font-display text-3xl font-medium tracking-tight text-ink sm:text-[34px] leading-tight">
           {product.title}
         </h1>
-
-        {/* Rating & Review Row */}
-        <div className="mt-2.5 flex items-center gap-3 text-xs sm:text-sm text-ink-muted">
-          <div className="flex items-center gap-1">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star
-                key={i}
-                className={cn(
-                  'h-4 w-4',
-                  i < Math.floor(product.rating)
-                    ? 'fill-primary text-primary'
-                    : 'fill-rose-light text-rose-light',
-                )}
-              />
-            ))}
-            <span className="ml-1 font-semibold text-ink">{product.rating}</span>
-          </div>
-
-          <button
-            type="button"
-            onClick={onScrollToReviews}
-            className="hover:text-primary underline decoration-primary/30 transition-colors"
-          >
-            ({product.reviews} reviews)
-          </button>
-
-          <span className="text-primary/30" aria-hidden>
-            |
-          </span>
-
-          <span className="text-ink-muted">
-            Sold <span className="font-semibold text-ink">372</span>
-          </span>
-        </div>
       </div>
 
       {/* Price Block */}

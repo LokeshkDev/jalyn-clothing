@@ -15,7 +15,7 @@ import {
   updateSalesBulk,
   reorderSales,
 } from '../controllers/productController.js';
-import { verifyToken, adminOnly } from '../middleware/auth.js';
+import { verifyToken, adminOnly, managerOrAbove } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 
 const router = express.Router();
@@ -38,7 +38,7 @@ router.get('/:slug', getProductBySlug);
 router.post(
   '/',
   verifyToken,
-  adminOnly,
+  managerOrAbove,
   upload.fields([
     { name: 'primary_image', maxCount: 1 },
     { name: 'hover_image', maxCount: 1 },
@@ -46,11 +46,11 @@ router.post(
   createProduct
 );
 
-router.put('/:id', verifyToken, adminOnly, upload.single('primary_image'), updateProduct);
-router.delete('/:id', verifyToken, adminOnly, deleteProduct);
+router.put('/:id', verifyToken, managerOrAbove, upload.single('primary_image'), updateProduct);
+router.delete('/:id', verifyToken, managerOrAbove, deleteProduct);
 
-router.post('/:id/offline-sale', verifyToken, adminOnly, recordOfflineSale);
-router.post('/:id/adjust-stock', verifyToken, adminOnly, adjustStock);
+router.post('/:id/offline-sale', verifyToken, managerOrAbove, recordOfflineSale);
+router.post('/:id/adjust-stock', verifyToken, managerOrAbove, adjustStock);
 
 export default router;
 

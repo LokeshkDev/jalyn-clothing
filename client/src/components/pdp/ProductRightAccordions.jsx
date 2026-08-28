@@ -150,9 +150,8 @@ export default function ProductRightAccordions({ product, reviewsRef }) {
         >
           <div className="flex items-center gap-2">
             <span>Customer Reviews</span>
-            <span className="flex items-center text-primary font-bold text-[11px] bg-rose-light/50 px-2 py-0.5 rounded-full">
-              <Star className="h-3 w-3 fill-primary mr-1" />
-              {product?.rating || 4.8} ({product?.reviews || 124})
+            <span className="text-primary font-semibold text-[11px] bg-rose-light/50 px-2 py-0.5 rounded-full">
+              ({product?.reviews || 124})
             </span>
           </div>
           <ChevronDown

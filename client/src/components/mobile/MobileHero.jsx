@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Autoplay, Pagination } from 'swiper/modules'
-import { motion } from 'framer-motion'
 import { HERO_SLIDES } from '@/constants/data'
 import { useCmsData } from '@/hooks/useCmsData'
 import 'swiper/css'
@@ -43,13 +42,9 @@ export default function MobileHero() {
   }, [slides])
 
   return (
-    <motion.section
+    <section
       className="w-full mb-4 overflow-hidden"
       aria-label="Featured collection"
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
       <Swiper
         modules={[Autoplay, Pagination]}
@@ -173,6 +168,6 @@ export default function MobileHero() {
           border-radius: 999px !important;
         }
       `}</style>
-    </motion.section>
+    </section>
   )
 }

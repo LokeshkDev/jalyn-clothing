@@ -8,7 +8,7 @@ import WhyJalyn from '@/components/home/WhyJalyn'
 import InstagramFeed from '@/components/home/InstagramFeed'
 import Newsletter from '@/components/home/Newsletter'
 import MobileTrendingProducts from '@/components/mobile/MobileTrendingProducts'
-import { SaleCarousel } from '@/components/home/HomeCarousels'
+import MobileSale from '@/components/mobile/MobileSale'
 import { useCmsData } from '@/hooks/useCmsData'
 
 /** App-style homepage for mobile & tablet (< lg) */
@@ -40,7 +40,7 @@ export default function MobileHome() {
       case 'new_arrivals':
         return <MobileNewArrivals />
       case 'exclusive_sale':
-        return <SaleCarousel />
+        return <MobileSale />
       case 'our_products':
         return <MobileTrendingProducts />
       case 'promo_banner':
