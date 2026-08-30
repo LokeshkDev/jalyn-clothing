@@ -90,16 +90,11 @@ export default function RichTextEditor({ value, onChange, placeholder = 'Start w
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await api.post('/upload/single', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await api.post('/upload/single', formData);
 
       const imageUrl = response.data?.file?.url;
       if (imageUrl) {
         const el = editorRef.current;
-        el?.focus();
         const imgHtml = `<img src="${imageUrl}" alt="Uploaded content image" class="my-4 max-w-full rounded-xl shadow-md border border-gray-100 block" />`;
         document.execCommand('insertHTML', false, imgHtml);
         emitChange();

@@ -33,11 +33,7 @@ export default function ImageUploader({
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await api.post('/upload/single', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await api.post('/upload/single', formData);
 
       if (response.data?.file?.url) {
         onChange(response.data.file.url);

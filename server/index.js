@@ -32,6 +32,35 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust reverse proxy headers (Nginx, Cloudflare, Vercel, Railway, etc.)
+app.set('trust proxy', true);
+
+// ─── 1. UNIVERSAL PRE-ROUTING CORS & PREFLIGHT MIDDLEWARE ───
+// Guarantees CORS headers are attached on EVERY request, response, and OPTIONS preflight
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, x-no-compression, Pragma, Expires'
+  );
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Disposition, Authorization');
+  res.setHeader('Access-Control-Max-Age', '86400');
+
+  // Immediately respond 200 OK to browser preflight OPTIONS requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
 // Safely enable Gzip response compression if package exists
 try {
   const { default: compression } = await import('compression');
@@ -51,10 +80,10 @@ try {
   console.log('ℹ️ Running without compression package');
 }
 
-// CORS configuration
+// ─── 2. CORS PACKAGE MIDDLEWARE ───
 const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:5173',
-  process.env.ADMIN_URL || 'http://localhost:5174',
+  process.env.CLIENT_URL,
+  process.env.ADMIN_URL,
   'https://jalyn.vercel.app',
   'https://www.jalyn.vercel.app',
   'https://jalyn-admin.vercel.app',
@@ -63,45 +92,41 @@ const allowedOrigins = [
   'https://www.admin.jalyn.in',
   'https://jalyn.in',
   'https://www.jalyn.in',
+  'https://api.jalyn.in',
   'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:4173',
   'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
   'http://127.0.0.1:4173',
-];
+].filter(Boolean);
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('jalyn.in') || origin.endsWith('vercel.app') || process.env.NODE_ENV !== 'production') {
+    // Allow matching origins, vercel domains, jalyn.in subdomains, or server-to-server (no origin)
+    if (
+      !origin ||
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('jalyn.in') ||
+      origin.endsWith('vercel.app') ||
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1')
+    ) {
       callback(null, true);
     } else {
       callback(null, true);
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control', 'x-no-compression'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'Cache-Control', 'x-no-compression', 'Pragma', 'Expires'],
+  exposedHeaders: ['Content-Length', 'Content-Range', 'Content-Disposition', 'Authorization'],
   credentials: true,
   optionsSuccessStatus: 200,
 };
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
-
-// Explicit fallback headers middleware ensuring CORS headers are present on every response including errors
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, x-no-compression');
-  }
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
 
 // Cache-Control middleware for idempotent read-only catalog API endpoints
 app.use('/api', (req, res, next) => {

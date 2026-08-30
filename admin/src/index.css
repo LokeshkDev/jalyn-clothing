@@ -5,6 +5,7 @@
 html {
   font-size: 17px;
   height: 100%;
+  font-family: 'Raleway', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 body {
@@ -12,7 +13,7 @@ body {
   height: 100%;
   overflow: hidden;
   background-color: #F9FAFB;
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Raleway', -apple-system, BlinkMacSystemFont, sans-serif;
   color: #111827;
   font-size: 1rem;
 }
@@ -20,17 +21,49 @@ body {
 #root {
   height: 100%;
   overflow: hidden;
+  font-family: 'Raleway', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* Global Heading & Subheading Typography in Admin */
-h1, h2, h3, h4, h5, h6,
+/* Global Site-Wide Raleway Typography with Lining & Tabular Numerals for Admin */
+html,
+body,
+p,
+span,
+a,
+button,
+input,
+textarea,
+select,
+label,
+li,
+td,
+th,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
 .font-display,
 .font-heading,
 .font-subheading,
 .sub-heading,
 [class*="subheading"],
 [class*="sub-heading"] {
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: 'Raleway', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: 'lnum' 1, 'tnum' 1;
+}
+
+/* Ensure all price tags, currency numbers, discounts, and badges sit flat, crisp, and aligned on the baseline */
+.price,
+[class*="price"],
+[class*="Price"],
+.tabular-nums,
+.font-numeric {
+  font-variant-numeric: lining-nums tabular-nums !important;
+  font-feature-settings: 'lnum' 1, 'tnum' 1 !important;
+  letter-spacing: 0.01em;
 }
 
 /* Hide Scrollbar Utility */

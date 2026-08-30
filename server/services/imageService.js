@@ -25,13 +25,21 @@ export const processAndStoreImage = async (file) => {
     file.mimetype
   );
 
-  let url;
-  let storage;
+  let url = null;
+  let storage = 'local_multer';
 
   if (isR2Configured()) {
-    url = await uploadToR2(buffer, file.originalname, mimetype, ext);
-    storage = 'cloudflare_r2';
-  } else {
+    try {
+      url = await uploadToR2(buffer, file.originalname, mimetype, ext);
+      storage = 'cloudflare_r2';
+    } catch (r2Err) {
+      console.warn('⚠️ Cloudflare R2 upload error, falling back to local storage:', r2Err.message);
+      url = null;
+    }
+  }
+
+  // Fallback to local storage if R2 is not configured or failed
+  if (!url) {
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }

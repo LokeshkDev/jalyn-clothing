@@ -12,8 +12,13 @@ export const uploadSingleImage = async (req, res) => {
   try {
     const { url, storage, size, width, height, mimetype } = await processAndStoreImage(req.file);
 
+    const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https' || process.env.NODE_ENV === 'production';
+    const protocol = isHttps ? 'https' : req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const serverUrl = `${protocol}://${host}`;
+
     const finalUrl = storage === 'local_multer'
-      ? `${req.protocol}://${req.get('host')}${url}`
+      ? (url.startsWith('http') ? url : `${serverUrl}${url}`)
       : url;
 
     return res.status(200).json({
@@ -48,6 +53,11 @@ export const uploadMultipleImages = async (req, res) => {
   }
 
   try {
+    const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https' || process.env.NODE_ENV === 'production';
+    const protocol = isHttps ? 'https' : req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const serverUrl = `${protocol}://${host}`;
+
     const uploadedFiles = await Promise.all(
       req.files.map(async (file) => {
         const { url, storage, size, width, height, mimetype } = await processAndStoreImage(file);
@@ -59,7 +69,7 @@ export const uploadMultipleImages = async (req, res) => {
           width,
           height,
           url: storage === 'local_multer'
-            ? `${req.protocol}://${req.get('host')}${url}`
+            ? (url.startsWith('http') ? url : `${serverUrl}${url}`)
             : url,
         };
       })
