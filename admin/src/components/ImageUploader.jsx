@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, X, Image as ImageIcon, Loader2, CheckCircle2, Sparkles, Info } from 'lucide-react';
 import api from '../services/api';
+import { compressImage } from '../utils/imageCompressor';
 
 export default function ImageUploader({
   value,
@@ -12,6 +13,7 @@ export default function ImageUploader({
   placeholderText = 'Upload high resolution optimized image',
 }) {
   const [loading, setLoading] = useState(false);
+  const [statusText, setStatusText] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [imageMeta, setImageMeta] = useState(null);
@@ -26,12 +28,21 @@ export default function ImageUploader({
     }
 
     setLoading(true);
+    setStatusText('Optimizing & compressing image...');
     setError('');
     setSuccess(false);
 
     try {
+      // Compress image in browser to ensure it stays well under proxy/server size limits
+      const optimizedFile = await compressImage(file, {
+        maxWidth: 1800,
+        maxHeight: 2200,
+        quality: 0.85,
+      });
+
+      setStatusText('Uploading to server...');
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', optimizedFile);
 
       const response = await api.post('/upload/single', formData);
 
@@ -49,9 +60,16 @@ export default function ImageUploader({
       }
     } catch (err) {
       console.error('Image upload failed:', err);
-      setError(err.response?.data?.message || 'Failed to upload image. Server error.');
+      if (err.response?.status === 413 || err.message?.includes('413')) {
+        setError('Image file is too large for the server. Please try a smaller image.');
+      } else if (err.code === 'ERR_NETWORK' || !err.response) {
+        setError('Network error: Unable to connect to upload server (CORS / size limit).');
+      } else {
+        setError(err.response?.data?.message || 'Failed to upload image. Server error.');
+      }
     } finally {
       setLoading(false);
+      setStatusText('');
     }
   };
 
@@ -104,8 +122,9 @@ export default function ImageUploader({
             </button>
           </div>
           {loading && (
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center">
-              <Loader2 className="w-6 h-6 animate-spin text-brand-600" />
+            <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center p-3 text-center">
+              <Loader2 className="w-6 h-6 animate-spin text-brand-600 mb-1.5" />
+              <span className="text-xs font-semibold text-brand-700">{statusText || 'Processing image...'}</span>
             </div>
           )}
         </div>
@@ -115,7 +134,7 @@ export default function ImageUploader({
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
           </div>
           <span className="text-xs font-semibold text-gray-700">
-            {loading ? 'Uploading & Optimizing via Server...' : placeholderText}
+            {loading ? (statusText || 'Compressing & uploading...') : placeholderText}
           </span>
           <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-[#AD4A85] bg-[#FAF0E6] border border-[#EFE8E2] px-2.5 py-1 rounded-md mt-2">
             <Sparkles className="w-3 h-3 text-[#AD4A85]" />

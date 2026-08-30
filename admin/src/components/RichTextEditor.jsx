@@ -19,6 +19,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import api from '../services/api';
+import { compressImage } from '../utils/imageCompressor';
 
 const TOOLBAR_BUTTONS = [
   { key: 'bold', label: 'Bold', icon: Bold, cmd: 'bold', hint: 'Ctrl+B' },
@@ -87,8 +88,14 @@ export default function RichTextEditor({ value, onChange, placeholder = 'Start w
 
     setUploading(true);
     try {
+      const optimizedFile = await compressImage(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.85,
+      });
+
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', optimizedFile);
 
       const response = await api.post('/upload/single', formData);
 
@@ -100,7 +107,7 @@ export default function RichTextEditor({ value, onChange, placeholder = 'Start w
         emitChange();
       }
     } catch (err) {
-      console.error('Failed to upload R2 image:', err);
+      console.error('Failed to upload image:', err);
       alert(err.response?.data?.message || 'Image upload failed. Please try again.');
     } finally {
       setUploading(false);

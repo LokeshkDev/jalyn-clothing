@@ -146,8 +146,8 @@ app.use('/api', (req, res, next) => {
 });
 
 // Body Parsing Middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Static directory for uploaded images with 1-year immutable caching
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
