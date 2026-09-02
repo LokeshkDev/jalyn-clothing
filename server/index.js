@@ -138,8 +138,9 @@ app.use('/api', (req, res, next) => {
       url.startsWith('/cms') ||
       url.startsWith('/filter-options')
     ) {
-      // Cache for 3 minutes in browser, serve stale while revalidating for 5 minutes
-      res.set('Cache-Control', 'public, max-age=180, stale-while-revalidate=300');
+      // Ensure product catalog updates reflect immediately
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+      res.set('Pragma', 'no-cache');
     }
   }
   next();

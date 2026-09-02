@@ -29,31 +29,63 @@ export function normalizeProduct(p) {
   const reviews = Number(p.reviews_count || p.reviews) || 12;
   const category = p.category_slug || p.category || 'dresses';
 
-  const variants = Array.isArray(p.variants) && p.variants.length > 0 ? p.variants : null;
-
-  const sizes = variants
-    ? [...new Set(variants.map((v) => v.size).filter(Boolean))]
-    : Array.isArray(p.sizes)
-    ? p.sizes
-    : typeof p.sizes === 'string'
-    ? JSON.parse(p.sizes)
-    : ['XS', 'S', 'M', 'L', 'XL'];
-
-  const colors = variants
-    ? [...new Set(variants.map((v) => v.color).filter(Boolean))]
-    : Array.isArray(p.colors)
+  const rawColors = Array.isArray(p.colors)
     ? p.colors
     : typeof p.colors === 'string'
     ? JSON.parse(p.colors)
-    : ['rose', 'cream', 'black'];
+    : [];
 
-  const colorHexMap = variants
-    ? Object.fromEntries(
-        variants
-          .map((v) => [v.color, v.colorHex])
-          .filter(([, hex]) => hex)
-      )
-    : {};
+  const defaultColorHexes = {
+    Rose: '#AD4A85',
+    Cream: '#FDFBF7',
+    Black: '#18181B',
+    White: '#FFFFFF',
+    Pink: '#EC4899',
+    Red: '#EF4444',
+    Blue: '#3B82F6',
+    Navy: '#1E3A8A',
+    Green: '#10B981',
+    Yellow: '#F59E0B',
+    Gold: '#D97706',
+    Purple: '#8B5CF6',
+    Beige: '#F5F5DC',
+    Brown: '#78350F',
+    Grey: '#6B7280',
+    Gray: '#6B7280',
+    Maroon: '#800000',
+    Peach: '#FFDAB9',
+  };
+
+  const colorHexMap = {};
+  rawColors.forEach((c) => {
+    if (typeof c === 'object' && c?.name && c?.hex) {
+      colorHexMap[c.name] = c.hex;
+    } else if (typeof c === 'string' && defaultColorHexes[c]) {
+      colorHexMap[c] = defaultColorHexes[c];
+    }
+  });
+
+  if (Array.isArray(p.variants)) {
+    p.variants.forEach((v) => {
+      if (v.color && v.colorHex) {
+        colorHexMap[v.color] = v.colorHex;
+      }
+    });
+  }
+
+  const variants = Array.isArray(p.variants) && p.variants.length > 0 ? p.variants : null;
+
+  const sizes = Array.isArray(p.sizes) && p.sizes.length > 0
+    ? p.sizes
+    : variants
+    ? [...new Set(variants.map((v) => v.size).filter(Boolean))]
+    : ['XS', 'S', 'M', 'L', 'XL'];
+
+  const colors = rawColors.length > 0
+    ? rawColors.map((c) => (typeof c === 'object' && c?.name ? c.name : String(c)))
+    : variants
+    ? [...new Set(variants.map((v) => v.color).filter(Boolean))]
+    : ['Rose', 'Cream'];
 
   const derivedStock = variants
     ? variants.reduce((sum, v) => sum + (parseInt(v.stock, 10) || 0), 0)
@@ -142,8 +174,8 @@ export function useProductsApi(category = 'all', search = '', sort = '') {
   const { data: products = SHOP_PRODUCTS.map(normalizeProduct), isLoading: prodLoading, error: prodError } = useQuery({
     queryKey: ['products', category, search, sort],
     queryFn: () => fetchProductsList(category, search, sort),
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 5 * 1000,
+    gcTime: 2 * 60 * 1000,
   });
 
   const { data: categories = SHOP_CATEGORIES, isLoading: catLoading, error: catError } = useQuery({

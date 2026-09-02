@@ -101,6 +101,7 @@ export default function ProductInfoPanel({
             const colorObj = colorMap[colorId]
             const isSelected = selectedColor === colorId
             const colorLabel = colorObj?.label || (typeof colorId === 'string' ? colorId : 'Color')
+            const colorHex = product?.colorHexMap?.[colorId] || colorObj?.hex || '#AD4A85'
             return (
               <button
                 key={colorId}
@@ -111,10 +112,10 @@ export default function ProductInfoPanel({
                 title={colorLabel}
                 onClick={() => setSelectedColor(colorId)}
                 className={cn(
-                  'h-8 w-8 rounded-full border border-black/10 transition-all active:scale-95 cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+                  'h-8 w-8 rounded-full border border-black/15 transition-all active:scale-95 cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 shadow-2xs',
                   isSelected && 'ring-2 ring-primary ring-offset-2 scale-110',
                 )}
-                style={{ backgroundColor: colorObj?.hex || '#ccc' }}
+                style={{ backgroundColor: colorHex }}
               />
             )
           })}
@@ -137,35 +138,45 @@ export default function ProductInfoPanel({
           </button>
         </div>
 
-        <div className="grid grid-cols-6 gap-2" role="radiogroup" aria-label="Select size">
-          {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((sz) => {
-            const available = isSizeAvailable(product, selectedColor, sz)
-            const isSelected = selectedSize === sz
-            return (
-              <button
-                key={sz}
-                type="button"
-                role="radio"
-                aria-checked={isSelected}
-                aria-label={`Size ${sz}${!available ? ' (Out of stock)' : ''}`}
-                disabled={!available}
-                onClick={() => setSelectedSize(sz)}
-                className={cn(
-                  'flex h-11 items-center justify-center rounded-xl font-label text-xs font-bold transition-all active:scale-95 cursor-pointer focus-visible:ring-2 focus-visible:ring-primary',
-                  isSelected && available
-                    ? 'bg-primary text-white shadow-soft'
-                    : isSelected && !available
-                    ? 'bg-primary/50 text-white line-through cursor-not-allowed'
-                    : available
-                    ? 'border border-primary/20 bg-white text-ink hover:border-primary/50'
-                    : 'border border-primary/10 bg-surface text-ink-muted/40 cursor-not-allowed line-through',
-                )}
-              >
-                {sz}
-              </button>
-            )
-          })}
-        </div>
+        {(() => {
+          const availableSizes = Array.isArray(product?.sizes) && product.sizes.length > 0
+            ? product.sizes
+            : Array.isArray(product?.variants) && product.variants.length > 0
+            ? [...new Set(product.variants.map((v) => v.size).filter(Boolean))]
+            : ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+
+          return (
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2" role="radiogroup" aria-label="Select size">
+              {availableSizes.map((sz) => {
+                const available = isSizeAvailable(product, selectedColor, sz)
+                const isSelected = selectedSize === sz
+                return (
+                  <button
+                    key={sz}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    aria-label={`Size ${sz}${!available ? ' (Out of stock)' : ''}`}
+                    disabled={!available}
+                    onClick={() => setSelectedSize(sz)}
+                    className={cn(
+                      'flex h-11 items-center justify-center rounded-xl font-label text-xs font-bold transition-all active:scale-95 cursor-pointer focus-visible:ring-2 focus-visible:ring-primary',
+                      isSelected && available
+                        ? 'bg-primary text-white shadow-soft'
+                        : isSelected && !available
+                        ? 'bg-primary/50 text-white line-through cursor-not-allowed'
+                        : available
+                        ? 'border border-primary/20 bg-white text-ink hover:border-primary/50'
+                        : 'border border-primary/10 bg-surface text-ink-muted/40 cursor-not-allowed line-through',
+                    )}
+                  >
+                    {sz}
+                  </button>
+                )
+              })}
+            </div>
+          )
+        })()}
       </div>
 
       {/* Stock Status */}

@@ -228,33 +228,43 @@ export default function MobilePDPInfo({
           </button>
         </div>
 
-        <div className="grid grid-cols-6 gap-2">
-          {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((sz) => {
-            const available = isSizeAvailable(product, selectedColor, sz)
-            const isSelected = selectedSize === sz
-            return (
-              <button
-                key={sz}
-                type="button"
-                disabled={!available}
-                onClick={() => setSelectedSize(sz)}
-                aria-label={`Size ${sz}${!available ? ' unavailable' : ''}`}
-                className={cn(
-                  'flex h-11 items-center justify-center rounded-[10px] text-[13px] font-bold transition-all active:scale-95 cursor-pointer',
-                  isSelected && available
-                    ? 'bg-primary text-white shadow-sm'
-                    : isSelected && !available
-                    ? 'bg-primary/50 text-white line-through cursor-not-allowed'
-                    : available
-                    ? 'border border-[#E5D8DE] bg-white text-[#222222]'
-                    : 'border border-[#E5D8DE]/50 bg-[#FAF8F8] text-[#666666]/40 cursor-not-allowed line-through',
-                )}
-              >
-                {sz}
-              </button>
-            )
-          })}
-        </div>
+        {(() => {
+          const availableSizes = Array.isArray(product?.sizes) && product.sizes.length > 0
+            ? product.sizes
+            : Array.isArray(product?.variants) && product.variants.length > 0
+            ? [...new Set(product.variants.map((v) => v.size).filter(Boolean))]
+            : ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+
+          return (
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+              {availableSizes.map((sz) => {
+                const available = isSizeAvailable(product, selectedColor, sz)
+                const isSelected = selectedSize === sz
+                return (
+                  <button
+                    key={sz}
+                    type="button"
+                    disabled={!available}
+                    onClick={() => setSelectedSize(sz)}
+                    aria-label={`Size ${sz}${!available ? ' unavailable' : ''}`}
+                    className={cn(
+                      'flex h-11 items-center justify-center rounded-[10px] text-[13px] font-bold transition-all active:scale-95 cursor-pointer',
+                      isSelected && available
+                        ? 'bg-primary text-white shadow-sm'
+                        : isSelected && !available
+                        ? 'bg-primary/50 text-white line-through cursor-not-allowed'
+                        : available
+                        ? 'border border-[#E5D8DE] bg-white text-[#222222]'
+                        : 'border border-[#E5D8DE]/50 bg-[#FAF8F8] text-[#666666]/40 cursor-not-allowed line-through',
+                    )}
+                  >
+                    {sz}
+                  </button>
+                )
+              })}
+            </div>
+          )
+        })()}
       </div>
 
       {/* Stock Status */}

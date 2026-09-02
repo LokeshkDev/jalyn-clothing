@@ -242,32 +242,42 @@ export default function QuickViewModal({ product, open, onClose }) {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-6 gap-1.5">
-                {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((sz) => {
-                  const available = isSizeAvailable(product, selectedColor, sz)
-                  const isSelected = selectedSize === sz
-                  return (
-                    <button
-                      key={sz}
-                      type="button"
-                      disabled={!available}
-                      onClick={() => setSelectedSize(sz)}
-                      className={cn(
-                        'flex h-9 items-center justify-center rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer',
-                        isSelected && available
-                          ? 'bg-primary text-white shadow-soft'
-                          : isSelected && !available
-                          ? 'bg-primary/50 text-white line-through cursor-not-allowed'
-                          : available
-                          ? 'border border-primary/20 bg-white text-ink hover:border-primary/50'
-                          : 'border border-primary/10 bg-surface text-ink-muted/40 cursor-not-allowed line-through',
-                      )}
-                    >
-                      {sz}
-                    </button>
-                  )
-                })}
-              </div>
+              {(() => {
+                const availableSizes = Array.isArray(product?.sizes) && product.sizes.length > 0
+                  ? product.sizes
+                  : Array.isArray(product?.variants) && product.variants.length > 0
+                  ? [...new Set(product.variants.map((v) => v.size).filter(Boolean))]
+                  : ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+
+                return (
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
+                    {availableSizes.map((sz) => {
+                      const available = isSizeAvailable(product, selectedColor, sz)
+                      const isSelected = selectedSize === sz
+                      return (
+                        <button
+                          key={sz}
+                          type="button"
+                          disabled={!available}
+                          onClick={() => setSelectedSize(sz)}
+                          className={cn(
+                            'flex h-9 items-center justify-center rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer',
+                            isSelected && available
+                              ? 'bg-primary text-white shadow-soft'
+                              : isSelected && !available
+                              ? 'bg-primary/50 text-white line-through cursor-not-allowed'
+                              : available
+                              ? 'border border-primary/20 bg-white text-ink hover:border-primary/50'
+                              : 'border border-primary/10 bg-surface text-ink-muted/40 cursor-not-allowed line-through',
+                          )}
+                        >
+                          {sz}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Coupons Carousel */}

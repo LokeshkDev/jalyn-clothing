@@ -253,6 +253,10 @@ export default function ProductsPage() {
       computedDiscount = Math.round(((Number(origPrice) - Number(sellPrice)) / Number(origPrice)) * 100);
     }
 
+    const variantSizes = (Array.isArray(p.variants) ? p.variants : []).map((v) => v.size).filter(Boolean);
+    const loadedSizes = Array.isArray(p.sizes) ? p.sizes : ['S', 'M', 'L'];
+    const mergedSizes = [...new Set([...loadedSizes, ...variantSizes])];
+
     setFormData({
       title: p.title || '',
       barcode_short_name: p.barcode_short_name || '',
@@ -276,7 +280,7 @@ export default function ProductsPage() {
       is_offline: p.is_offline !== undefined ? !!p.is_offline : true,
       primary_image: p.primary_image || '',
       hover_image: p.hover_image || '',
-      sizes: Array.isArray(p.sizes) ? p.sizes : ['S', 'M', 'L'],
+      sizes: mergedSizes,
       custom_size_input: '',
       colors: colorObjs.length > 0 ? colorObjs : [{ name: 'Rose', hex: '#AD4A85', images: [] }],
       color_images: p.color_images || {},
@@ -502,19 +506,33 @@ export default function ProductsPage() {
   };
 
   const handleDeleteVariant = (idx) => {
+    const targetVariant = formData.variants[idx];
     const newVariants = formData.variants.filter((_, i) => i !== idx);
+
+    // If deleting a custom size variant and no other variant uses this size, clean it from sizes list
+    let nextSizes = formData.sizes || [];
+    if (targetVariant && !SIZE_PRESETS.includes(targetVariant.size)) {
+      const isSizeStillUsed = newVariants.some((v) => v.size === targetVariant.size);
+      if (!isSizeStillUsed) {
+        nextSizes = nextSizes.filter((s) => s !== targetVariant.size);
+      }
+    }
+
     setFormData((prev) => ({
       ...prev,
+      sizes: nextSizes,
       variants: newVariants,
       stock: recalcTotalStock(newVariants),
     }));
-    showToast('Variant removed from matrix. Click Save to sync it live on the website.', 'success');
+    showToast('Variant removed from matrix.', 'info');
   };
+  const handleRemoveVariant = handleDeleteVariant;
 
   const updateVariant = (idx, field, value) => {
     const next = [...formData.variants];
     next[idx] = { ...next[idx], [field]: field === 'stock' || field === 'price' ? Number(value) : value };
 
+    let nextSizes = formData.sizes || [];
     if (field === 'color' || field === 'size') {
       const baseSku = formData.base_sku || 'JLN-' + Math.floor(100 + Math.random() * 900);
       next[idx].sku = buildVariantSku(baseSku, next[idx].color, next[idx].size);
@@ -522,10 +540,14 @@ export default function ProductsPage() {
         const col = formData.colors.find((c) => c.name === value);
         next[idx].colorHex = col?.hex || next[idx].colorHex;
       }
+      if (field === 'size' && value && !nextSizes.includes(value)) {
+        nextSizes = [...nextSizes, value];
+      }
     }
 
     setFormData((prev) => ({
       ...prev,
+      sizes: nextSizes,
       variants: next,
       stock: recalcTotalStock(next),
     }));
@@ -540,21 +562,90 @@ export default function ProductsPage() {
   };
 
   const handleRemoveColor = (idx) => {
+    const targetCol = formData.colors[idx];
+    const nextColors = formData.colors.filter((_, i) => i !== idx);
+    const nextVariants = targetCol
+      ? (formData.variants || []).filter((v) => v.color !== targetCol.name)
+      : formData.variants;
+
     setFormData((prev) => ({
       ...prev,
-      colors: prev.colors.filter((_, i) => i !== idx),
+      colors: nextColors,
+      variants: nextVariants,
+      stock: recalcTotalStock(nextVariants),
     }));
+  };
+
+  const handleUpdateColorField = (idx, field, value) => {
+    setFormData((prev) => {
+      const oldColorName = prev.colors[idx]?.name;
+      const newCols = [...prev.colors];
+      newCols[idx] = { ...newCols[idx], [field]: value };
+
+      let nextVariants = prev.variants || [];
+      if (field === 'name' && oldColorName && oldColorName !== value) {
+        nextVariants = nextVariants.map((v) => {
+          if (v.color === oldColorName) {
+            const baseSku = prev.base_sku || 'JLN-' + Math.floor(100 + Math.random() * 900);
+            return {
+              ...v,
+              color: value,
+              colorHex: newCols[idx].hex || v.colorHex || '#AD4A85',
+              sku: buildVariantSku(baseSku, value, v.size),
+            };
+          }
+          return v;
+        });
+      } else if (field === 'hex') {
+        const colorName = newCols[idx].name;
+        nextVariants = nextVariants.map((v) => {
+          if (v.color === colorName) {
+            return { ...v, colorHex: value };
+          }
+          return v;
+        });
+      }
+
+      return {
+        ...prev,
+        colors: newCols,
+        variants: nextVariants,
+      };
+    });
   };
 
   // Size Selection Helpers
   const toggleSize = (sizeStr) => {
     setFormData((prev) => {
-      const exists = prev.sizes.includes(sizeStr);
+      const exists = (prev.sizes || []).includes(sizeStr);
+      const nextSizes = exists
+        ? (prev.sizes || []).filter((s) => s !== sizeStr)
+        : [...(prev.sizes || []), sizeStr];
+      const nextVariants = exists
+        ? (prev.variants || []).filter((v) => v.size !== sizeStr)
+        : prev.variants;
+
       return {
         ...prev,
-        sizes: exists ? prev.sizes.filter((s) => s !== sizeStr) : [...prev.sizes, sizeStr],
+        sizes: nextSizes,
+        variants: nextVariants,
+        stock: recalcTotalStock(nextVariants),
       };
     });
+  };
+
+  const handleRemoveCustomSize = (sz) => {
+    setFormData((prev) => {
+      const nextSizes = (prev.sizes || []).filter((s) => s !== sz);
+      const nextVariants = (prev.variants || []).filter((v) => v.size !== sz);
+      return {
+        ...prev,
+        sizes: nextSizes,
+        variants: nextVariants,
+        stock: recalcTotalStock(nextVariants),
+      };
+    });
+    showToast(`Removed size "${sz}" and its variant matrix entries.`, 'info');
   };
 
   const handleAddCustomSize = () => {
@@ -566,6 +657,10 @@ export default function ProductsPage() {
         sizes: [...prev.sizes, val],
         custom_size_input: '',
       }));
+      showToast(`Added size "${val}" to product!`, 'success');
+    } else {
+      setFormData((prev) => ({ ...prev, custom_size_input: '' }));
+      showToast(`Size "${val}" is already in product sizes`, 'info');
     }
   };
 
@@ -738,6 +833,10 @@ export default function ProductsPage() {
       const masterPrice = Number(formData.price) || 0;
       const payload = {
         ...formData,
+        sizes: [...new Set([
+          ...(formData.sizes || []),
+          ...(formData.variants || []).map((v) => v.size).filter(Boolean),
+        ])],
         price: masterPrice,
         original_price: formData.original_price !== '' ? Number(formData.original_price) : null,
         base_price: formData.base_price !== '' && formData.base_price !== null ? Number(formData.base_price) : null,
@@ -748,7 +847,7 @@ export default function ProductsPage() {
           price: Number(v.price) > 0 ? Number(v.price) : masterPrice,
           stock: parseInt(v.stock, 10) || 0,
         })),
-        colors: formData.colors.map((c) => c.name),
+        colors: formData.colors.map((c) => (typeof c === 'object' && c?.name ? { name: c.name, hex: c.hex || '#AD4A85' } : { name: String(c), hex: '#AD4A85' })),
         color_images: formData.colors.reduce((acc, c) => {
           if (c.images && c.images.length > 0) acc[c.name] = c.images;
           return acc;
@@ -1701,21 +1800,13 @@ export default function ProductsPage() {
                             <input
                               type="color"
                               value={col.hex || '#AD4A85'}
-                              onChange={(e) => {
-                                const newCols = [...formData.colors];
-                                newCols[idx].hex = e.target.value;
-                                setFormData({ ...formData, colors: newCols });
-                              }}
+                              onChange={(e) => handleUpdateColorField(idx, 'hex', e.target.value)}
                               className="w-8 h-8 rounded-lg border-0 cursor-pointer shrink-0"
                             />
                             <input
                               type="text"
                               value={col.name}
-                              onChange={(e) => {
-                                const newCols = [...formData.colors];
-                                newCols[idx].name = e.target.value;
-                                setFormData({ ...formData, colors: newCols });
-                              }}
+                              onChange={(e) => handleUpdateColorField(idx, 'name', e.target.value)}
                               placeholder="Color Name (e.g. Dusty Rose)"
                               className="px-3 py-1.5 rounded-lg border border-gray-300 font-semibold text-xs flex-1 bg-white"
                             />
@@ -1775,21 +1866,33 @@ export default function ProductsPage() {
                   </div>
 
                   <div className="flex flex-wrap gap-2 pt-2">
-                    {SIZE_PRESETS.map((sz) => {
-                      const selected = formData.sizes.includes(sz);
+                    {[...new Set([...SIZE_PRESETS, ...(formData.sizes || [])])].map((sz) => {
+                      const selected = (formData.sizes || []).includes(sz);
+                      const isCustom = !SIZE_PRESETS.includes(sz);
                       return (
-                        <button
-                          key={sz}
-                          type="button"
-                          onClick={() => toggleSize(sz)}
-                          className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                            selected
-                              ? 'bg-brand-600 text-white shadow-md'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          {sz} {selected && '✓'}
-                        </button>
+                        <div key={sz} className="inline-flex items-center">
+                          <button
+                            type="button"
+                            onClick={() => toggleSize(sz)}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                              selected
+                                ? 'bg-brand-600 text-white shadow-md'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            {sz} {selected && '✓'}
+                          </button>
+                          {isCustom && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCustomSize(sz)}
+                              className="ml-1 p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 cursor-pointer"
+                              title={`Delete custom size ${sz}`}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -1799,7 +1902,13 @@ export default function ProductsPage() {
                       type="text"
                       value={formData.custom_size_input}
                       onChange={(e) => setFormData({ ...formData, custom_size_input: e.target.value })}
-                      placeholder="Add custom size (e.g. 40, Free Size)..."
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCustomSize();
+                        }
+                      }}
+                      placeholder="Add custom size (e.g. 18, 40, Free Size)..."
                       className="px-3 py-2 rounded-xl border border-gray-300 flex-1 text-xs"
                     />
                     <button
@@ -1877,7 +1986,7 @@ export default function ProductsPage() {
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                           {formData.variants.map((v, idx) => (
-                            <tr key={v.sku || idx} className="hover:bg-gray-50">
+                            <tr key={`variant-row-${v.id || ''}-${v.sku || 'sku'}-${idx}`} className="hover:bg-gray-50">
                               <td className="py-2 px-3">
                                 <input
                                   type="text"
@@ -1888,31 +1997,41 @@ export default function ProductsPage() {
                               </td>
                               <td className="py-2 px-3">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="w-3 h-3 rounded-full border border-gray-300 shrink-0" style={{ backgroundColor: v.colorHex }} />
+                                  {(() => {
+                                    const matchedCol = formData.colors.find((c) => (typeof c === 'string' ? c : c.name) === v.color);
+                                    const resolvedHex = matchedCol?.hex || v.colorHex || '#AD4A85';
+                                    return (
+                                      <span
+                                        className="w-3.5 h-3.5 rounded-full border border-gray-400 shrink-0 shadow-2xs inline-block"
+                                        style={{ backgroundColor: resolvedHex }}
+                                        title={`${v.color} (${resolvedHex})`}
+                                      />
+                                    );
+                                  })()}
                                   <select
-                                    value={formData.colors.some((c) => c.name === v.color) ? v.color : ''}
+                                    value={formData.colors.some((c) => (typeof c === 'string' ? c : c.name) === v.color) ? v.color : (v.color || '')}
                                     onChange={(e) => updateVariant(idx, 'color', e.target.value)}
                                     className="px-2 py-1 border border-gray-300 rounded text-[11px] font-medium bg-white"
                                   >
-                                    {!formData.colors.some((c) => c.name === v.color) && (
-                                      <option value="" disabled>{v.color}</option>
+                                    {!formData.colors.some((c) => (typeof c === 'string' ? c : c.name) === v.color) && v.color && (
+                                      <option value={v.color}>{v.color}</option>
                                     )}
-                                    {formData.colors.map((c) => (
-                                      <option key={c.name} value={c.name}>{c.name}</option>
-                                    ))}
+                                    {formData.colors.map((c) => {
+                                      const cName = typeof c === 'string' ? c : c.name;
+                                      return (
+                                        <option key={cName} value={cName}>{cName}</option>
+                                      );
+                                    })}
                                   </select>
                                 </div>
                               </td>
                               <td className="py-2 px-3">
                                 <select
-                                  value={formData.sizes.includes(v.size) ? v.size : ''}
+                                  value={v.size || ''}
                                   onChange={(e) => updateVariant(idx, 'size', e.target.value)}
                                   className="px-2 py-1 border border-gray-300 rounded text-[11px] font-medium bg-white"
                                 >
-                                  {!formData.sizes.includes(v.size) && (
-                                    <option value="" disabled>{v.size}</option>
-                                  )}
-                                  {formData.sizes.map((s) => (
+                                  {[...new Set([...(formData.sizes || []), ...SIZE_PRESETS, v.size].filter(Boolean))].map((s) => (
                                     <option key={s} value={s}>{s}</option>
                                   ))}
                                 </select>
@@ -1936,8 +2055,9 @@ export default function ProductsPage() {
                               <td className="py-2 px-3 text-center">
                                 <button
                                   type="button"
-                                  onClick={() => handleRemoveVariant(idx)}
+                                  onClick={() => handleDeleteVariant(idx)}
                                   className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 cursor-pointer"
+                                  title="Remove variant"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
