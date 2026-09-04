@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -30,6 +30,7 @@ import {
   PanelLeftOpen,
 } from 'lucide-react';
 import api from '../services/api';
+import { onToggleMobileSidebar } from '../utils/billingEvents';
 
 export default function Sidebar({ currentUser, onLogout }) {
   const role = currentUser?.role || 'staff';
