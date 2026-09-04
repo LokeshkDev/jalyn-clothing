@@ -73,6 +73,9 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
   const [discountValue, setDiscountValue] = useState('');
   const [shippingFee, setShippingFee] = useState(0);
 
+  // Scan / Enter Product Price Entry Selection: 'selling' (Discounted Price) or 'mrp' (Tag MRP)
+  const [defaultPriceType, setDefaultPriceType] = useState('selling');
+
   // Processing state
   const [submitting, setSubmitting] = useState(false);
 
@@ -132,11 +135,15 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
   const handleAddProduct = (product, selectedSize = null, selectedColor = null) => {
     const defaultSize = selectedSize || (Array.isArray(product.sizes) && product.sizes.length > 0 ? product.sizes[0] : (product.size || 'Free Size'));
     const defaultColor = selectedColor || (Array.isArray(product.colors) && product.colors.length > 0 ? product.colors[0] : (product.color || ''));
+    
     const mrp = Number(product.original_price) || Number(product.compare_price) || Number(product.price) || 0;
+    const sellingPrice = Number(product.price) > 0 ? Number(product.price) : mrp;
+    const appliedPrice = (defaultPriceType === 'mrp' && mrp > 0) ? mrp : sellingPrice;
+
     const imageUrl = product.primary_image || product.image || product.image_url || (Array.isArray(product.images) && product.images[0]) || '';
     const sku = product.base_sku || product.sku || (product.id ? `SKU-${product.id}` : '');
     const hsnCode = product.hsn_code || '6204';
-    const itemGstRate = getApparelGstRate(mrp);
+    const itemGstRate = getApparelGstRate(appliedPrice);
 
     setBillItems((prev) => {
       const existingIndex = prev.findIndex(
@@ -161,12 +168,15 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
           barcode_short_name: product.barcode_short_name || product.short_name || '',
           sku: sku,
           hsn_code: hsnCode,
-          price: mrp,
+          price: appliedPrice,
+          mrp: mrp,
+          selling_price: sellingPrice,
           original_price: mrp,
+          price_type: defaultPriceType,
           base_price: product.base_price
             ? Number(product.base_price)
-            : (mrp > 0
-              ? Math.round((mrp / (1 + itemGstRate / 100)) * 100) / 100
+            : (appliedPrice > 0
+              ? Math.round((appliedPrice / (1 + itemGstRate / 100)) * 100) / 100
               : ''),
           gst_rate: itemGstRate,
           quantity: 1,
@@ -398,6 +408,26 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     setBillItems(updated);
   };
 
+  // Toggle item unit price between Selling Price (SP) and Tag MRP
+  const handleSelectPriceType = (index, type) => {
+    const updated = [...billItems];
+    const item = updated[index];
+    const targetPrice = type === 'mrp'
+      ? (Number(item.mrp) || Number(item.original_price) || Number(item.price))
+      : (Number(item.selling_price) || Number(item.price));
+
+    updated[index].price = targetPrice;
+    updated[index].price_type = type;
+    const rate = getApparelGstRate(targetPrice);
+    updated[index].gst_rate = rate;
+    if (isGstInclusive) {
+      updated[index].base_price = targetPrice > 0 ? Math.round((targetPrice / (1 + rate / 100)) * 100) / 100 : '';
+    } else {
+      updated[index].base_price = targetPrice;
+    }
+    setBillItems(updated);
+  };
+
   // Remove line item
   const handleRemoveItem = (index) => {
     setBillItems(billItems.filter((_, i) => i !== index));
@@ -592,6 +622,28 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
               <Settings className="w-3.5 h-3.5 text-pink-300" />
               <span className="hidden sm:inline">Receipt Settings</span>
             </button>
+
+            {/* Default Scan Price Entry Switcher (Selling Price vs Tag MRP) */}
+            <div className="flex bg-black/40 p-1 rounded-xl border border-white/10 text-xs font-semibold" title="Default price to apply when scanning or adding products">
+              <button
+                type="button"
+                onClick={() => setDefaultPriceType('selling')}
+                className={`px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer ${
+                  defaultPriceType === 'selling' ? 'bg-[#AD4A85] text-white shadow-sm font-bold' : 'text-white/80 hover:text-white'
+                }`}
+              >
+                <Tag className="w-3 h-3 text-pink-200" /> Selling Price
+              </button>
+              <button
+                type="button"
+                onClick={() => setDefaultPriceType('mrp')}
+                className={`px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer ${
+                  defaultPriceType === 'mrp' ? 'bg-[#2A1A22] text-white shadow-sm font-bold' : 'text-white/80 hover:text-white'
+                }`}
+              >
+                <IndianRupee className="w-3 h-3 text-amber-300" /> Tag MRP
+              </button>
+            </div>
 
             <div className="flex bg-black/40 p-1 rounded-xl border border-white/10 text-xs font-semibold">
               <button
@@ -982,6 +1034,36 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                               className="w-24 pl-5 pr-2 py-1 text-xs font-bold text-gray-900 border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#AD4A85] outline-none bg-white"
                             />
                           </div>
+
+                          {/* Quick Price Selector Pill: Selling Price vs Tag MRP */}
+                          {(item.selling_price || item.mrp || item.original_price) && (
+                            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200" title="Select which price to apply on this bill item">
+                              <button
+                                type="button"
+                                onClick={() => handleSelectPriceType(idx, 'selling')}
+                                className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition cursor-pointer ${
+                                  Number(item.price) === Number(item.selling_price || item.price) && item.price_type !== 'mrp'
+                                    ? 'bg-[#AD4A85] text-white shadow-xs'
+                                    : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                              >
+                                SP: ₹{Number(item.selling_price || item.price).toLocaleString('en-IN')}
+                              </button>
+                              {(item.mrp || item.original_price) > 0 && Number(item.mrp || item.original_price) !== Number(item.selling_price) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectPriceType(idx, 'mrp')}
+                                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition cursor-pointer ${
+                                    Number(item.price) === Number(item.mrp || item.original_price)
+                                      ? 'bg-[#2A1A22] text-white shadow-xs'
+                                      : 'text-gray-600 hover:text-gray-900'
+                                  }`}
+                                >
+                                  MRP: ₹{Number(item.mrp || item.original_price).toLocaleString('en-IN')}
+                                </button>
+                              )}
+                            </div>
+                          )}
 
                           {/* Dynamic Per-Item GST Slab Badge */}
                           <span

@@ -10,14 +10,15 @@ const LABEL_HEIGHT_MM = 25;
 const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }) => {
   const [copiesMap, setCopiesMap] = useState({});
   const [globalCopies, setGlobalCopies] = useState(defaultCopies);
-  const [layoutMode, setLayoutMode] = useState('3_per_row'); // '3_per_row' (105mm TVS LP-46 Lite), '2_per_row' (100mm), '1_per_row' (50mm)
+  const [layoutMode, setLayoutMode] = useState('2_per_row'); // Default to '2_per_row' (100mm 2 Stickers / Row)
 
   const [companyName, setCompanyName] = useState(BARCODE_LABEL_CONFIG.label.companyName);
 
   const [showProductName, setShowProductName] = useState(BARCODE_LABEL_CONFIG.label.showProductName);
   const [showColor, setShowColor] = useState(BARCODE_LABEL_CONFIG.label.showColor);
   const [showSize, setShowSize] = useState(BARCODE_LABEL_CONFIG.label.showSize);
-  const [showPrice, setShowPrice] = useState(BARCODE_LABEL_CONFIG.label.showPrice);
+  const [showPrice, setShowPrice] = useState(BARCODE_LABEL_CONFIG.label.showPrice); // MRP
+  const [showSellingPrice, setShowSellingPrice] = useState(false); // Selling Price (SP)
   const [showBarcodeNumber, setShowBarcodeNumber] = useState(BARCODE_LABEL_CONFIG.label.showBarcodeNumber);
 
   const labelsPerRow = layoutMode === '3_per_row' ? 3 : (layoutMode === '2_per_row' ? 2 : 1);
@@ -73,7 +74,8 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
           backgroundColor: '#ffffff'
         });
 
-        const displayPrice = item.mrp !== undefined && item.mrp !== null && item.mrp !== '' ? item.mrp : (item.original_price || item.compare_price || item.price);
+        const displayMrp = item.mrp !== undefined && item.mrp !== null && item.mrp !== '' ? item.mrp : (item.original_price || item.compare_price || item.price);
+        const displaySellingPrice = item.price !== undefined && item.price !== null && item.price !== '' ? item.price : item.mrp;
         const clothName = (item.barcodeShortName && item.barcodeShortName.trim()) || (item.barcode_short_name && item.barcode_short_name.trim()) || item.productName || '';
         const formattedSize = item.size ? `(${String(item.size).replace(/^\(|\)$/g, '').trim()})` : '';
 
@@ -89,6 +91,15 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
         }
         const combinedBarcodeInfo = barcodeRowParts.join(' ');
 
+        const priceParts = [];
+        if (showPrice && displayMrp) {
+          priceParts.push(`MRP: ₹${Number(displayMrp).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
+        }
+        if (showSellingPrice && displaySellingPrice) {
+          priceParts.push(`SP: ₹${Number(displaySellingPrice).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
+        }
+        const priceLineText = priceParts.join(' &nbsp; ');
+
         return `
           <div class="sticker-label">
             <div class="brand-title">${String(companyName || 'JALYN APPARELS').toUpperCase().replace(/[&<>"']/g, '')}</div>
@@ -96,7 +107,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
               ${barcodeSvg}
             </div>
             ${combinedBarcodeInfo ? `<div class="barcode-num">${String(combinedBarcodeInfo).replace(/[&<>"']/g, '')}</div>` : ''}
-            ${showPrice && displayPrice ? `<div class="price-line">MRP: ₹${Number(displayPrice).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>` : ''}
+            ${priceLineText ? `<div class="price-line" style="${priceParts.length > 1 ? 'font-size:' + (isThreePerRow ? '7.5pt' : '10pt') : ''}">${priceLineText}</div>` : ''}
           </div>
         `;
       }).join('');
@@ -202,7 +213,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
     width: 100%;
   }
   .price-line {
-    font-size: ${isThreePerRow ? '10pt' : '13pt'};
+    font-size: ${isThreePerRow ? '9.5pt' : '12pt'};
     font-weight: 900;
     line-height: 1.05;
     color: #000000;
@@ -262,6 +273,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
       color: item.color,
       size: item.size,
       price: item.price,
+      mrp: item.mrp,
       barcode: item.barcode
     };
 
@@ -274,6 +286,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
         showColor,
         showSize,
         showPrice,
+        showSellingPrice,
         showBarcodeNumber
       }
     };
@@ -322,11 +335,11 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-hidden bg-black/50 backdrop-blur-sm">
-      <div className="relative w-full max-w-5xl h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-hidden bg-black/60 backdrop-blur-sm p-4">
+      <div className="relative w-full max-w-5xl h-[92vh] max-h-[850px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-3">
             <Printer className="w-5 h-5 text-brand-600" />
             <h2 className="text-xl font-heading font-semibold text-gray-900">Print Barcode Labels (50mm × 25mm)</h2>
@@ -339,7 +352,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
         <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
 
           {/* Left: Preview Area */}
-          <div className="flex-1 bg-gray-50 overflow-y-auto p-6 flex flex-col relative">
+          <div className="flex-1 min-w-0 bg-gray-50 overflow-y-auto p-6 flex flex-col relative">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-bold text-gray-700">Preview</h3>
               <div className="flex items-center gap-2">
@@ -356,7 +369,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
               <div className="w-full max-w-full space-y-6">
                 {barcodes.map(item => (
                   <div key={item.barcode} className="flex flex-col items-center gap-2">
-                    <div className="bg-white p-1 rounded-xl border border-gray-200 shadow-sm">
+                    <div className="bg-white p-2 rounded-xl border border-gray-200 shadow-sm flex items-center justify-center">
                       <BarcodeLabel
                         barcode={item.barcode}
                         productName={item.productName}
@@ -369,6 +382,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
                         showColor={showColor}
                         showSize={showSize}
                         showPrice={showPrice}
+                        showSellingPrice={showSellingPrice}
                         showBarcodeNumber={showBarcodeNumber}
                         layoutMode={layoutMode}
                         forPrint={false}
@@ -421,6 +435,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
                                 showColor={showColor}
                                 showSize={showSize}
                                 showPrice={showPrice}
+                                showSellingPrice={showSellingPrice}
                                 showBarcodeNumber={showBarcodeNumber}
                                 layoutMode={layoutMode}
                                 forPrint={false}
@@ -442,7 +457,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
           </div>
 
           {/* Right: Controls */}
-          <div className="w-full md:w-84 border-l border-gray-100 bg-white flex flex-col h-full shrink-0">
+          <div className="w-full md:w-[340px] border-l border-gray-200 bg-white flex flex-col h-full shrink-0">
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
 
               {/* Printer Roll Mode Selection */}
@@ -542,7 +557,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
                         type="checkbox"
                         checked={showProductName}
                         onChange={(e) => setShowProductName(e.target.checked)}
-                        className="w-3.5 h-3.5 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
+                        className="w-3.5 h-3.5 text-brand-600 rounded border-gray-300 focus:ring-brand-500 cursor-pointer"
                       />
                       <span className="text-xs font-medium text-gray-700">Product / Short Name</span>
                     </label>
@@ -551,7 +566,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
                         type="checkbox"
                         checked={showSize}
                         onChange={(e) => setShowSize(e.target.checked)}
-                        className="w-3.5 h-3.5 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
+                        className="w-3.5 h-3.5 text-brand-600 rounded border-gray-300 focus:ring-brand-500 cursor-pointer"
                       />
                       <span className="text-xs font-medium text-gray-700">Size</span>
                     </label>
@@ -560,16 +575,25 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
                         type="checkbox"
                         checked={showPrice}
                         onChange={(e) => setShowPrice(e.target.checked)}
-                        className="w-3.5 h-3.5 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
+                        className="w-3.5 h-3.5 text-brand-600 rounded border-gray-300 focus:ring-brand-500 cursor-pointer"
                       />
-                      <span className="text-xs font-medium text-gray-700">Price (₹)</span>
+                      <span className="text-xs font-medium text-gray-700">MRP / Tag Price (MRP ₹)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={showSellingPrice}
+                        onChange={(e) => setShowSellingPrice(e.target.checked)}
+                        className="w-3.5 h-3.5 text-brand-600 rounded border-gray-300 focus:ring-brand-500 cursor-pointer"
+                      />
+                      <span className="text-xs font-medium text-gray-700">Selling Price (SP ₹)</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={showBarcodeNumber}
                         onChange={(e) => setShowBarcodeNumber(e.target.checked)}
-                        className="w-3.5 h-3.5 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
+                        className="w-3.5 h-3.5 text-brand-600 rounded border-gray-300 focus:ring-brand-500 cursor-pointer"
                       />
                       <span className="text-xs font-medium text-gray-700">Barcode Digits</span>
                     </label>
@@ -580,7 +604,7 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
             </div>
 
             {/* Footer Actions */}
-            <div className="p-5 border-t border-gray-100 bg-gray-50 flex flex-col gap-2.5">
+            <div className="p-5 border-t border-gray-100 bg-gray-50 flex flex-col gap-2.5 shrink-0">
               <button
                 onClick={handlePrint}
                 className="w-full flex items-center justify-center gap-2 bg-[#2A1A22] hover:bg-[#3D2631] text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-md transition-colors cursor-pointer"

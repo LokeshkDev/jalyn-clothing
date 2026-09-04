@@ -64,7 +64,7 @@ export default function ScanResultPopup({ visible, result, onClose }) {
                 </h3>
                 
                 {data.variant?.hasVariant && (
-                  <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 mt-1.5 text-sm text-gray-600">
                     {data.variant.color && (
                       <span className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full border border-gray-200 shadow-sm" style={{ backgroundColor: data.variant.color.toLowerCase() }}></span>
@@ -79,6 +79,19 @@ export default function ScanResultPopup({ visible, result, onClose }) {
                     )}
                   </div>
                 )}
+
+                {/* Selected Price Display on QR / Barcode Scan */}
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Price:</span>
+                  <span className="text-base font-black text-brand-700">
+                    ₹{Number(data.selectedPrice || data.variant?.price || data.product?.price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                  {(data.mrpPrice || data.product?.original_price) > (data.selectedPrice || data.product?.price || 0) && (
+                    <span className="text-xs text-gray-400 line-through font-semibold">
+                      MRP: ₹{Number(data.mrpPrice || data.product?.original_price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  )}
+                </div>
               </div>
               
               {data.product?.image && (

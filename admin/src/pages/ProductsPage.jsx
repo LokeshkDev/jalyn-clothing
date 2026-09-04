@@ -948,55 +948,55 @@ export default function ProductsPage() {
 
       <main className="p-6 max-w-7xl mx-auto space-y-6">
         {/* KPI & Quick Inventory Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-pink-50 rounded-xl text-brand-600">
-              <ShoppingBag className="w-5 h-5" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-gray-200/80 shadow-sm flex items-center gap-2.5 sm:gap-3">
+            <div className="p-2.5 sm:p-3 bg-pink-50 rounded-xl text-brand-600 shrink-0">
+              <ShoppingBag className="w-4 sm:w-5 h-4 sm:h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Total Products</p>
-              <p className="text-xl font-bold text-gray-900">{products.length}</p>
+              <p className="text-[10px] sm:text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Total Products</p>
+              <p className="text-lg sm:text-xl font-bold text-gray-900">{products.length}</p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600">
-              <Globe className="w-5 h-5" />
+          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-gray-200/80 shadow-sm flex items-center gap-2.5 sm:gap-3">
+            <div className="p-2.5 sm:p-3 bg-emerald-50 rounded-xl text-emerald-600 shrink-0">
+              <Globe className="w-4 sm:w-5 h-4 sm:h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Online Available</p>
-              <p className="text-xl font-bold text-gray-900">{products.filter((p) => p.is_online !== 0).length}</p>
+              <p className="text-[10px] sm:text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Online Available</p>
+              <p className="text-lg sm:text-xl font-bold text-gray-900">{products.filter((p) => p.is_online !== 0).length}</p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-purple-50 rounded-xl text-purple-600">
-              <Store className="w-5 h-5" />
+          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-gray-200/80 shadow-sm flex items-center gap-2.5 sm:gap-3">
+            <div className="p-2.5 sm:p-3 bg-purple-50 rounded-xl text-purple-600 shrink-0">
+              <Store className="w-4 sm:w-5 h-4 sm:h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Offline Store Active</p>
-              <p className="text-xl font-bold text-gray-900">{products.filter((p) => p.is_offline !== 0).length}</p>
+              <p className="text-[10px] sm:text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Offline Store Active</p>
+              <p className="text-lg sm:text-xl font-bold text-gray-900">{products.filter((p) => p.is_offline !== 0).length}</p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-amber-50 rounded-xl text-amber-600">
-                <ShieldAlert className="w-5 h-5" />
+          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-gray-200/80 shadow-sm flex items-center justify-between">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="p-2.5 sm:p-3 bg-amber-50 rounded-xl text-amber-600 shrink-0">
+                <ShieldAlert className="w-4 sm:w-5 h-4 sm:h-5" />
               </div>
               <div>
-                <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Low Stock Alerts</p>
-                <p className="text-xl font-bold text-amber-600">
+                <p className="text-[10px] sm:text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Low Stock Alerts</p>
+                <p className="text-lg sm:text-xl font-bold text-amber-600">
                   {products.filter((p) => (p.stock || 0) <= (p.low_stock_threshold || 5)).length}
                 </p>
-                <p className="text-[10px] font-semibold text-red-600">
+                <p className="text-[9px] sm:text-[10px] font-semibold text-red-600">
                   {products.filter((p) => (p.stock || 0) < 3).length} critical (&lt; 3 qty)
                 </p>
               </div>
             </div>
             <button
               onClick={() => handleOpenAuditTrail()}
-              className="text-[11px] text-brand-600 font-bold hover:underline flex items-center gap-1"
+              className="text-[10px] sm:text-[11px] text-brand-600 font-bold hover:underline flex items-center gap-1 shrink-0"
             >
               <History className="w-3.5 h-3.5" /> Audit Log
             </button>
@@ -1004,8 +1004,8 @@ export default function ProductsPage() {
         </div>
 
         {/* Top Search & Filter Controls */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3 w-full sm:w-auto flex-1 max-w-md">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto flex-1 max-w-md">
             <div className="relative w-full">
               <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
               <input
@@ -1019,7 +1019,7 @@ export default function ProductsPage() {
             <select
               value={filterCat}
               onChange={(e) => setFilterCat(e.target.value)}
-              className="px-3 py-2.5 rounded-xl border border-gray-200 text-xs bg-white focus:ring-2 focus:ring-brand-500 shadow-sm"
+              className="px-3 py-2.5 rounded-xl border border-gray-200 text-xs bg-white focus:ring-2 focus:ring-brand-500 shadow-sm shrink-0"
             >
               <option value="all">All Categories</option>
               {categories.map((c) => (
@@ -1033,7 +1033,7 @@ export default function ProductsPage() {
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={loadData}
-              className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-100 text-gray-600 transition shadow-sm"
+              className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-100 text-gray-600 transition shadow-sm shrink-0"
               title="Refresh Catalog"
             >
               <RefreshCw className="w-4 h-4" />
@@ -1048,7 +1048,7 @@ export default function ProductsPage() {
         </div>
 
         {/* Master Products Table */}
-        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-x-auto">
           {loading ? (
             <div className="p-12 text-center text-gray-400">
               <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-brand-600" /> Loading product inventory catalog...

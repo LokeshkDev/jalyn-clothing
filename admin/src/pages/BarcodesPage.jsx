@@ -188,9 +188,9 @@ export default function BarcodesPage() {
         </div>
       )}
 
-      <main className="p-6 max-w-7xl mx-auto space-y-6">
+      <main className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
-          <div className="flex flex-1 w-full items-center gap-4">
+          <div className="flex flex-col sm:flex-row flex-1 w-full items-stretch sm:items-center gap-3">
             <div className="relative w-full sm:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input

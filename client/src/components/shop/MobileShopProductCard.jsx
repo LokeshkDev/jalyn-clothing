@@ -6,32 +6,53 @@ import { SHOP_COLORS } from '@/constants/shopProducts'
 import { cn, formatINR } from '@/lib/utils'
 
 function getColorImage(product, colorId, idx) {
-  if (!colorId) return null
-  const normalizedId = typeof colorId === 'string' ? colorId.toLowerCase() : colorId
-  if (product.color_images?.[colorId]) {
-    const val = product.color_images[colorId]
-    return Array.isArray(val) ? val[0] : val
+  if (!colorId || !product) return null
+  const normalizedId = typeof colorId === 'string' ? colorId.toLowerCase().trim() : String(colorId).toLowerCase()
+
+  // 1. Check color_images / colorImages object
+  let colorImgs = product.color_images || product.colorImages
+  if (typeof colorImgs === 'string') {
+    try { colorImgs = JSON.parse(colorImgs) } catch (e) { colorImgs = null }
   }
-  if (product.color_images?.[normalizedId]) {
-    const val = product.color_images[normalizedId]
-    return Array.isArray(val) ? val[0] : val
-  }
-  if (product.colorImages?.[colorId]) {
-    const val = product.colorImages[colorId]
-    return Array.isArray(val) ? val[0] : val
-  }
-  if (Array.isArray(product.colors)) {
-    const colObj = product.colors.find(c => typeof c === 'object' && (c.id === colorId || c.name?.toLowerCase() === normalizedId))
-    if (colObj && colObj.images?.length) {
-      return colObj.images[0]
+  if (colorImgs && typeof colorImgs === 'object') {
+    if (colorImgs[colorId]) {
+      const val = colorImgs[colorId]
+      return Array.isArray(val) ? val[0] : val
+    }
+    const key = Object.keys(colorImgs).find(k => k.toLowerCase().trim() === normalizedId)
+    if (key && colorImgs[key]) {
+      const val = colorImgs[key]
+      return Array.isArray(val) ? val[0] : val
     }
   }
+
+  // 2. Check colors list for objects with image property
+  const colorsList = product.rawColors || product.colors
+  if (Array.isArray(colorsList)) {
+    const colObj = colorsList.find(c => typeof c === 'object' && (c.id === colorId || c.name?.toLowerCase().trim() === normalizedId))
+    if (colObj) {
+      if (colObj.image) return colObj.image
+      if (colObj.primary_image) return colObj.primary_image
+      if (Array.isArray(colObj.images) && colObj.images.length > 0) return colObj.images[0]
+    }
+  }
+
+  // 3. Check variants array for variant image matching selected color
+  if (Array.isArray(product.variants)) {
+    const vMatch = product.variants.find(v => v.color && String(v.color).toLowerCase().trim() === normalizedId && (v.image || v.primary_image || v.colorImage))
+    if (vMatch) {
+      return vMatch.image || vMatch.primary_image || vMatch.colorImage
+    }
+  }
+
+  // 4. Fallback to hoverImage if index 1
   if (idx === 1 && (product.hoverImage || product.hover_image || product.images?.hover)) {
     return product.hoverImage || product.hover_image || product.images?.hover
   }
   if (Array.isArray(product.images?.gallery) && product.images.gallery[idx]) {
     return product.images.gallery[idx]
   }
+
   return null
 }
 
@@ -137,39 +158,43 @@ function MobileShopProductCard({ product }) {
         </div>
 
         {/* Color Swatches Row */}
-        <div className="mt-2 flex items-center gap-1.5 z-10" role="group" aria-label="Color options">
-          {colorsList.slice(0, 3).map((cObj, idx) => {
-            const colorId = typeof cObj === 'string' ? cObj : cObj.id || cObj.name
-            const hex = typeof cObj === 'object' && cObj.hex ? cObj.hex : colorMap[colorId]?.hex || '#AD4A85'
-            const isSelected = selectedColor === colorId || (!selectedColor && idx === 0)
-            const colorLabel = typeof cObj === 'object' ? cObj.name : colorMap[colorId]?.label || colorId
-            return (
-              <button
-                key={colorId + idx}
-                type="button"
-                role="button"
-                aria-label={`Select color ${colorLabel}`}
-                aria-pressed={isSelected}
-                title={colorLabel}
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setSelectedColor(colorId)
-                }}
-                className={cn(
-                  'h-3.5 w-3.5 rounded-full border border-black/10 transition-transform active:scale-90 cursor-pointer focus-visible:outline-2 focus-visible:outline-primary',
-                  isSelected && 'ring-1 ring-primary ring-offset-1 scale-110',
-                )}
-                style={{ backgroundColor: hex }}
-              />
-            )
-          })}
-          {colorsList.length > 3 && (
-            <span className="text-[10px] font-semibold text-ink-muted">
-              +{colorsList.length - 3}
-            </span>
-          )}
-        </div>
+        {colorsList.length > 0 && (
+          <div className="mt-2 flex items-center gap-1.5 z-10" role="group" aria-label="Color options">
+            {colorsList.slice(0, 4).map((cObj, idx) => {
+              const colorId = typeof cObj === 'string' ? cObj : cObj.id || cObj.name
+              const colorLabel = typeof cObj === 'object' ? cObj.name || cObj.id : colorMap[colorId]?.label || colorId
+              const hex = (typeof cObj === 'object' && cObj.hex)
+                ? cObj.hex
+                : product.colorHexMap?.[colorLabel] || product.colorHexMap?.[colorId] || colorMap[colorId]?.hex || '#AD4A85'
+              const isSelected = selectedColor === colorId || (!selectedColor && idx === 0)
+              return (
+                <button
+                  key={colorId + idx}
+                  type="button"
+                  role="button"
+                  aria-label={`Select color ${colorLabel}`}
+                  aria-pressed={isSelected}
+                  title={colorLabel}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setSelectedColor(colorId)
+                  }}
+                  className={cn(
+                    'h-3.5 w-3.5 rounded-full border border-black/10 transition-transform active:scale-90 cursor-pointer focus-visible:outline-2 focus-visible:outline-primary',
+                    isSelected && 'ring-1 ring-primary ring-offset-1 scale-110',
+                  )}
+                  style={{ backgroundColor: hex }}
+                />
+              )
+            })}
+            {colorsList.length > 4 && (
+              <span className="text-[10px] font-semibold text-ink-muted">
+                +{colorsList.length - 4}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </article>
   )

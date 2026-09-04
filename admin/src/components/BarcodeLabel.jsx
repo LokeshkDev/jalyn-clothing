@@ -13,12 +13,14 @@ export default function BarcodeLabel({
   showProductName = true,
   showSize = true,
   showPrice = true,
+  showSellingPrice = false,
   showBarcodeNumber = true,
-  layoutMode = '3_per_row', // '3_per_row', '2_per_row', '1_per_row'
+  layoutMode = '2_per_row', // '3_per_row', '2_per_row' (default), '1_per_row'
   forPrint = false
 }) {
   const isThreePerRow = layoutMode === '3_per_row';
-  const displayPrice = mrp !== undefined && mrp !== null && mrp !== '' ? mrp : price;
+  const displayMrp = mrp !== undefined && mrp !== null && mrp !== '' ? mrp : price;
+  const displaySellingPrice = price !== undefined && price !== null && price !== '' ? price : mrp;
   const clothName = (barcodeShortName && barcodeShortName.trim()) || (barcode_short_name && barcode_short_name.trim()) || productName || '';
   const formattedSize = size ? `(${String(size).replace(/^\(|\)$/g, '').trim()})` : '';
 
@@ -47,6 +49,16 @@ export default function BarcodeLabel({
     barcodeRowParts.push(clothName.toUpperCase());
   }
   const combinedBarcodeInfo = barcodeRowParts.join(' ');
+
+  // Format Price Line (MRP and/or Selling Price)
+  const priceParts = [];
+  if (showPrice && displayMrp) {
+    priceParts.push(`MRP: ₹${Number(displayMrp).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
+  }
+  if (showSellingPrice && displaySellingPrice) {
+    priceParts.push(`SP: ₹${Number(displaySellingPrice).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
+  }
+  const priceLineText = priceParts.join('  ');
 
   const labelWidth = isThreePerRow
     ? (forPrint ? '32.5mm' : '33mm')
@@ -117,19 +129,20 @@ export default function BarcodeLabel({
         </div>
       )}
 
-      {/* 4. MRP Price (Extra Bold with MRP label) */}
-      {showPrice && displayPrice && (
+      {/* 4. Price Line (MRP / Selling Price) */}
+      {priceLineText && (
         <div
           style={{
-            fontSize: isThreePerRow ? '9.5pt' : '12pt',
+            fontSize: isThreePerRow ? (priceParts.length > 1 ? '7.5pt' : '9.5pt') : (priceParts.length > 1 ? '10pt' : '12pt'),
             lineHeight: '1.05',
             fontWeight: 900,
             color: '#000000',
             letterSpacing: '-0.3px'
           }}
-          className="font-sans text-black text-center w-full shrink-0 tracking-tight"
+          className="font-sans text-black text-center w-full shrink-0 tracking-tight truncate px-0.5"
+          title={priceLineText}
         >
-          MRP: ₹{Number(displayPrice).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {priceLineText}
         </div>
       )}
     </div>

@@ -76,10 +76,10 @@ export default function DashboardPage() {
     <div className="flex-1 overflow-y-auto">
       <Header title="Dashboard & BI Analytics" subtitle="Store management, real-time POS billing & Tally tax reporting center." />
 
-      <main className="p-6 space-y-6 max-w-7xl mx-auto">
+      <main className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
         {/* Primary Dashboard Tab Switcher & Quick Billing Launcher */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-gray-200/80 pb-3">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setActiveTab('overview')}
@@ -105,11 +105,11 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setShowThermalSettings(true)}
-              className="bg-white hover:bg-gray-100 text-gray-700 text-xs font-bold px-3.5 py-2.5 rounded-xl border border-gray-300 shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+              className="flex-1 sm:flex-initial bg-white hover:bg-gray-100 text-gray-700 text-xs font-bold px-3.5 py-2.5 rounded-xl border border-gray-300 shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
               title="Configure Thermal Bill Format & Terms"
             >
               <Settings className="w-4 h-4 text-[#AD4A85]" />
@@ -119,7 +119,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={openGlobalPosBilling}
-              className="bg-[#2A1A22] hover:bg-[#3D2631] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center gap-2 cursor-pointer"
+              className="flex-1 sm:flex-initial bg-[#2A1A22] hover:bg-[#3D2631] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center gap-2 cursor-pointer"
               title="Open Walk-in Billing Counter"
             >
               <Store className="w-4 h-4 text-pink-300" />

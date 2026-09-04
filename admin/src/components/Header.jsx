@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ExternalLink, Bell, ShoppingBag, AlertTriangle, CheckCheck, Inbox, Store } from 'lucide-react';
+import { ExternalLink, Bell, ShoppingBag, AlertTriangle, CheckCheck, Inbox, Store, Menu } from 'lucide-react';
 import api from '../services/api';
-import { openGlobalPosBilling } from '../utils/billingEvents';
+import { openGlobalPosBilling, toggleMobileSidebar } from '../utils/billingEvents';
 
 const SEEN_KEY = 'jalyn_notif_seen_at';
 
@@ -58,8 +58,6 @@ export default function Header({ title, subtitle }) {
       time: o.created_at,
       to: '/orders',
     }));
-    // Low-stock items keep a STABLE first-seen timestamp per product so that
-    // marking them read actually sticks (fresh Date.now() per poll never would).
     const stock = notifications.lowStock.map((p) => {
       if (!stockTimeRef.current[p.id]) {
         stockTimeRef.current[p.id] = new Date().toISOString();
@@ -100,18 +98,30 @@ export default function Header({ title, subtitle }) {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200/80 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-      <div>
-        <h1 className="text-lg font-bold text-gray-900 tracking-tight">{title}</h1>
-        {subtitle && <p className="text-xs text-gray-500 font-medium mt-0.5">{subtitle}</p>}
+    <header className="bg-white border-b border-gray-200/80 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-20 shadow-xs">
+      <div className="flex items-center gap-2 min-w-0">
+        {/* Mobile Navigation Drawer Toggle */}
+        <button
+          type="button"
+          onClick={toggleMobileSidebar}
+          className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg lg:hidden transition cursor-pointer"
+          title="Toggle Navigation Menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        <div className="min-w-0">
+          <h1 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight truncate">{title}</h1>
+          {subtitle && <p className="text-[11px] sm:text-xs text-gray-500 font-medium mt-0.5 truncate hidden sm:block">{subtitle}</p>}
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3">
         {/* Global POS Billing Button (Single Solid Theme Color) */}
         <button
           type="button"
           onClick={openGlobalPosBilling}
-          className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#2A1A22] hover:bg-[#3D2631] px-3.5 py-1.5 rounded-lg transition shadow-sm cursor-pointer"
+          className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#2A1A22] hover:bg-[#3D2631] px-2.5 sm:px-3.5 py-1.5 rounded-lg transition shadow-sm cursor-pointer"
           title="Open POS Billing Counter"
         >
           <Store className="w-3.5 h-3.5 text-pink-300" />
@@ -123,7 +133,7 @@ export default function Header({ title, subtitle }) {
           href={import.meta.env.VITE_CLIENT_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5173' : 'https://jalyn.in')}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-xs font-semibold text-brand-600 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-lg transition"
+          className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-brand-600 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-lg transition"
         >
           <ExternalLink className="w-3.5 h-3.5" />
           View Live Website

@@ -93,6 +93,11 @@ export function normalizeProduct(p) {
     ? p.stock
     : 15;
 
+  let colorImages = p.color_images || p.colorImages || null;
+  if (typeof colorImages === 'string') {
+    try { colorImages = JSON.parse(colorImages); } catch (e) { colorImages = null; }
+  }
+
   return {
     ...p,
     id,
@@ -124,6 +129,9 @@ export function normalizeProduct(p) {
     },
     sizes,
     colors,
+    rawColors,
+    color_images: colorImages,
+    colorImages,
     colorHexMap,
     variants,
     stock: derivedStock,

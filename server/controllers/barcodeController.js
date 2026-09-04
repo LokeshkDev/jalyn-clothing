@@ -224,6 +224,9 @@ export const scanBarcode = async (req, res) => {
 
       await connection.commit();
       
+      const variantPrice = deductedVariant && Number(deductedVariant.price) > 0 ? Number(deductedVariant.price) : Number(product.price);
+      const mrpPrice = Number(product.original_price) || Number(product.price);
+
       return res.json({
         success: true,
         data: {
@@ -236,15 +239,19 @@ export const scanBarcode = async (req, res) => {
             image: product.primary_image,
             brand: product.brand,
             category: product.category_slug,
-            price: product.price,
+            price: Number(product.price),
+            original_price: mrpPrice,
             colors: product.colors
           },
           variant: {
             size: deductedVariant.size,
             color: deductedVariant.color,
+            price: variantPrice,
             hasVariant: true,
             exactMatch: isExactMatch
           },
+          selectedPrice: variantPrice,
+          mrpPrice: mrpPrice,
           quantityBefore: stockBefore,
           quantityChange: -1,
           quantityAfter: stockAfter,

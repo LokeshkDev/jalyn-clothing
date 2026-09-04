@@ -52,6 +52,16 @@ export default function Sidebar({ currentUser, onLogout }) {
     });
   };
 
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (onToggleMobileSidebar) {
+      return onToggleMobileSidebar(() => {
+        setMobileOpen((prev) => !prev);
+      });
+    }
+  }, [onToggleMobileSidebar]);
+
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -215,6 +225,7 @@ export default function Sidebar({ currentUser, onLogout }) {
                 to={item.path}
                 end={item.path === '/'}
                 title={isCollapsed ? item.label : undefined}
+                onClick={() => setMobileOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center ${
                     isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3.5 py-2.5'

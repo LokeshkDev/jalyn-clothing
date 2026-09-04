@@ -166,9 +166,9 @@ export default function CategoriesPage() {
         </div>
       )}
 
-      <main className="p-6 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <main className="p-4 sm:p-6 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Category Form (Create / Edit) */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm space-y-4 h-fit sticky top-6">
+        <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm space-y-4 h-fit lg:sticky lg:top-6">
           <div className="flex items-center justify-between border-b border-gray-100 pb-3">
             <h3 className="font-heading text-base font-bold text-gray-900 flex items-center gap-2">
               {editingId ? (

@@ -309,7 +309,7 @@ export default function CouponsPage() {
         </div>
 
         {/* Coupons Table */}
-        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-x-auto">
           {loading ? (
             <div className="p-12 text-center text-gray-400">
               <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-brand-600" /> Loading coupons...

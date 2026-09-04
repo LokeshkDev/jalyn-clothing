@@ -47,6 +47,7 @@ export default function ScannerPage() {
         barcode,
         productName: response.data.data.product.name,
         variant: response.data.data.variant,
+        selectedPrice: response.data.data.selectedPrice || response.data.data.variant?.price || response.data.data.product?.price,
         quantityBefore: response.data.data.quantityBefore,
         quantityAfter: response.data.data.quantityAfter,
         timestamp: new Date(),
@@ -283,7 +284,14 @@ export default function ScannerPage() {
                       <td className="p-4">
                         {scan.success ? (
                           <div>
-                            <p className="font-medium text-gray-900">{scan.productName}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900">{scan.productName}</span>
+                              {scan.selectedPrice && (
+                                <span className="font-bold text-brand-700 bg-brand-50 border border-brand-200/60 text-[11px] px-1.5 py-0.5 rounded">
+                                  ₹{Number(scan.selectedPrice).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                </span>
+                              )}
+                            </div>
                             {scan.variant && (
                               <p className="text-xs text-gray-500 mt-0.5">
                                 {[scan.variant.color, scan.variant.size].filter(Boolean).join(' • ')}

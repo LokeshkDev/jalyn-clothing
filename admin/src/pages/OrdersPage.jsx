@@ -274,7 +274,7 @@ export default function OrdersPage() {
         </div>
       )}
 
-      <main className="p-6 max-w-7xl mx-auto space-y-6">
+      <main className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm flex items-center gap-3">
@@ -440,7 +440,7 @@ export default function OrdersPage() {
         </div>
 
         {/* Orders Table */}
-        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-x-auto">
           {loading ? (
             <div className="p-12 text-center text-gray-400">
               <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-brand-600" /> Loading orders...
@@ -613,7 +613,7 @@ export default function OrdersPage() {
                   {PAYMENT_STATUS[detailOrder.payment_status]?.label || detailOrder.payment_status}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {!editing && (
                   <>
                     <a
@@ -699,7 +699,7 @@ export default function OrdersPage() {
                   <h4 className="font-bold text-xs text-gray-900 mb-3 flex items-center gap-2">
                     <Package className="w-4 h-4 text-brand-600" /> Order Items ({itemTotal(detailOrder.items)} units)
                   </h4>
-                  <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                  <div className="border border-gray-200 rounded-xl overflow-x-auto shadow-sm">
                     <table className="w-full text-left text-xs">
                       <thead className="bg-gray-100 font-bold text-gray-600 text-[10px] uppercase">
                         <tr>
