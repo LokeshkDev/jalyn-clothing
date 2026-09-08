@@ -104,7 +104,7 @@ export default function CartDrawer() {
                             <p className="text-xs text-ink-muted mt-0.5">
                               {item.size && <span>Size: <strong>{item.size}</strong></span>}
                               {item.size && item.color && <span> | </span>}
-                              {item.color && <span>Color: <strong>{item.color}</strong></span>}
+                              {item.color && <span>Color: <strong>{typeof item.color === 'object' ? (item.color.name || item.color.label || '') : String(item.color)}</strong></span>}
                             </p>
                           )}
                           <p className="mt-1.5 text-sm font-semibold text-primary">

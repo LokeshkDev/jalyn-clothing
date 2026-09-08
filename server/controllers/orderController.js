@@ -1,5 +1,12 @@
 import pool from '../config/db.js';
 import { calculateOrderTax, calculateItemTax, getApparelGstRate } from '../utils/taxCalculator.js';
+import {
+  awardJCoinsForOrder,
+  processOrderJCoinsRedemption,
+  reverseJCoinsForOrder,
+  getUserJCoinsBalance,
+  findOrCreateCustomerByPhone,
+} from '../services/jcoinService.js';
 
 let mockOrders = [];
 
@@ -208,15 +215,43 @@ export const createOrder = async (req, res) => {
     payment_status = 'pending',
     order_status = 'pending',
     payment_method = 'Online Payment',
+    jcoins_redeemed = 0,
+    jcoins_discount = 0,
     items = [],
   } = req.body;
 
   const isAdminUser = ['superadmin', 'admin'].includes(req.user?.role);
-  const orderUserId = isAdminUser ? (req.body.user_id || null) : (req.user?.id || null);
+  let orderUserId = isAdminUser ? (req.body.user_id || null) : (req.user?.id || null);
   const orderCustomerEmail = isAdminUser ? customer_email : (req.user?.email || customer_email);
 
   if (!customer_name || !orderCustomerEmail || !shipping_address) {
     return res.status(400).json({ success: false, message: 'Customer name, email and shipping address are required.' });
+  }
+
+  // Auto-resolve customer user_id by phone/email if null
+  if (!orderUserId) {
+    try {
+      const customerUser = await findOrCreateCustomerByPhone({
+        phone: customer_phone,
+        name: customer_name,
+        email: orderCustomerEmail,
+      });
+      if (customerUser) orderUserId = customerUser.id;
+    } catch (_) {}
+  }
+
+  // Server-side validation of JCoins redemption
+  const numJcoinsRedeemed = Math.max(0, parseInt(jcoins_redeemed, 10) || 0);
+  const numJcoinsDiscount = numJcoinsRedeemed > 0 ? (Number(jcoins_discount) || numJcoinsRedeemed) : 0;
+
+  if (numJcoinsRedeemed > 0 && orderUserId) {
+    const userBalance = await getUserJCoinsBalance(orderUserId);
+    if (userBalance < numJcoinsRedeemed) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient JCoins balance. Available: ${userBalance}, Requested: ${numJcoinsRedeemed}`,
+      });
+    }
   }
 
   // Determine order_type ('pos' / 'walkin' or 'online')
@@ -232,7 +267,7 @@ export const createOrder = async (req, res) => {
   const isInclusive = is_gst_inclusive !== undefined ? Boolean(is_gst_inclusive) : true;
   const orderTax = calculateOrderTax({
     items,
-    discountAmount: Number(discount_amount) || 0,
+    discountAmount: (Number(discount_amount) || 0) + numJcoinsDiscount,
     shippingAmount: Number(shipping_amount) || 0,
     isGstInclusive: isInclusive,
     shippingState: shipping_address,
@@ -286,6 +321,8 @@ export const createOrder = async (req, res) => {
     payment_status,
     order_status,
     payment_method: payment_method || null,
+    jcoins_redeemed: numJcoinsRedeemed,
+    jcoins_discount: numJcoinsDiscount,
     created_at: nowStr,
     items: orderTax.items.map((i) => ({
       product_id: i.product_id || null,
@@ -311,8 +348,8 @@ export const createOrder = async (req, res) => {
     try {
       const [result] = await pool.query(
         `INSERT INTO orders
-         (order_number, user_id, customer_name, customer_email, customer_phone, shipping_address, total_amount, discount_amount, shipping_amount, received_amount, balance_amount, gst_rate, is_gst_inclusive, taxable_amount, cgst_amount, sgst_amount, igst_amount, total_mrp, order_type, payment_method, payment_status, order_status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (order_number, user_id, customer_name, customer_email, customer_phone, shipping_address, total_amount, discount_amount, shipping_amount, received_amount, balance_amount, gst_rate, is_gst_inclusive, taxable_amount, cgst_amount, sgst_amount, igst_amount, total_mrp, order_type, payment_method, payment_status, order_status, jcoins_redeemed, jcoins_discount)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           generatedOrderNum,
           orderUserId,
@@ -336,6 +373,8 @@ export const createOrder = async (req, res) => {
           payment_method || null,
           payment_status,
           order_status,
+          numJcoinsRedeemed,
+          numJcoinsDiscount,
         ]
       );
       orderId = result.insertId;
@@ -404,6 +443,16 @@ export const createOrder = async (req, res) => {
         );
       }
     }
+
+    // Deduct redeemed JCoins from customer's account balance
+    if (numJcoinsRedeemed > 0 && orderUserId) {
+      await processOrderJCoinsRedemption(orderId, orderUserId, numJcoinsRedeemed);
+    }
+
+    // Award JCoins if order is immediately completed (e.g. POS Billing or delivered)
+    if (order_status === 'delivered' || (inferredOrderType === 'pos' && payment_status === 'paid')) {
+      await awardJCoinsForOrder(createdOrderObject);
+    }
   } catch (error) {
     console.warn('DB insert in createOrder fallback:', error.message);
   }
@@ -437,7 +486,7 @@ export const updateOrder = async (req, res) => {
 
   try {
     const [rows] = await pool.query(
-      'SELECT id, order_number FROM orders WHERE id = ? OR order_number = ?',
+      'SELECT * FROM orders WHERE id = ? OR order_number = ?',
       [id, id]
     );
     const row = rows[0];
@@ -531,6 +580,21 @@ export const updateOrder = async (req, res) => {
       }
     }
 
+    // Fetch updated order object to evaluate JCoins lifecycle triggers
+    const [updatedRows] = await pool.query('SELECT * FROM orders WHERE id = ? OR order_number = ?', [id, id]);
+    const updatedOrder = updatedRows.length > 0 ? updatedRows[0] : row;
+
+    if (updatedOrder) {
+      const finalOrderStatus = order_status || updatedOrder.order_status;
+      const finalPaymentStatus = payment_status || updatedOrder.payment_status;
+
+      if (finalOrderStatus === 'delivered' || (updatedOrder.order_type === 'pos' && finalPaymentStatus === 'paid')) {
+        await awardJCoinsForOrder(updatedOrder);
+      } else if (finalOrderStatus === 'cancelled' || finalPaymentStatus === 'refunded') {
+        await reverseJCoinsForOrder(updatedOrder.id);
+      }
+    }
+
     return res.json({ success: true, message: 'Order updated successfully.' });
   } catch (error) {
     const idx = mockOrders.findIndex((o) => String(o.id) === String(id) || o.order_number === id);
@@ -548,7 +612,14 @@ export const updateOrder = async (req, res) => {
         items: Array.isArray(items) ? items : mockOrders[idx].items,
       };
       mockOrders[idx] = updated;
-      return res.json({ success: true, message: 'Order updated successfully. (Demo mode — not persisted)', isFallback: true });
+
+      if (order_status === 'delivered' || (updated.order_type === 'pos' && payment_status === 'paid')) {
+        await awardJCoinsForOrder(updated);
+      } else if (order_status === 'cancelled' || payment_status === 'refunded') {
+        await reverseJCoinsForOrder(updated.id);
+      }
+
+      return res.json({ success: true, message: 'Order updated successfully.', isFallback: true });
     }
     return res.status(500).json({ success: false, message: error.message });
   }

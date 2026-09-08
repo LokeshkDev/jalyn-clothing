@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `password` VARCHAR(255) NOT NULL,
   `role` ENUM('admin', 'customer') DEFAULT 'customer',
   `avatar` VARCHAR(255) NULL,
+  `jcoins_balance` INT DEFAULT 0,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -53,6 +54,23 @@ CREATE TABLE IF NOT EXISTS `addresses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
+-- 1d. JCoins Ledger Transactions Table
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `jcoin_transactions` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `order_id` INT NULL,
+  `type` ENUM('EARN', 'REDEEM', 'REFUND_REVERSAL', 'ADMIN_ADJUSTMENT', 'EXPIRY') NOT NULL,
+  `points` INT NOT NULL,
+  `balance_after` INT NOT NULL,
+  `description` VARCHAR(255) NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_jcoin_user` (`user_id`),
+  INDEX `idx_jcoin_order` (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
 -- 2. Categories Table
 -- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `categories` (
@@ -77,6 +95,7 @@ CREATE TABLE IF NOT EXISTS `products` (
   `price` DECIMAL(10,2) NOT NULL,
   `original_price` DECIMAL(10,2) NULL,
   `base_price` DECIMAL(10,2) NULL,
+  `purchase_price` DECIMAL(10,2) NULL DEFAULT 0.00,
   `hsn_code` VARCHAR(50) DEFAULT '6204',
   `discount` INT DEFAULT 0,
   `rating` DECIMAL(3,2) DEFAULT 4.5,
@@ -216,6 +235,8 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `payment_method` VARCHAR(50) NULL,
   `payment_status` ENUM('pending', 'paid', 'failed', 'refunded') DEFAULT 'pending',
   `order_status` ENUM('pending', 'processing', 'shipped', 'delivered', 'cancelled') DEFAULT 'pending',
+  `jcoins_redeemed` INT DEFAULT 0,
+  `jcoins_discount` DECIMAL(10,2) DEFAULT 0,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

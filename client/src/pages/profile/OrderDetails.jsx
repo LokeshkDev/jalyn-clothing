@@ -268,7 +268,7 @@ export default function OrderDetails() {
                     <p className="font-bold text-ink text-sm">{item.name}</p>
                     <div className="flex items-center gap-2 flex-wrap text-ink-muted">
                       <span>Size: <strong className="text-ink">{item.size || 'M'}</strong></span>
-                      <span>Color: <strong className="text-ink">{item.color || 'Rose'}</strong></span>
+                      <span>Color: <strong className="text-ink">{typeof item.color === 'object' ? (item.color.name || item.color.label || 'Rose') : (item.color || 'Rose')}</strong></span>
                       <span className="font-mono text-[11px]">HSN: {item.hsn_code}</span>
                       <span className="font-mono text-[11px] bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded border border-blue-200 font-semibold">
                         Base: {formatINR(Math.round((item.price / (1 + item.gst_rate / 100)) * 100) / 100)}
@@ -417,7 +417,7 @@ export default function OrderDetails() {
                     <td className="p-3 font-medium">{idx + 1}</td>
                     <td className="p-3">
                       <p className="font-bold">{item.name}</p>
-                      <p className="text-[10px] text-gray-500">Size: {item.size || 'M'} | Color: {item.color || 'Default'}</p>
+                      <p className="text-[10px] text-gray-500">Size: {item.size || 'M'} | Color: {typeof item.color === 'object' ? (item.color.name || item.color.label || 'Default') : (item.color || 'Default')}</p>
                     </td>
                     <td className="p-3 font-mono">{item.hsn_code || '6204'}</td>
                     <td className="p-3 text-right font-mono text-gray-700">{formatINR(unitBase)}</td>

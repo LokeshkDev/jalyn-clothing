@@ -133,9 +133,31 @@ export default function Checkout() {
     return 0
   }, [shippingMethod, isExpressShippingEnabled, isStandardShippingEnabled, expressRate, standardFreeThreshold, standardRate, subtotal])
 
+  const [userJcoins, setUserJcoins] = useState(user?.jcoins_balance || 0)
+  const [selectedJcoinsRedeem, setSelectedJcoinsRedeem] = useState(0) // 0, 250, 500
+
+  // Fetch current customer JCoins balance
+  useEffect(() => {
+    if (user && userToken) {
+      api.get('/jcoins/balance')
+        .then((res) => {
+          if (res.data?.balance !== undefined) {
+            setUserJcoins(Number(res.data.balance) || 0)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [user, userToken])
+
   const discountAmount = useMemo(() => {
     return calcCouponDiscount(appliedCoupon, subtotal)
   }, [subtotal, appliedCoupon])
+
+  const jcoinsDiscountAmount = useMemo(() => {
+    if (!selectedJcoinsRedeem || userJcoins < selectedJcoinsRedeem) return 0
+    const discountRs = Math.round(Number(selectedJcoinsRedeem) * 0.25 * 100) / 100
+    return Math.min(discountRs, Math.max(0, subtotal - discountAmount))
+  }, [selectedJcoinsRedeem, userJcoins, subtotal, discountAmount])
 
   const selectedAddressObj = useMemo(() => {
     return addresses.find((a) => a.id === selectedAddrId) || addresses[0]
@@ -150,12 +172,12 @@ export default function Checkout() {
         quantity: Number(i.qty || i.quantity) || 1,
         hsn_code: i.hsn_code || '6204',
       })),
-      discountAmount,
+      discountAmount: discountAmount + jcoinsDiscountAmount,
       shippingAmount: shippingCost,
       isGstInclusive: true,
       shippingState: selectedAddressObj?.state || selectedAddressObj?.addressLine1 || 'Tamil Nadu',
     })
-  }, [cartItems, discountAmount, shippingCost, selectedAddressObj])
+  }, [cartItems, discountAmount, jcoinsDiscountAmount, shippingCost, selectedAddressObj])
 
   const {
     taxableAmount,
@@ -169,7 +191,7 @@ export default function Checkout() {
   } = orderTax
 
   // Storefront MRP prices are inclusive of GST
-  const grandTotal = Math.max(0, subtotal - discountAmount + shippingCost + codFee)
+  const grandTotal = Math.max(0, subtotal - discountAmount - jcoinsDiscountAmount + shippingCost + codFee)
 
   const effectivePhone = useMemo(() => {
     return (
@@ -484,6 +506,8 @@ export default function Checkout() {
             payment_status: 'paid',
             order_status: 'processing',
             payment_method: 'Online Payment (Cashfree)',
+            jcoins_redeemed: selectedJcoinsRedeem,
+            jcoins_discount: jcoinsDiscountAmount,
             items: payloadItems,
           }
 
@@ -520,6 +544,8 @@ export default function Checkout() {
           payment_status: 'failed',
           order_status: 'cancelled',
           payment_method: 'Online Payment (Error)',
+          jcoins_redeemed: 0,
+          jcoins_discount: 0,
           items: payloadItems,
         }
 
@@ -548,7 +574,7 @@ export default function Checkout() {
         orderNotes,
         items: cartItems,
         subtotal,
-        discount: discountAmount,
+        discount: discountAmount + jcoinsDiscountAmount,
         tax: taxAmount,
         taxable_amount: taxableAmount,
         cgst_amount: cgstAmount,
@@ -574,6 +600,8 @@ export default function Checkout() {
         payment_status: 'pending',
         order_status: 'Processing',
         payment_method: 'Cash on Delivery (COD)',
+        jcoins_redeemed: selectedJcoinsRedeem,
+        jcoins_discount: jcoinsDiscountAmount,
         items: payloadItems,
       }
 
@@ -647,16 +675,8 @@ export default function Checkout() {
           <div className="rounded-2xl border border-primary/10 bg-white p-4 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-[13px] font-bold text-[#222222] flex items-center gap-1.5">
-                <MapPin className="h-4 w-4 text-primary" />
-                <span>1. Contact &amp; Shipping Address</span>
+                <MapPin className="h-4 w-4 text-primary" /> Delivery Address
               </h3>
-              <button
-                type="button"
-                onClick={() => setIsAddressSheetOpen(true)}
-                className="text-[12px] font-bold text-primary active:scale-95"
-              >
-                Change
-              </button>
             </div>
 
             {/* Customer Contact Snippet */}

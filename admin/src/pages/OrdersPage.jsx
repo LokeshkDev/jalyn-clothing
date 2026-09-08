@@ -741,7 +741,7 @@ export default function OrdersPage() {
                               <td className="py-2.5 px-3 text-gray-500">
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   {item.size && <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-semibold">Size {item.size}</span>}
-                                  {item.color && <span className="bg-pink-50 px-1.5 py-0.5 rounded text-[10px] font-semibold capitalize text-brand-700">{item.color}</span>}
+                                  {item.color && <span className="bg-pink-50 px-1.5 py-0.5 rounded text-[10px] font-semibold capitalize text-brand-700">{typeof item.color === 'object' ? (item.color.name || item.color.label || '') : String(item.color)}</span>}
                                   <span className="text-[10px] font-mono text-gray-400">HSN: {hsn}</span>
                                 </div>
                               </td>

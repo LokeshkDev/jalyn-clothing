@@ -22,9 +22,11 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  Coins,
+  Sparkles,
 } from 'lucide-react'
 import { useUserStore } from '@/store'
-import { authAPI } from '@/services/api'
+import api, { authAPI } from '@/services/api'
 import { cn } from '@/lib/utils'
 
 export default function ProfileLayout() {
@@ -33,6 +35,20 @@ export default function ProfileLayout() {
   const user = useUserStore((s) => s.user)
   const logoutStore = useUserStore((s) => s.logout)
   const updateProfile = useUserStore((s) => s.updateProfile)
+
+  const [userJcoins, setUserJcoins] = useState(user?.jcoins_balance || 0)
+
+  useEffect(() => {
+    if (user) {
+      api.get('/jcoins/balance')
+        .then((res) => {
+          if (res.data?.balance !== undefined) {
+            setUserJcoins(Number(res.data.balance) || 0)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [user])
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
@@ -210,9 +226,15 @@ export default function ProfileLayout() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-light">
-                    JALYN Member
-                  </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-light">
+                      JALYN Member
+                    </span>
+                    <span className="text-[11px] font-extrabold bg-amber-400/20 text-amber-200 px-2.5 py-0.5 rounded-full border border-amber-300/30 font-mono flex items-center gap-1.5 shrink-0">
+                      <Coins className="h-3.5 w-3.5 text-amber-300" />
+                      <span>{userJcoins} Pts</span>
+                    </span>
+                  </div>
                   <h2 className="text-xl font-bold truncate">Hello, {user.firstName}</h2>
                   <p className="text-[11px] text-white/80 truncate">{user.email}</p>
                 </div>
@@ -318,11 +340,27 @@ export default function ProfileLayout() {
                   <span className="font-label text-xs font-bold uppercase tracking-wider text-rose-light">
                     Welcome back to JALYN
                   </span>
-                  <h1 className="font-display text-2xl font-bold sm:text-3xl">
-                    Hello, {user.firstName} {user.lastName}
-                  </h1>
+                  <div className="flex flex-wrap items-center gap-3.5 mt-0.5">
+                    <h1 className="font-display text-2xl font-bold sm:text-3xl">
+                      Hello, {user.firstName} {user.lastName}
+                    </h1>
+                    {/* Clean JCoins Reward Badge */}
+                    <div className="flex items-center gap-2.5 bg-white/15 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-white/25 text-white shadow-sm font-body">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-400/20 text-amber-300 border border-amber-300/30 shrink-0">
+                        <Coins className="h-4.5 w-4.5 text-amber-300" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-200 block">
+                          JCoins Balance
+                        </span>
+                        <span className="text-sm font-extrabold font-mono text-white leading-tight block">
+                          {userJcoins} <span className="text-xs font-semibold text-white/90 font-sans">Pts</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                   <p className="mt-1 text-xs text-white/80">
-                    {user.email} | {user.phone}
+                    {user.email} {user.phone ? `| ${user.phone}` : ''}
                   </p>
                 </div>
               </div>

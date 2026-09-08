@@ -166,26 +166,36 @@ export default function ProductDetails() {
     }
   }, [product, selectedColor, selectedSize])
 
-  // Derive multiple high quality images for gallery based on color selection
+  // Derive multiple high quality images for gallery based on color selection and hover image
   const galleryImages = useMemo(() => {
-    if (Array.isArray(product.gallery) && product.gallery.length > 0) {
-      return product.gallery.filter(Boolean)
-    }
-    if (Array.isArray(product.images?.gallery) && product.images.gallery.length > 0) {
-      return product.images.gallery.filter(Boolean)
-    }
-
-    // Check if color specific images exist
-    const colorKey = typeof selectedColor === 'object' ? selectedColor?.name || selectedColor?.id : selectedColor
-    const colorSpecific = product.color_images?.[colorKey] || product.colorImages?.[colorKey]
-    if (colorSpecific && (Array.isArray(colorSpecific) ? colorSpecific.length > 0 : Boolean(colorSpecific))) {
-      return Array.isArray(colorSpecific) ? colorSpecific : [colorSpecific]
-    }
-
-    const primaryImg = product.image || product.primary_image || product.images?.primary || '/images/products/floral-midi-dress.webp'
+    let list = []
     const hoverImg = product.hoverImage || product.hover_image || product.images?.hover
-    const list = [primaryImg]
-    if (hoverImg && hoverImg !== primaryImg) list.push(hoverImg)
+
+    if (Array.isArray(product.gallery) && product.gallery.length > 0) {
+      list = product.gallery.filter(Boolean)
+    } else if (Array.isArray(product.images?.gallery) && product.images.gallery.length > 0) {
+      list = product.images.gallery.filter(Boolean)
+    } else {
+      // Check if color specific images exist
+      const colorKey = typeof selectedColor === 'object' ? selectedColor?.name || selectedColor?.id : selectedColor
+      const colorSpecific = product.color_images?.[colorKey] || product.colorImages?.[colorKey]
+      if (colorSpecific && (Array.isArray(colorSpecific) ? colorSpecific.length > 0 : Boolean(colorSpecific))) {
+        list = Array.isArray(colorSpecific) ? colorSpecific.filter(Boolean) : [colorSpecific]
+      } else {
+        const primaryImg = product.image || product.primary_image || product.images?.primary || '/images/products/floral-midi-dress.webp'
+        list = [primaryImg]
+      }
+    }
+
+    // Ensure hover image is also available as a PDP gallery thumbnail if present
+    if (hoverImg && typeof hoverImg === 'string' && hoverImg.trim()) {
+      const normalizedHover = hoverImg.trim().toLowerCase()
+      const alreadyPresent = list.some((img) => typeof img === 'string' && img.trim().toLowerCase() === normalizedHover)
+      if (!alreadyPresent) {
+        list.push(hoverImg)
+      }
+    }
+
     return list
   }, [product, selectedColor])
 

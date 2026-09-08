@@ -102,7 +102,7 @@ export const loginUser = async (req, res) => {
 
 export const getMe = async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT id, name, email, phone, role, avatar, created_at FROM users WHERE id = ?', [req.user.id]);
+    const [rows] = await pool.query('SELECT id, name, email, phone, role, avatar, jcoins_balance, created_at FROM users WHERE id = ?', [req.user.id]);
     if (rows.length > 0) {
       return res.json({
         success: true,
@@ -157,7 +157,7 @@ export const registerUser = async (req, res) => {
       }
 
       const [result] = await pool.query(
-        'INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)',
+        'INSERT INTO users (name, email, phone, password, role, jcoins_balance) VALUES (?, ?, ?, ?, ?, 0)',
         [name, email, phone || null, hashedPassword, assignedRole]
       );
       newUserId = result.insertId;
@@ -292,7 +292,7 @@ export const createUserByAdmin = async (req, res) => {
 
 export const getAllUsers = async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT id, name, email, phone, role, created_at FROM users ORDER BY id DESC');
+    const [rows] = await pool.query('SELECT id, name, email, phone, role, avatar, jcoins_balance, created_at FROM users ORDER BY id DESC');
     
     // Fetch addresses for each database user
     const usersWithAddresses = [];

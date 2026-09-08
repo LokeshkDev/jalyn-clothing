@@ -18,6 +18,28 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  // ── Resilience for remote MySQL (e.g. AWS 52.66.173.135) ──
+  // Without keepAlive AWS/RDS/firewalls kill idle sockets -> next query gets `read ECONNRESET`
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
+  connectTimeout: 20000,
+  // mysql2 pool v3+ supports idleTimeout to prune idle connections before firewall does
+  idleTimeout: 60000,
+  charset: 'utf8mb4',
+});
+
+// Log pool lifecycle – helps diagnose ECONNRESET / PROTOCOL_CONNECTION_LOST without crashing
+pool.on('connection', (connection) => {
+  // Per-connection error handler prevents unhandled 'error' crash
+  connection.on('error', (err) => {
+    console.warn(`⚠️ MySQL connection ${connection.threadId} error: ${err.code} - ${err.message}`);
+  });
+});
+pool.on('acquire', (connection) => {
+  // console.log(`🔌 Acquired DB connection ${connection.threadId}`);
+});
+pool.on('release', (connection) => {
+  // console.log(`🔓 Released DB connection ${connection.threadId}`);
 });
 
 export const initDatabase = async (connection) => {
@@ -97,6 +119,35 @@ export const testConnection = async () => {
     } catch (e) {}
     try {
       await connection.query("ALTER TABLE orders ADD COLUMN order_type VARCHAR(50) DEFAULT 'online'");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE users ADD COLUMN jcoins_balance INT DEFAULT 0");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE orders ADD COLUMN jcoins_redeemed INT DEFAULT 0");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE orders ADD COLUMN jcoins_discount DECIMAL(10,2) DEFAULT 0");
+    } catch (e) {}
+    try {
+      await connection.query("ALTER TABLE products ADD COLUMN purchase_price DECIMAL(10,2) NULL DEFAULT 0.00");
+    } catch (e) {}
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS jcoin_transactions (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
+          order_id INT NULL,
+          type ENUM('EARN', 'REDEEM', 'REFUND_REVERSAL', 'ADMIN_ADJUSTMENT', 'EXPIRY') NOT NULL,
+          points INT NOT NULL,
+          balance_after INT NOT NULL,
+          description VARCHAR(255) NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          INDEX idx_jcoin_user (user_id),
+          INDEX idx_jcoin_order (order_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+      `);
     } catch (e) {}
     try {
       await connection.query("ALTER TABLE order_items ADD COLUMN sku VARCHAR(100) NULL");

@@ -23,6 +23,7 @@ import vendorRoutes from './routes/vendorRoutes.js';
 import rackRoutes from './routes/rackRoutes.js';
 import godownRoutes from './routes/godownRoutes.js';
 import consentRoutes from './routes/consentRoutes.js';
+import jcoinRoutes from './routes/jcoinRoutes.js';
 
 dotenv.config();
 
@@ -182,6 +183,8 @@ app.use('/api/vendors', vendorRoutes);
 app.use('/api/racks', rackRoutes);
 app.use('/api/godowns', godownRoutes);
 app.use('/api/consent', consentRoutes);
+app.use('/api/jcoins', jcoinRoutes);
+app.use('/api/customers', jcoinRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

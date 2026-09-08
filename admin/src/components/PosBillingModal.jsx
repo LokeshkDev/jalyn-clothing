@@ -31,6 +31,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
   const [searchFocused, setSearchFocused] = useState(false);
   const searchInputRef = useRef(null);
   const scanInputRef = useRef(null);
+  const phoneInputRef = useRef(null);
   const lastScannedRef = useRef({ code: '', timestamp: 0 });
 
   // Thermal format settings modal
@@ -78,6 +79,43 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
 
   // Processing state
   const [submitting, setSubmitting] = useState(false);
+
+  // JCoins Loyalty State
+  const [jcoinsData, setJcoinsData] = useState(null);
+  const [loadingJcoins, setLoadingJcoins] = useState(false);
+  const [selectedJcoinsRedeem, setSelectedJcoinsRedeem] = useState(0);
+
+  // Auto Lookup Customer & JCoins Balance by Phone
+  useEffect(() => {
+    const cleanPhone = (customerPhone || '').replace(/[^0-9]/g, '');
+    if (cleanPhone.length >= 10) {
+      setLoadingJcoins(true);
+      api.get('/jcoins/lookup', { params: { phone: cleanPhone } })
+        .then((res) => {
+          if (res.data?.success && res.data?.found) {
+            setJcoinsData(res.data);
+            if (res.data.customer?.name && (customerName === 'Walk-in Customer' || !customerName)) {
+              setCustomerName(res.data.customer.name);
+            }
+            if (res.data.customer?.email && !customerEmail) {
+              setCustomerEmail(res.data.customer.email);
+            }
+          } else {
+            setJcoinsData(null);
+            setSelectedJcoinsRedeem(0);
+          }
+        })
+        .catch((err) => {
+          console.warn('JCoins customer lookup error:', err);
+          setJcoinsData(null);
+          setSelectedJcoinsRedeem(0);
+        })
+        .finally(() => setLoadingJcoins(false));
+    } else {
+      setJcoinsData(null);
+      setSelectedJcoinsRedeem(0);
+    }
+  }, [customerPhone]);
 
   // Load product catalog and thermal default settings on open
   useEffect(() => {
@@ -134,7 +172,8 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
   // Add a product to the billing cart
   const handleAddProduct = (product, selectedSize = null, selectedColor = null) => {
     const defaultSize = selectedSize || (Array.isArray(product.sizes) && product.sizes.length > 0 ? product.sizes[0] : (product.size || 'Free Size'));
-    const defaultColor = selectedColor || (Array.isArray(product.colors) && product.colors.length > 0 ? product.colors[0] : (product.color || ''));
+    const rawColor = selectedColor || (Array.isArray(product.colors) && product.colors.length > 0 ? product.colors[0] : (product.color || ''));
+    const defaultColor = typeof rawColor === 'object' ? (rawColor?.name || rawColor?.label || '') : String(rawColor || '');
     
     const mrp = Number(product.original_price) || Number(product.compare_price) || Number(product.price) || 0;
     const sellingPrice = Number(product.price) > 0 ? Number(product.price) : mrp;
@@ -448,16 +487,31 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     return Math.min(val, rawSubtotal);
   }, [billItems, discountType, discountValue]);
 
+  // JCoins Instant Redemption Discount Calculation
+  const jcoinsDiscountAmount = useMemo(() => {
+    if (!selectedJcoinsRedeem || !jcoinsData?.customer?.jcoins_balance) return 0;
+    const avail = Number(jcoinsData.customer.jcoins_balance || 0);
+    if (avail < selectedJcoinsRedeem) return 0;
+    const rawSubtotal = billItems.reduce((sum, item) => {
+      const p = Number(item.price) || 0;
+      const q = Number(item.quantity) || 1;
+      return sum + p * q;
+    }, 0);
+    const afterManualDiscount = Math.max(0, rawSubtotal - discountAmount);
+    const discountRs = Math.round(Number(selectedJcoinsRedeem) * 0.25 * 100) / 100;
+    return Math.min(discountRs, afterManualDiscount);
+  }, [selectedJcoinsRedeem, jcoinsData, billItems, discountAmount]);
+
   // Unified Multi-Item Dynamic GST Calculation
   const orderTax = useMemo(() => {
     return calculateOrderTax({
       items: billItems,
-      discountAmount,
+      discountAmount: discountAmount + jcoinsDiscountAmount,
       shippingAmount: Number(shippingFee) || 0,
       isGstInclusive,
       shippingState: shippingAddress,
     });
-  }, [billItems, discountAmount, shippingFee, isGstInclusive, shippingAddress]);
+  }, [billItems, discountAmount, jcoinsDiscountAmount, shippingFee, isGstInclusive, shippingAddress]);
 
   const {
     subtotal,
@@ -493,6 +547,10 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     const cleanPhone = (customerPhone || '').replace(/[^0-9]/g, '');
     if (!cleanPhone || cleanPhone.length < 10) {
       showToast?.('Customer Phone Number is mandatory (minimum 10 digits required for billing).', 'error');
+      if (phoneInputRef.current) {
+        phoneInputRef.current.focus();
+        phoneInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
     const cleanEmail = (customerEmail || '').trim() || `${cleanPhone}@jalyn.in`;
@@ -510,6 +568,8 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
       shipping_address: cleanAddress,
       total_amount: grandTotal,
       discount_amount: discountAmount,
+      jcoins_redeemed: selectedJcoinsRedeem,
+      jcoins_discount: jcoinsDiscountAmount,
       shipping_amount: Number(shippingFee) || 0,
       gst_rate: dominantGstRate,
       is_gst_inclusive: isGstInclusive ? 1 : 0,
@@ -1011,7 +1071,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
 
                             {item.color && (
                               <span className="text-[10px] font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-200">
-                                {item.color}
+                                {typeof item.color === 'object' ? (item.color.name || item.color.label || '') : String(item.color)}
                               </span>
                             )}
                           </div>
@@ -1195,6 +1255,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                 <div>
                   <div className="relative flex items-center">
                     <input
+                      ref={phoneInputRef}
                       type="tel"
                       required
                       value={customerPhone}
@@ -1227,6 +1288,100 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                     className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold focus:ring-2 focus:ring-[#AD4A85] outline-none"
                   />
                 </>
+              )}
+
+              {/* JCoins Loyalty Badge & Instant Redemption Selector */}
+              {customerPhone && customerPhone.replace(/[^0-9]/g, '').length >= 10 && (
+                <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-amber-900 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Customer JCoins Loyalty
+                    </span>
+                    {loadingJcoins ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                    ) : (
+                      <span className="text-xs font-extrabold text-amber-900 bg-amber-200/80 px-2.5 py-0.5 rounded-full border border-amber-300">
+                        🪙 {jcoinsData?.customer?.jcoins_balance || 0} JCoins
+                      </span>
+                    )}
+                  </div>
+
+                  {jcoinsData?.customer?.jcoins_balance >= 10 ? (
+                    <div className="space-y-1.5 pt-1">
+                      <div className="text-[10px] text-amber-800 font-semibold flex items-center justify-between">
+                        <span>Redeem JCoins (1 Pt = ₹0.25 discount):</span>
+                        <span>Avail: {jcoinsData.customer.jcoins_balance} Pts</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1.5 text-[10px] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedJcoinsRedeem(0)}
+                          className={`py-1 px-1.5 rounded-lg border transition cursor-pointer text-center ${
+                            selectedJcoinsRedeem === 0
+                              ? 'bg-amber-900 text-white border-amber-900 shadow-xs'
+                              : 'bg-white text-gray-700 border-amber-200 hover:bg-amber-100/50'
+                          }`}
+                        >
+                          None (₹0)
+                        </button>
+                        <button
+                          type="button"
+                          disabled={jcoinsData.customer.jcoins_balance < 100}
+                          onClick={() => setSelectedJcoinsRedeem(100)}
+                          className={`py-1 px-1.5 rounded-lg border transition text-center ${
+                            selectedJcoinsRedeem === 100
+                              ? 'bg-amber-900 text-white border-amber-900 shadow-xs cursor-pointer'
+                              : jcoinsData.customer.jcoins_balance >= 100
+                                ? 'bg-white text-amber-900 border-amber-200 hover:bg-amber-100/50 cursor-pointer'
+                                : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                          }`}
+                        >
+                          100 Pts (₹25)
+                        </button>
+                        <button
+                          type="button"
+                          disabled={jcoinsData.customer.jcoins_balance < 200}
+                          onClick={() => setSelectedJcoinsRedeem(200)}
+                          className={`py-1 px-1.5 rounded-lg border transition text-center ${
+                            selectedJcoinsRedeem === 200
+                              ? 'bg-amber-900 text-white border-amber-900 shadow-xs cursor-pointer'
+                              : jcoinsData.customer.jcoins_balance >= 200
+                                ? 'bg-white text-amber-900 border-amber-200 hover:bg-amber-100/50 cursor-pointer'
+                                : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                          }`}
+                        >
+                          200 Pts (₹50)
+                        </button>
+                        <button
+                          type="button"
+                          disabled={jcoinsData.customer.jcoins_balance < 400}
+                          onClick={() => setSelectedJcoinsRedeem(400)}
+                          className={`py-1 px-1.5 rounded-lg border transition text-center ${
+                            selectedJcoinsRedeem === 400
+                              ? 'bg-amber-900 text-white border-amber-900 shadow-xs cursor-pointer'
+                              : jcoinsData.customer.jcoins_balance >= 400
+                                ? 'bg-white text-amber-900 border-amber-200 hover:bg-amber-100/50 cursor-pointer'
+                                : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                          }`}
+                        >
+                          400 Pts (₹100)
+                        </button>
+                      </div>
+                      {jcoinsDiscountAmount > 0 && (
+                        <div className="text-[10px] font-bold text-emerald-800 flex items-center justify-between bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
+                          <span>JCoins Reward ({selectedJcoinsRedeem} Pts):</span>
+                          <span>−₹{jcoinsDiscountAmount.toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-amber-700 italic">
+                      {jcoinsData?.customer
+                        ? `Customer has ${jcoinsData.customer.jcoins_balance || 0} JCoins balance.`
+                        : 'Enter 10-digit customer mobile no. to check JCoins reward balance.'}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
@@ -1373,6 +1528,13 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
                   )}
                 </div>
               </div>
+
+              {jcoinsDiscountAmount > 0 && (
+                <div className="flex items-center justify-between text-amber-900 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200 font-semibold text-[11px]">
+                  <span className="flex items-center gap-1">🪙 JCoins ({selectedJcoinsRedeem} Coins):</span>
+                  <span className="font-bold text-amber-800">−{money(jcoinsDiscountAmount)}</span>
+                </div>
+              )}
 
               {billingMode === 'delivery' && (
                 <div className="flex items-center justify-between">

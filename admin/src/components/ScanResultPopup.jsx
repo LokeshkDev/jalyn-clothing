@@ -67,8 +67,8 @@ export default function ScanResultPopup({ visible, result, onClose }) {
                   <div className="flex items-center gap-2 mt-1.5 text-sm text-gray-600">
                     {data.variant.color && (
                       <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full border border-gray-200 shadow-sm" style={{ backgroundColor: data.variant.color.toLowerCase() }}></span>
-                        <span className="text-xs font-medium">{data.variant.color}</span>
+                        <span className="w-2.5 h-2.5 rounded-full border border-gray-200 shadow-sm" style={{ backgroundColor: (typeof data.variant.color === 'object' ? (data.variant.color.hex || '#AD4A85') : String(data.variant.color)).toLowerCase() }}></span>
+                        <span className="text-xs font-medium">{typeof data.variant.color === 'object' ? (data.variant.color.name || data.variant.color.label || '') : String(data.variant.color)}</span>
                       </span>
                     )}
                     {data.variant.color && data.variant.size && <span className="text-gray-300">•</span>}

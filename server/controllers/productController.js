@@ -84,6 +84,7 @@ export const ensureProductsTable = async () => {
         price DECIMAL(10,2) NOT NULL,
         original_price DECIMAL(10,2) DEFAULT NULL,
         base_price DECIMAL(10,2) NULL,
+        purchase_price DECIMAL(10,2) NULL DEFAULT 0.00,
         hsn_code VARCHAR(50) DEFAULT '6204',
         discount INT DEFAULT 0,
         rating DECIMAL(3,2) DEFAULT 4.8,
@@ -136,6 +137,7 @@ export const ensureProductsTable = async () => {
 
     await ensureColumn('barcode_short_name', 'ALTER TABLE products ADD COLUMN barcode_short_name VARCHAR(150) NULL');
     await ensureColumn('base_price', 'ALTER TABLE products ADD COLUMN base_price DECIMAL(10,2) NULL');
+    await ensureColumn('purchase_price', 'ALTER TABLE products ADD COLUMN purchase_price DECIMAL(10,2) NULL DEFAULT 0.00');
     await ensureColumn('hsn_code', "ALTER TABLE products ADD COLUMN hsn_code VARCHAR(50) DEFAULT '6204'");
     await ensureColumn('product_code', 'ALTER TABLE products ADD COLUMN product_code VARCHAR(100)');
     await ensureColumn('base_sku', 'ALTER TABLE products ADD COLUMN base_sku VARCHAR(100)');
@@ -188,18 +190,34 @@ export const getProducts = async (req, res) => {
   const { category, search, sort, new_arrivals, sales, sale, include_offline } = req.query;
   const isIncludeOffline = include_offline === '1' || include_offline === 'true';
 
-  try {
-    let query = 'SELECT p.*, '
-      + '(SELECT COALESCE(SUM(stock), 0) FROM product_godown_stock WHERE product_id = p.id) as godown_total, '
-      + '(SELECT COUNT(*) FROM product_godown_stock WHERE product_id = p.id) as godown_count '
-      + 'FROM products p WHERE 1=1';
+  // Helper: transient MySQL network errors that are safe to retry once
+  const isTransientDbError = (err) => {
+    const code = err?.code || '';
+    const msg = err?.message || '';
+    return (
+      code === 'ECONNRESET' ||
+      code === 'PROTOCOL_CONNECTION_LOST' ||
+      code === 'ETIMEDOUT' ||
+      code === 'EPIPE' ||
+      code === 'ECONNREFUSED' ||
+      msg.includes('ECONNRESET') ||
+      msg.includes('read ECONNRESET')
+    );
+  };
+
+  const buildQuery = () => {
+    // Optimized: single LEFT JOIN derived table instead of 2 correlated subqueries per row.
+    // Correlated subqueries held connections open longer and amplified ECONNRESET on remote DB.
+    let query =
+      'SELECT p.*, COALESCE(gs.total, 0) as godown_total, COALESCE(gs.cnt, 0) as godown_count ' +
+      'FROM products p ' +
+      'LEFT JOIN (SELECT product_id, SUM(stock) as total, COUNT(*) as cnt FROM product_godown_stock GROUP BY product_id) gs ON gs.product_id = p.id ' +
+      'WHERE 1=1';
     const params = [];
 
-    // For public online store, only show active products that have online publishing turned ON
     if (!isIncludeOffline) {
       query += ' AND p.is_active = 1 AND (p.is_online = 1 OR p.is_online IS NULL)';
     }
-
     if (new_arrivals === '1') {
       query += ' AND p.is_new_arrival = 1 AND p.new_arrival_published = 1';
     }
@@ -216,7 +234,6 @@ export const getProducts = async (req, res) => {
       params.push(s, s, s, s, s);
     }
 
-    // Dynamic sorting
     if (sort === 'price-low' || sort === 'price_asc') query += ' ORDER BY p.price ASC';
     else if (sort === 'price-high' || sort === 'price_desc') query += ' ORDER BY p.price DESC';
     else if (sort === 'top-rated' || sort === 'rating') query += ' ORDER BY p.rating DESC';
@@ -226,12 +243,37 @@ export const getProducts = async (req, res) => {
     else if (sales === '1' || sale === '1') query += ' ORDER BY p.sale_order ASC, p.created_at DESC';
     else query += ' ORDER BY p.created_at DESC';
 
-    const [rows] = await pool.query(query, params);
-    const products = rows && rows.length > 0 ? rows.map(withEffectiveStock).filter(Boolean) : [];
-    return res.json({ success: true, products });
-  } catch (error) {
-    console.error('getProducts query error:', error);
-    return res.status(500).json({ success: false, message: error.message, products: [] });
+    return { query, params };
+  };
+
+  const { query, params } = buildQuery();
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const [rows] = await pool.query(query, params);
+      const products = rows && rows.length > 0 ? rows.map(withEffectiveStock).filter(Boolean) : [];
+      return res.json({ success: true, products });
+    } catch (error) {
+      console.error(`getProducts query error (attempt ${attempt + 1}/2):`, error.code || '', error.message);
+
+      // Retry once on transient network resets from remote MySQL (52.66.173.135)
+      if (attempt === 0 && isTransientDbError(error)) {
+        console.warn('⚠️ Transient DB error, retrying getProducts in 400ms...');
+        await new Promise((r) => setTimeout(r, 400));
+        continue;
+      }
+
+      // Non-transient or second failure -> respond with service-unavailable hint
+      const isNetwork = isTransientDbError(error);
+      return res.status(isNetwork ? 503 : 500).json({
+        success: false,
+        message: isNetwork
+          ? 'Database connection was reset. Please retry. If this persists, check DB_HOST connectivity and pool keepAlive settings.'
+          : error.message,
+        code: error.code || 'DB_ERROR',
+        products: [],
+      });
+    }
   }
 };
 
@@ -326,12 +368,12 @@ export const createProduct = async (req, res) => {
   try {
     const [result] = await pool.query(
       `INSERT INTO products 
-      (title, barcode_short_name, slug, category_slug, price, original_price, base_price, hsn_code, discount, description, short_description,
+      (title, barcode_short_name, slug, category_slug, price, original_price, base_price, purchase_price, hsn_code, discount, description, short_description,
        sizes, colors, primary_image, hover_image, stock, brand, product_code, base_sku,
        is_featured, is_new_arrival, is_online, is_offline, low_stock_threshold,
        variants, color_images, size_guide, fabric, sleeve, occasion, fit, pattern, season,
        vendor_id, rack_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         title || 'Untitled Product',
         barcode_short_name || null,
@@ -340,6 +382,7 @@ export const createProduct = async (req, res) => {
         sellPrice,
         origPrice || sellPrice,
         base_price !== undefined && base_price !== null && base_price !== '' ? parseFloat(base_price) : null,
+        purchase_price !== undefined && purchase_price !== null && purchase_price !== '' ? parseFloat(purchase_price) : 0.00,
         hsn_code || '6204',
         disc,
         description || '',
@@ -465,6 +508,7 @@ export const updateProduct = async (req, res) => {
       barcode_short_name: 'barcode_short_name',
       price: 'price',
       original_price: 'original_price',
+      purchase_price: 'purchase_price',
       base_price: 'base_price',
       hsn_code: 'hsn_code',
       discount: 'discount',

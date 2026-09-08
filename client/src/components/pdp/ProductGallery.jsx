@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronUp, ChevronDown, ZoomIn, Share2, Check } from 'lucide-react'
 import ProductBadge from '@/components/shop/ProductBadge'
 import WishlistButton from '@/components/shop/WishlistButton'
@@ -12,6 +13,26 @@ export default function ProductGallery({ product, images = [] }) {
   const [copied, setCopied] = useState(false)
 
   const currentImage = images[selectedIndex] || product.images?.primary || product.image
+
+  // Prevent background scrolling and enable Escape key to close modal
+  useEffect(() => {
+    if (lightboxOpen) {
+      const originalStyle = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+          setLightboxOpen(false)
+        }
+      }
+
+      window.addEventListener('keydown', handleKeyDown)
+      return () => {
+        document.body.style.overflow = originalStyle
+        window.removeEventListener('keydown', handleKeyDown)
+      }
+    }
+  }, [lightboxOpen])
 
   const handleMouseMove = (e) => {
     const { left, top, width, height } = e.currentTarget.getBoundingClientRect()
@@ -165,28 +186,35 @@ export default function ProductGallery({ product, images = [] }) {
           </div>
         </div>
 
-        {/* Fullscreen Lightbox Overlay Modal */}
-        {lightboxOpen && (
-          <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4 backdrop-blur-md"
-            onClick={() => setLightboxOpen(false)}
-          >
-            <div className="relative max-h-[90vh] max-w-4xl overflow-hidden rounded-2xl">
-              <img
-                src={currentImage}
-                alt={product.title}
-                className="max-h-[90vh] w-auto object-contain"
-              />
-              <button
-                type="button"
-                onClick={() => setLightboxOpen(false)}
-                className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink font-bold shadow-lift"
+        {/* Fullscreen Lightbox Overlay Modal via React Portal */}
+        {lightboxOpen &&
+          typeof document !== 'undefined' &&
+          createPortal(
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 p-4 sm:p-6 backdrop-blur-md animate-in fade-in duration-200"
+              onClick={() => setLightboxOpen(false)}
+            >
+              <div
+                className="relative max-h-[92vh] max-w-5xl overflow-hidden rounded-2xl flex flex-col items-center justify-center"
+                onClick={(e) => e.stopPropagation()}
               >
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
+                <img
+                  src={currentImage}
+                  alt={product.title}
+                  className="max-h-[88vh] w-auto object-contain rounded-xl shadow-2xl"
+                />
+                <button
+                  type="button"
+                  aria-label="Close modal"
+                  onClick={() => setLightboxOpen(false)}
+                  className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-ink font-bold shadow-lift hover:bg-white hover:scale-110 transition cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )}
       </div>
     </div>
   )

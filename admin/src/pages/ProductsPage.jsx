@@ -112,6 +112,7 @@ export default function ProductsPage() {
     brand: 'JALYN',
     price: '',
     original_price: '',
+    purchase_price: '',
     discount: '',
     description: '',
     short_description: '',
@@ -205,6 +206,7 @@ export default function ProductsPage() {
       price: '',
       original_price: '',
       base_price: '',
+      purchase_price: '',
       hsn_code: '6204',
       discount: '',
       description: '',
@@ -268,6 +270,7 @@ export default function ProductsPage() {
       price: sellPrice,
       original_price: origPrice,
       base_price: p.base_price !== undefined && p.base_price !== null ? p.base_price : '',
+      purchase_price: p.purchase_price !== undefined && p.purchase_price !== null ? p.purchase_price : '',
       hsn_code: p.hsn_code || '6204',
       discount: computedDiscount,
       description: p.description || '',
@@ -840,6 +843,7 @@ export default function ProductsPage() {
         price: masterPrice,
         original_price: formData.original_price !== '' ? Number(formData.original_price) : null,
         base_price: formData.base_price !== '' && formData.base_price !== null ? Number(formData.base_price) : null,
+        purchase_price: formData.purchase_price !== '' && formData.purchase_price !== null ? Number(formData.purchase_price) : 0,
         hsn_code: formData.hsn_code || '6204',
         discount: formData.discount !== '' && formData.discount !== null ? Number(formData.discount) : null,
         variants: (formData.variants || []).map((v) => ({
@@ -1328,7 +1332,25 @@ export default function ProductsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-7 gap-4">
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1 flex items-center justify-between">
+                        <span>Purchase Price (₹)</span>
+                        <span className="text-[9px] font-bold text-amber-700 bg-amber-50 px-1 py-0.5 rounded border border-amber-200" title="Internal cost price (hidden from website)">
+                          🔒 Internal
+                        </span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.purchase_price !== undefined ? formData.purchase_price : ''}
+                        onChange={(e) => setFormData({ ...formData, purchase_price: e.target.value })}
+                        placeholder="e.g. 850"
+                        className="w-full px-3 py-2 rounded-xl border border-amber-300 font-mono font-bold focus:ring-2 focus:ring-amber-500 bg-amber-50/20 text-xs text-gray-900"
+                      />
+                    </div>
+
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1">
                         Base Price (₹) <span className="text-[10px] text-blue-600 font-bold">(Excl. GST)</span>
