@@ -304,7 +304,7 @@ export const getProductBySlug = async (req, res) => {
 // ─── POST /products ───
 export const createProduct = async (req, res) => {
   const {
-    title, barcode_short_name, slug, category_slug, price, original_price, base_price, hsn_code, description, short_description,
+    title, barcode_short_name, slug, category_slug, price, original_price, base_price, purchase_price, hsn_code, description, short_description,
     sizes, colors, stock, brand, product_code, base_sku,
     is_featured, is_new_arrival, is_online, is_offline, low_stock_threshold,
     variants, color_images, size_guide,

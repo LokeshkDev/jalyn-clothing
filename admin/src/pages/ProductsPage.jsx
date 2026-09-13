@@ -6,7 +6,7 @@ import BarcodePrintModal from '../components/BarcodePrintModal';
 import api from '../services/api';
 import { generateBarcodeSVG } from '../utils/barcodeEncoder';
 import {
-  Plus, Edit, Trash2, Search, Sparkles, RefreshCw, Loader2, X, Globe, Store,
+  Plus, Edit, Trash2, Copy, Search, Sparkles, RefreshCw, Loader2, X, Globe, Store,
   Layers, Palette, Ruler, ShieldAlert, History, Zap, Check, AlertCircle, ShoppingBag,
   Barcode, Printer, Download, RotateCcw, Eye, Handshake, Boxes, Warehouse, MapPin, Phone
 } from 'lucide-react';
@@ -322,6 +322,84 @@ export default function ProductsPage() {
         }));
       })
       .catch(() => {});
+  };
+
+  const handleDuplicateProduct = (p) => {
+    setEditingId(null);
+    setActiveTab('basic');
+
+    const colorObjs = Array.isArray(p.colors)
+      ? p.colors.map((c) => (typeof c === 'string' ? { name: c, hex: '#AD4A85', images: p.color_images?.[c] || [] } : c))
+      : [];
+
+    const origPrice = p.original_price || '';
+    const sellPrice = p.price || '';
+    let computedDiscount = p.discount !== undefined && p.discount !== null && p.discount !== '' ? p.discount : '';
+    if (computedDiscount === '' && origPrice && sellPrice && Number(origPrice) > Number(sellPrice)) {
+      computedDiscount = Math.round(((Number(origPrice) - Number(sellPrice)) / Number(origPrice)) * 100);
+    }
+
+    const variantSizes = (Array.isArray(p.variants) ? p.variants : []).map((v) => v.size).filter(Boolean);
+    const loadedSizes = Array.isArray(p.sizes) ? p.sizes : ['S', 'M', 'L'];
+    const mergedSizes = [...new Set([...loadedSizes, ...variantSizes])];
+
+    const duplicateBaseSku = generateAlphanumericSku();
+    const duplicateProductCode = 'JAL-' + Math.floor(1000 + Math.random() * 9000);
+    const duplicateTitle = `${p.title || 'Untitled'} (Copy)`;
+    const duplicateSlug = (p.slug ? `${p.slug}-copy` : 'copy') + '-' + Math.floor(1000 + Math.random() * 9000);
+
+    const duplicatedVariants = (Array.isArray(p.variants) ? p.variants : []).map((v) => {
+      const colCode = (v.color || 'COL').toUpperCase().slice(0, 3);
+      return {
+        ...v,
+        sku: `${duplicateBaseSku}-${colCode}-${v.size || 'M'}`,
+      };
+    });
+
+    setFormData({
+      title: duplicateTitle,
+      barcode_short_name: p.barcode_short_name || '',
+      slug: duplicateSlug,
+      product_code: duplicateProductCode,
+      base_sku: duplicateBaseSku,
+      category_slug: p.category_slug || 'dresses',
+      brand: p.brand || 'JALYN',
+      price: sellPrice,
+      original_price: origPrice,
+      base_price: p.base_price !== undefined && p.base_price !== null ? p.base_price : '',
+      purchase_price: p.purchase_price !== undefined && p.purchase_price !== null ? p.purchase_price : '',
+      hsn_code: p.hsn_code || '6204',
+      discount: computedDiscount,
+      description: p.description || '',
+      short_description: p.short_description || '',
+      stock: p.stock || 0,
+      low_stock_threshold: p.low_stock_threshold || 5,
+      is_featured: !!p.is_featured,
+      is_new_arrival: true,
+      is_online: p.is_online !== undefined ? !!p.is_online : true,
+      is_offline: p.is_offline !== undefined ? !!p.is_offline : true,
+      primary_image: p.primary_image || '',
+      hover_image: p.hover_image || '',
+      sizes: mergedSizes,
+      custom_size_input: '',
+      colors: colorObjs.length > 0 ? colorObjs : [{ name: 'Rose', hex: '#AD4A85', images: [] }],
+      color_images: p.color_images || {},
+      variants: duplicatedVariants,
+      size_guide: normalizeSizeGuide(p.size_guide),
+      fabric: p.fabric || '',
+      sleeve: p.sleeve || '',
+      occasion: p.occasion || '',
+      fit: p.fit || '',
+      pattern: p.pattern || '',
+      season: p.season || '',
+      vendor_id: p.vendor_id ? String(p.vendor_id) : '',
+      rack_id: p.rack_id ? String(p.rack_id) : '',
+      godown_stock: (godowns || []).map((g) => ({ godown_id: g.id, stock: 0 })),
+    });
+
+    setProductBarcodes([]);
+    setIsModalOpen(true);
+    showToast(`Duplicating "${p.title}". Review details and click Save!`, 'info');
   };
 
   // Custom Filter Option Helpers
@@ -1211,6 +1289,13 @@ export default function ProductsPage() {
                             title="Full Product Edit"
                           >
                             <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDuplicateProduct(p)}
+                            className="p-1.5 rounded-lg text-gray-600 hover:text-amber-600 hover:bg-amber-50 transition cursor-pointer"
+                            title="Duplicate Product & Pre-fill Matrix"
+                          >
+                            <Copy className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(p.id, p.title)}
@@ -2525,20 +2610,45 @@ export default function ProductsPage() {
                   Centralized inventory updates in real-time across Website &amp; Retail Store.
                 </p>
                 <div className="flex items-center gap-2">
+                  {editingId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId(null);
+                        const dupSku = generateAlphanumericSku();
+                        setFormData((prev) => ({
+                          ...prev,
+                          title: prev.title.endsWith('(Copy)') ? prev.title : `${prev.title} (Copy)`,
+                          base_sku: dupSku,
+                          product_code: 'JAL-' + Math.floor(1000 + Math.random() * 9000),
+                          slug: (prev.slug ? `${prev.slug}-copy` : 'copy') + '-' + Math.floor(1000 + Math.random() * 9000),
+                          variants: (prev.variants || []).map((v) => ({
+                            ...v,
+                            sku: `${dupSku}-${(v.color || 'COL').toUpperCase().slice(0, 3)}-${v.size || 'M'}`,
+                          })),
+                        }));
+                        showToast('Switched to Duplicate mode! Click Save to create this copy.', 'info');
+                      }}
+                      className="px-4 py-2 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold flex items-center gap-1.5 cursor-pointer text-xs"
+                      title="Convert this edit form into a new duplicate copy"
+                    >
+                      <Copy className="w-3.5 h-3.5" /> Duplicate as Copy
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-100 font-semibold text-gray-600"
+                    className="px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-100 font-semibold text-gray-600 cursor-pointer text-xs"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="px-6 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold flex items-center gap-2 shadow-md cursor-pointer"
+                    className="px-6 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50 text-xs"
                   >
                     {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                    Save Product &amp; Sync Inventory
+                    {editingId ? 'Save Product & Sync Inventory' : 'Save Product & Sync Inventory'}
                   </button>
                 </div>
               </div>
