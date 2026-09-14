@@ -536,11 +536,11 @@ ${baseOrigin ? `<base href="${baseOrigin}/" />` : ''}
   body {
     width: ${paperWidth};
     margin: 0 auto;
-    font-family: 'Segoe UI', Arial, -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif;
+    font-family: 'Segoe UI', Arial, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
     font-size: 12px;
     line-height: 1.35;
-    font-weight: 600;
-    color: #444444;
+    font-weight: 700;
+    color: #000000;
     background: #FFFFFF;
     padding: 3mm 3.5mm 5mm;
     -webkit-print-color-adjust: exact;
@@ -551,7 +551,7 @@ ${baseOrigin ? `<base href="${baseOrigin}/" />` : ''}
   }
   .center { text-align: center; }
   .right { text-align: right; }
-  .bold { font-weight: 800; color: #111111; }
+  .bold { font-weight: 900; color: #000000; }
 
   /* Store Header */
   .store-header {
@@ -580,9 +580,9 @@ ${baseOrigin ? `<base href="${baseOrigin}/" />` : ''}
   }
   .store-sub {
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.35;
-    color: #555555;
+    color: #000000;
   }
   .inv-heading {
     font-size: 14px;
@@ -597,12 +597,12 @@ ${baseOrigin ? `<base href="${baseOrigin}/" />` : ''}
   /* Divider */
   .divider {
     border: none;
-    border-top: 1.5px dashed #888888;
+    border-top: 1.5px dashed #000000;
     margin: 2mm 0;
   }
   .solid-divider {
     border: none;
-    border-top: 1.5px solid #555555;
+    border-top: 1.5px solid #000000;
     margin: 1.5mm 0;
   }
 
@@ -610,20 +610,20 @@ ${baseOrigin ? `<base href="${baseOrigin}/" />` : ''}
   .meta-grid {
     font-size: 11.5px;
     line-height: 1.5;
-    font-weight: 600;
-    color: #555555;
+    font-weight: 700;
+    color: #000000;
   }
   .meta-row {
     display: flex;
     justify-content: space-between;
   }
   .meta-label {
-    font-weight: 600;
-    color: #555555;
+    font-weight: 700;
+    color: #000000;
   }
   .meta-val {
-    font-weight: 700;
-    color: #333333;
+    font-weight: 900;
+    color: #000000;
   }
 
   /* Items Table */
@@ -632,52 +632,55 @@ ${baseOrigin ? `<base href="${baseOrigin}/" />` : ''}
   }
   .table-header {
     display: flex;
-    font-weight: 700;
+    font-weight: 900;
     font-size: 11.5px;
     padding-bottom: 1mm;
-    border-bottom: 1.5px solid #666666;
-    color: #444444;
+    border-bottom: 2px solid #000000;
+    color: #000000;
     letter-spacing: 0.3px;
   }
   .item-line {
     display: flex;
     font-size: 11.5px;
-    font-weight: 600;
+    font-weight: 700;
     padding: 1.5mm 0;
-    border-bottom: 1px dashed #cccccc;
+    border-bottom: 1px dashed #000000;
     align-items: flex-start;
-    color: #555555;
+    color: #000000;
   }
-  .col-num { width: 16px; font-weight: 700; color: #555555; }
+  .item-line:last-child {
+    border-bottom: none;
+  }
+  .col-num { width: 16px; font-weight: 900; color: #000000; }
   .col-desc { flex: 1; padding: 0 4px; }
-  .item-title { font-weight: 700; text-transform: uppercase; font-size: 11.5px; color: #333333; }
-  .item-sub { font-size: 10px; font-weight: 600; color: #666666; margin-top: 1px; }
-  .col-qty { width: 44px; text-align: center; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums; color: #555555; }
-  .col-rate { width: 52px; text-align: right; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums; color: #555555; }
-  .col-amt { width: 48px; text-align: right; font-weight: 700; font-size: 11.5px; font-variant-numeric: tabular-nums; color: #444444; }
+  .item-title { font-weight: 900; text-transform: uppercase; font-size: 11.5px; color: #000000; }
+  .item-sub { font-size: 10px; font-weight: 700; color: #000000; margin-top: 1px; }
+  .col-qty { width: 44px; text-align: center; font-weight: 800; font-size: 11.5px; font-variant-numeric: tabular-nums; color: #000000; }
+  .col-rate { width: 52px; text-align: right; font-weight: 800; font-size: 11.5px; font-variant-numeric: tabular-nums; color: #000000; }
+  .col-amt { width: 48px; text-align: right; font-weight: 900; font-size: 11.5px; font-variant-numeric: tabular-nums; color: #000000; }
 
   /* Calculations & Totals */
   .totals-section {
     font-size: 11.5px;
     line-height: 1.55;
-    font-weight: 600;
-    color: #555555;
+    font-weight: 700;
+    color: #000000;
   }
   .calc-row {
     display: flex;
     justify-content: space-between;
-    font-weight: 600;
-    color: #555555;
+    font-weight: 700;
+    color: #000000;
     font-variant-numeric: tabular-nums;
   }
   .grand-row {
     display: flex;
     justify-content: space-between;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 900;
     padding: 1.5mm 0;
-    border-top: 1.5px solid #000000;
-    border-bottom: 1.5px solid #000000;
+    border-top: 2px solid #000000;
+    border-bottom: 2px solid #000000;
     margin: 1.5mm 0;
     color: #000000;
     font-variant-numeric: tabular-nums;
@@ -685,8 +688,8 @@ ${baseOrigin ? `<base href="${baseOrigin}/" />` : ''}
   .payment-row {
     display: flex;
     justify-content: space-between;
-    font-weight: 600;
-    color: #555555;
+    font-weight: 700;
+    color: #000000;
     font-variant-numeric: tabular-nums;
   }
 
@@ -694,16 +697,27 @@ ${baseOrigin ? `<base href="${baseOrigin}/" />` : ''}
   .footer-box {
     text-align: center;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     margin-top: 3mm;
     line-height: 1.4;
-    color: #666666;
+    color: #000000;
   }
 
   @media print {
+    * {
+      color: #000000 !important;
+      font-weight: 700 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
     body {
       width: ${paperWidth};
       padding: 1mm 2mm;
+      color: #000000 !important;
+    }
+    .item-title, .store-title, .inv-heading, .grand-row, .col-amt, .col-num, .meta-val, .bold {
+      font-weight: 900 !important;
+      color: #000000 !important;
     }
   }
 </style>
@@ -719,7 +733,7 @@ ${baseOrigin ? `<base href="${baseOrigin}/" />` : ''}
       ${cfg.cityStatePin ? `<div class="store-sub">${escapeHtml(cfg.cityStatePin)}</div>` : ''}
     ` : ''}
     ${cfg.showPhone && cfg.phone ? `<div class="store-sub">Phone No : ${escapeHtml(cfg.phone)}</div>` : ''}
-    ${cfg.showGstin && cfg.gstin ? `<div class="store-sub" style="font-weight: 700; color: #444;">GST : ${escapeHtml(cfg.gstin)}</div>` : ''}
+    ${cfg.showGstin && cfg.gstin ? `<div class="store-sub" style="font-weight: 800; color: #000000;">GST : ${escapeHtml(cfg.gstin)}</div>` : ''}
     ${cfg.showEmail && cfg.email ? `<div class="store-sub">Email : ${escapeHtml(cfg.email)}</div>` : ''}
   </div>` : ''}
 
@@ -806,7 +820,7 @@ ${baseOrigin ? `<base href="${baseOrigin}/" />` : ''}
     </div>
 
     ${cfg.showYouSaved && youSaved > 0 ? `
-    <div class="calc-row" style="color: #555555;">
+    <div class="calc-row" style="color: #000000; font-weight: 800;">
       <span>You Saved</span>
       <span>- ₹ ${youSaved.toLocaleString('en-IN')}</span>
     </div>` : ''}
@@ -828,13 +842,13 @@ ${baseOrigin ? `<base href="${baseOrigin}/" />` : ''}
 
   ${cfg.showFooterMessage ? `
   <div class="footer-box">
-    ${cfg.footerMessage ? `<div style="font-size: 11.5px; font-weight: 700; color: #444; margin-bottom: 1.5mm;">${escapeHtml(cfg.footerMessage)}</div>` : ''}
+    ${cfg.footerMessage ? `<div style="font-size: 11.5px; font-weight: 800; color: #000000; margin-bottom: 1.5mm;">${escapeHtml(cfg.footerMessage)}</div>` : ''}
     ${cfg.showTermsAndConditions !== false ? `
       ${Array.isArray(cfg.termsAndConditions) && cfg.termsAndConditions.length > 0 ? `
-        <div style="font-size: 9.5px; line-height: 1.35; color: #666; text-align: center; margin-top: 1mm; font-weight: 600;">
+        <div style="font-size: 9.5px; line-height: 1.35; color: #000000; text-align: center; margin-top: 1mm; font-weight: 700;">
           ${cfg.termsAndConditions.filter(Boolean).map((term) => `<div>${escapeHtml(term)}</div>`).join('')}
         </div>
-      ` : (cfg.termsNote ? `<div style="font-size: 9.5px; color: #666; margin-top: 1mm; font-weight: 600;">${escapeHtml(cfg.termsNote)}</div>` : '')}
+      ` : (cfg.termsNote ? `<div style="font-size: 9.5px; color: #000000; margin-top: 1mm; font-weight: 700;">${escapeHtml(cfg.termsNote)}</div>` : '')}
     ` : ''}
   </div>` : ''}
 <script>

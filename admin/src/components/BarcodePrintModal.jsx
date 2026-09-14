@@ -664,6 +664,10 @@ const BarcodePrintModal = ({ isOpen, onClose, barcodes = [], defaultCopies = 1 }
           #barcode-print-area,
           #barcode-print-area * {
             visibility: visible !important;
+            color: #000000 !important;
+            font-weight: 800 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           #barcode-print-area {
             position: absolute !important;
