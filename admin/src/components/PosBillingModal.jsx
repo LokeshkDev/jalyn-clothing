@@ -23,7 +23,7 @@ const PAYMENT_METHODS = [
   { id: 'Bank Transfer', label: 'Bank Transfer', icon: IndianRupee, color: 'text-purple-700 bg-purple-50 border-purple-300' },
 ];
 
-export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showToast }) {
+export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showToast, editOrder = null }) {
   const [products, setProducts] = useState([]);
   const [barcodesList, setBarcodesList] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -117,7 +117,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
     }
   }, [customerPhone]);
 
-  // Load product catalog and thermal default settings on open
+  // Load product catalog and populate editOrder if provided
   useEffect(() => {
     if (isOpen) {
       const currentSettings = getThermalSettings();
@@ -128,11 +128,51 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
         setIsGstInclusive(!!currentSettings.isGstInclusive);
       }
       loadProductCatalog();
+
+      if (editOrder) {
+        setCustomerName(editOrder.customer_name || 'Walk-in Customer');
+        setCustomerPhone(editOrder.customer_phone || '');
+        setCustomerEmail(editOrder.customer_email || '');
+        setShippingAddress(editOrder.shipping_address || 'In-Store Counter Pickup');
+        setPaymentMethod(editOrder.payment_method || 'Cash');
+        setPaymentStatus(editOrder.payment_status || 'paid');
+        setOrderStatus(editOrder.order_status || 'delivered');
+        setDiscountValue(editOrder.discount_amount ? String(editOrder.discount_amount) : '');
+        setAmountReceived(editOrder.received_amount !== undefined && editOrder.received_amount !== null ? String(editOrder.received_amount) : '');
+
+        const parsedItems = (editOrder.items || []).map((it) => ({
+          product_id: it.product_id || null,
+          title: it.product_name || 'Item',
+          name: it.product_name || 'Item',
+          product_name: it.product_name || 'Item',
+          selling_price: Number(it.price || 0),
+          mrp: Number(it.price || 0),
+          price: Number(it.price || 0),
+          quantity: Number(it.quantity || 1),
+          size: it.size || '',
+          color: it.color || '',
+          gstRate: Number(it.gst_rate || 5),
+          hsnCode: it.hsn_code || '6204',
+        }));
+        setBillItems(parsedItems);
+      } else {
+        setCustomerName('Walk-in Customer');
+        setCustomerPhone('');
+        setCustomerEmail('');
+        setShippingAddress('In-Store Counter Pickup');
+        setPaymentMethod('Cash');
+        setPaymentStatus('paid');
+        setOrderStatus('delivered');
+        setDiscountValue('');
+        setAmountReceived('');
+        setBillItems([]);
+      }
+
       setTimeout(() => {
         searchInputRef.current?.focus();
       }, 100);
     }
-  }, [isOpen]);
+  }, [isOpen, editOrder]);
 
   const loadProductCatalog = async () => {
     setLoadingProducts(true);
@@ -606,16 +646,21 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
 
     setSubmitting(true);
     try {
-      // 1. Always Auto-Save to MySQL Database first
-      const res = await api.post('/orders', payload);
-      const createdOrder = res.data?.order || {
-        ...payload,
-        id: Date.now(),
-        order_number: `ORD-${Date.now().toString().slice(-6)}`,
-        created_at: new Date().toISOString(),
-      };
-
-      showToast?.(res.data?.message || 'Order & Bill saved to database successfully!');
+      let createdOrder;
+      if (editOrder) {
+        const res = await api.put(`/orders/${editOrder.id}`, payload);
+        createdOrder = { ...editOrder, ...payload };
+        showToast?.(res.data?.message || `POS Bill #${editOrder.order_number || editOrder.id} updated successfully!`);
+      } else {
+        const res = await api.post('/orders', payload);
+        createdOrder = res.data?.order || {
+          ...payload,
+          id: Date.now(),
+          order_number: `ORD-${Date.now().toString().slice(-6)}`,
+          created_at: new Date().toISOString(),
+        };
+        showToast?.(res.data?.message || 'Order & Bill saved to database successfully!');
+      }
 
       // 2. Handle Thermal Receipt or Tax Invoice print using saved DB order
       if (printAction === 'thermal') {
@@ -632,7 +677,7 @@ export default function PosBillingModal({ isOpen, onClose, onOrderCreated, showT
       onOrderCreated?.();
       onClose();
     } catch (err) {
-      showToast?.(err.response?.data?.message || 'Failed to create order', 'error');
+      showToast?.(err.response?.data?.message || 'Failed to save order', 'error');
     } finally {
       setSubmitting(false);
     }

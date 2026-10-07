@@ -47,6 +47,23 @@ export const ensureOrderColumns = async () => {
     await ensureCol('order_items', 'sgst_amount', 'ALTER TABLE order_items ADD COLUMN sgst_amount DECIMAL(10,2) NULL');
     await ensureCol('order_items', 'igst_amount', 'ALTER TABLE order_items ADD COLUMN igst_amount DECIMAL(10,2) NULL');
     await ensureCol('order_items', 'total_tax', 'ALTER TABLE order_items ADD COLUMN total_tax DECIMAL(10,2) NULL');
+    await ensureCol('order_items', 'returned_quantity', 'ALTER TABLE order_items ADD COLUMN returned_quantity INT DEFAULT 0');
+
+    // Order Returns audit table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS order_returns (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        order_id INT NOT NULL,
+        order_number VARCHAR(100) NOT NULL,
+        return_type VARCHAR(20) NOT NULL DEFAULT 'return',
+        returned_items JSON NOT NULL,
+        replacement_items JSON NULL,
+        total_refund_amount DECIMAL(10,2) DEFAULT 0.00,
+        balance_collected DECIMAL(10,2) DEFAULT 0.00,
+        reason VARCHAR(255) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
   } catch (err) {
     console.log('ℹ️ MySQL database order columns check:', err.message);
   }
@@ -73,9 +90,23 @@ const readOrdersWithItems = async () => {
       ids
     );
 
+    let returns = [];
+    try {
+      const [retRows] = await pool.query(
+        `SELECT * FROM order_returns WHERE order_id IN (${placeholders}) ORDER BY id DESC`,
+        ids
+      );
+      returns = retRows.map((r) => ({
+        ...r,
+        returned_items: typeof r.returned_items === 'string' ? JSON.parse(r.returned_items || '[]') : (r.returned_items || []),
+        replacement_items: typeof r.replacement_items === 'string' ? JSON.parse(r.replacement_items || '[]') : (r.replacement_items || []),
+      }));
+    } catch (_) {}
+
     return orders.map((o) => ({
       ...o,
       items: items.filter((it) => it.order_id === o.id),
+      returns: returns.filter((ret) => ret.order_id === o.id),
     }));
   } catch (error) {
     console.warn('⚠️ Database query failed in readOrdersWithItems:', error.message);
@@ -158,7 +189,18 @@ export const getOrderById = async (req, res) => {
         return res.status(403).json({ success: false, message: 'Access denied.' });
       }
       const [items] = await pool.query('SELECT * FROM order_items WHERE order_id = ?', [found.id]);
-      return res.json({ success: true, order: { ...found, items } });
+
+      let returns = [];
+      try {
+        const [retRows] = await pool.query('SELECT * FROM order_returns WHERE order_id = ? ORDER BY id DESC', [found.id]);
+        returns = retRows.map((r) => ({
+          ...r,
+          returned_items: typeof r.returned_items === 'string' ? JSON.parse(r.returned_items || '[]') : (r.returned_items || []),
+          replacement_items: typeof r.replacement_items === 'string' ? JSON.parse(r.replacement_items || '[]') : (r.replacement_items || []),
+        }));
+      } catch (_) {}
+
+      return res.json({ success: true, order: { ...found, items, returns } });
     }
 
     const mockOrder = mockOrders.find((o) => String(o.id) === String(id) || o.order_number === id);
@@ -449,6 +491,9 @@ export const createOrder = async (req, res) => {
       await processOrderJCoinsRedemption(orderId, orderUserId, numJcoinsRedeemed);
     }
 
+    // Deduct inventory stock for billed items (POS Billing & Online Orders)
+    await deductInventoryForOrder(createdOrderObject.items, generatedOrderNum);
+
     // Award JCoins if order is immediately completed (e.g. POS Billing or delivered)
     if (order_status === 'delivered' || (inferredOrderType === 'pos' && payment_status === 'paid')) {
       await awardJCoinsForOrder(createdOrderObject);
@@ -592,6 +637,12 @@ export const updateOrder = async (req, res) => {
         await awardJCoinsForOrder(updatedOrder);
       } else if (finalOrderStatus === 'cancelled' || finalPaymentStatus === 'refunded') {
         await reverseJCoinsForOrder(updatedOrder.id);
+        try {
+          const [orderItems] = await pool.query('SELECT * FROM order_items WHERE order_id = ?', [updatedOrder.id]);
+          await restoreInventoryForOrder(orderItems && orderItems.length > 0 ? orderItems : updatedOrder.items || [], updatedOrder.order_number);
+        } catch (restockErr) {
+          console.warn('Restock on cancel error:', restockErr.message);
+        }
       }
     }
 
@@ -639,3 +690,569 @@ export const deleteOrder = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+/**
+ * Process Return & Replace with Mandatory Reason and Inventory Restocking
+ */
+export const returnReplaceOrder = async (req, res) => {
+  const { id } = req.params;
+  const {
+    return_type = 'return',
+    returned_items = [],
+    replacement_items = [],
+    total_refund_amount = 0,
+    balance_collected = 0,
+    general_reason = '',
+  } = req.body;
+
+  if (!Array.isArray(returned_items) || returned_items.length === 0) {
+    return res.status(400).json({ success: false, message: 'At least one item must be selected for return.' });
+  }
+
+  // MANDATORY REQUIREMENT: Verify every returned item has a non-empty reason!
+  for (const item of returned_items) {
+    const qty = parseInt(item.quantity, 10) || 0;
+    if (qty > 0 && (!item.reason || !String(item.reason).trim())) {
+      return res.status(400).json({
+        success: false,
+        message: `Please select or provide a return reason for item: "${item.product_name || 'Item'}" before proceeding.`,
+      });
+    }
+  }
+
+  try {
+    const [rows] = await pool.query('SELECT * FROM orders WHERE id = ? OR order_number = ?', [id, id]);
+    const order = rows[0];
+
+    const orderId = order ? order.id : id;
+    const orderNumber = order ? order.order_number : id;
+
+    // 1. Restock returned items to product & variant stock inventory
+    await restoreInventoryForOrder(returned_items, `RET-${orderNumber}`);
+
+    for (const retItem of returned_items) {
+      const qty = parseInt(retItem.quantity, 10) || 0;
+      if (qty <= 0) continue;
+      try {
+        await pool.query(
+          `UPDATE order_items
+           SET returned_quantity = COALESCE(returned_quantity, 0) + ?
+           WHERE order_id = ? AND (product_id = ? OR product_name = ?)`,
+          [qty, orderId, retItem.product_id || null, retItem.product_name || '']
+        );
+      } catch (_) {}
+    }
+
+    // 2. If replacement items picked, deduct inventory stock for replacement items
+    if (return_type === 'replace' && Array.isArray(replacement_items) && replacement_items.length > 0) {
+      await deductInventoryForOrder(replacement_items, `REP-${orderNumber}`);
+    }
+
+    // 3. Record entry in order_returns table
+    try {
+      await pool.query(
+        `INSERT INTO order_returns (order_id, order_number, return_type, returned_items, replacement_items, total_refund_amount, balance_collected, reason)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          orderId,
+          orderNumber,
+          return_type,
+          JSON.stringify(returned_items),
+          JSON.stringify(replacement_items),
+          Number(total_refund_amount) || 0,
+          Number(balance_collected) || 0,
+          general_reason || returned_items.map((i) => `${i.product_name}: ${i.reason}`).join('; '),
+        ]
+      );
+    } catch (retTableErr) {
+      console.warn('Could not record order_returns entry:', retTableErr.message);
+    }
+
+    // 4. Update parent order status
+    const newOrderStatus = return_type === 'replace' ? 'replaced' : 'returned';
+    try {
+      await pool.query(
+        `UPDATE orders
+         SET order_status = ?,
+             payment_status = CASE WHEN ? > 0 THEN 'refunded' ELSE payment_status END,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [newOrderStatus, Number(total_refund_amount) || 0, orderId]
+      );
+    } catch (_) {}
+
+    return res.json({
+      success: true,
+      message: return_type === 'replace'
+        ? 'Item replacement completed. Restocked returned item and updated stock inventory.'
+        : 'Item return completed successfully. Stock inventory has been restocked.',
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * Get Sales Analytics for Admin Dashboard Bar Chart (Daily, Weekly, Monthly, Yearly)
+ */
+export const getSalesAnalytics = async (req, res) => {
+  const { period = 'daily' } = req.query;
+
+  try {
+    let orders = await readOrdersWithItems();
+    if (!orders || orders.length === 0) {
+      orders = mockOrders;
+    }
+
+    const validOrders = orders.filter((o) => o.order_status !== 'cancelled' && o.payment_status !== 'failed');
+
+    const now = new Date();
+    let labels = [];
+    let buckets = {};
+
+    if (period === 'daily') {
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(now.getDate() - i);
+        const dayStr = d.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' });
+        const dateKey = d.toISOString().slice(0, 10);
+        labels.push(dayStr);
+        buckets[dateKey] = { label: dayStr, pos: 0, online: 0, total: 0, orders: 0 };
+      }
+
+      validOrders.forEach((o) => {
+        const createdDate = new Date(o.created_at || o.date || now);
+        const key = createdDate.toISOString().slice(0, 10);
+        if (buckets[key]) {
+          const amt = Number(o.total_amount) || 0;
+          const isPos = o.order_type === 'pos' || o.order_type === 'walkin' || String(o.shipping_address).toLowerCase().includes('in-store');
+          if (isPos) buckets[key].pos += amt;
+          else buckets[key].online += amt;
+          buckets[key].total += amt;
+          buckets[key].orders += 1;
+        }
+      });
+    } else if (period === 'weekly') {
+      for (let i = 3; i >= 0; i--) {
+        const weekLabel = `Week ${4 - i}`;
+        labels.push(weekLabel);
+        buckets[i] = { label: weekLabel, pos: 0, online: 0, total: 0, orders: 0 };
+      }
+
+      validOrders.forEach((o) => {
+        const createdDate = new Date(o.created_at || o.date || now);
+        const diffDays = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
+        const weekIdx = Math.floor(diffDays / 7);
+        if (weekIdx >= 0 && weekIdx < 4) {
+          const key = 3 - weekIdx;
+          if (buckets[key]) {
+            const amt = Number(o.total_amount) || 0;
+            const isPos = o.order_type === 'pos' || o.order_type === 'walkin' || String(o.shipping_address).toLowerCase().includes('in-store');
+            if (isPos) buckets[key].pos += amt;
+            else buckets[key].online += amt;
+            buckets[key].total += amt;
+            buckets[key].orders += 1;
+          }
+        }
+      });
+    } else if (period === 'monthly') {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      months.forEach((m, idx) => {
+        labels.push(m);
+        buckets[idx] = { label: m, pos: 0, online: 0, total: 0, orders: 0 };
+      });
+
+      validOrders.forEach((o) => {
+        const createdDate = new Date(o.created_at || o.date || now);
+        if (createdDate.getFullYear() === now.getFullYear()) {
+          const mIdx = createdDate.getMonth();
+          if (buckets[mIdx]) {
+            const amt = Number(o.total_amount) || 0;
+            const isPos = o.order_type === 'pos' || o.order_type === 'walkin' || String(o.shipping_address).toLowerCase().includes('in-store');
+            if (isPos) buckets[mIdx].pos += amt;
+            else buckets[mIdx].online += amt;
+            buckets[mIdx].total += amt;
+            buckets[mIdx].orders += 1;
+          }
+        }
+      });
+    } else {
+      const currentYear = now.getFullYear();
+      for (let y = currentYear - 4; y <= currentYear; y++) {
+        labels.push(String(y));
+        buckets[y] = { label: String(y), pos: 0, online: 0, total: 0, orders: 0 };
+      }
+
+      validOrders.forEach((o) => {
+        const createdDate = new Date(o.created_at || o.date || now);
+        const y = createdDate.getFullYear();
+        if (buckets[y]) {
+          const amt = Number(o.total_amount) || 0;
+          const isPos = o.order_type === 'pos' || o.order_type === 'walkin' || String(o.shipping_address).toLowerCase().includes('in-store');
+          if (isPos) buckets[y].pos += amt;
+          else buckets[y].online += amt;
+          buckets[y].total += amt;
+          buckets[y].orders += 1;
+        }
+      });
+    }
+
+    const chartData = Object.values(buckets);
+    const totalRevenue = chartData.reduce((s, b) => s + b.total, 0);
+    const posRevenue = chartData.reduce((s, b) => s + b.pos, 0);
+    const onlineRevenue = chartData.reduce((s, b) => s + b.online, 0);
+    const totalOrders = chartData.reduce((s, b) => s + b.orders, 0);
+
+    return res.json({
+      success: true,
+      period,
+      chartData,
+      totals: {
+        totalRevenue,
+        posRevenue,
+        onlineRevenue,
+        totalOrders,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * Generate Printable PDF / HTML Invoice for WhatsApp and Direct Download
+ */
+export const getOrderPdf = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await pool.query('SELECT * FROM orders WHERE id = ? OR order_number = ?', [id, id]);
+    let order = rows[0];
+    if (!order) {
+      order = mockOrders.find((o) => String(o.id) === String(id) || o.order_number === id);
+    }
+    if (!order) {
+      return res.status(404).send('<h2>Invoice Not Found</h2>');
+    }
+
+    const [items] = await pool.query('SELECT * FROM order_items WHERE order_id = ?', [order.id]);
+    const orderItems = items.length > 0 ? items : (order.items || []);
+
+    const dateStr = new Date(order.created_at || Date.now()).toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric'
+    });
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Tax Invoice - ${order.order_number || order.id}</title>
+  <style>
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1f1419; margin: 0; padding: 24px; background: #fff; }
+    .invoice-card { max-width: 800px; margin: 0 auto; border: 1px solid #e5e7eb; padding: 32px; border-radius: 12px; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #ad4a85; padding-bottom: 16px; }
+    .brand { font-size: 24px; font-weight: 800; color: #ad4a85; letter-spacing: 2px; }
+    .title { font-size: 14px; color: #6b7280; text-transform: uppercase; font-weight: 700; margin-top: 4px; }
+    .meta { text-align: right; font-size: 12px; color: #374151; }
+    .details { display: flex; justify-content: space-between; margin: 24px 0; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+    th { background: #faf8f8; text-align: left; padding: 10px; border-bottom: 2px solid #e5e7eb; font-weight: 700; color: #374151; }
+    td { padding: 10px; border-bottom: 1px solid #f3f4f6; }
+    .totals { margin-top: 24px; width: 280px; margin-left: auto; font-size: 13px; }
+    .row { display: flex; justify-content: space-between; padding: 4px 0; }
+    .grand-total { font-weight: 800; font-size: 16px; color: #ad4a85; border-top: 2px solid #ad4a85; padding-top: 8px; margin-top: 8px; }
+    .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 16px; }
+    @media print { body { padding: 0; } .invoice-card { border: none; padding: 0; } }
+  </style>
+</head>
+<body>
+  <div class="invoice-card">
+    <div class="header">
+      <div>
+        <div class="brand">JALYN APPARELS</div>
+        <div class="title">Official Tax Invoice</div>
+      </div>
+      <div class="meta">
+        <div><strong>Invoice #:</strong> ${order.order_number || order.id}</div>
+        <div><strong>Date:</strong> ${dateStr}</div>
+        <div><strong>GSTIN:</strong> 33BPCPA4714D1ZP</div>
+      </div>
+    </div>
+
+    <div class="details">
+      <div>
+        <strong>Billed To:</strong><br>
+        ${order.customer_name || 'Walk-in Customer'}<br>
+        ${order.customer_phone ? 'Phone: +91 ' + order.customer_phone + '<br>' : ''}
+        ${order.customer_email || ''}
+      </div>
+      <div style="text-align: right;">
+        <strong>Store Address:</strong><br>
+        Jalyn Apparel Studio<br>
+        Chennai, Tamil Nadu 600073<br>
+        Phone: +91 9790904504
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Item Particulars</th>
+          <th>Qty</th>
+          <th>Price</th>
+          <th style="text-align: right;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${orderItems.map((item, idx) => `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${item.product_name || 'Item'} ${item.size ? '(' + item.size + ')' : ''}</td>
+            <td>${item.quantity || 1}</td>
+            <td>₹${Number(item.price || 0).toLocaleString('en-IN')}</td>
+            <td style="text-align: right;">₹${((Number(item.price || 0)) * (Number(item.quantity || 1))).toLocaleString('en-IN')}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+
+    <div class="totals">
+      <div class="row"><span>Subtotal:</span><span>₹${Number(order.total_amount || 0).toLocaleString('en-IN')}</span></div>
+      ${Number(order.discount_amount) > 0 ? `<div class="row"><span>Discount:</span><span>−₹${Number(order.discount_amount).toLocaleString('en-IN')}</span></div>` : ''}
+      <div class="row grand-total"><span>Grand Total:</span><span>₹${Number(order.total_amount || 0).toLocaleString('en-IN')}</span></div>
+    </div>
+
+    <div class="footer">
+      <p>Thank you for shopping with Jalyn Apparels! This is a computer generated invoice.</p>
+    </div>
+  </div>
+  <script>window.onload = function() { if (window.location.search.includes('print=true')) window.print(); }</script>
+</body>
+</html>
+    `;
+
+    res.setHeader('Content-Type', 'text/html');
+    return res.send(html);
+  } catch (err) {
+    return res.status(500).send('Error generating invoice: ' + err.message);
+  }
+};
+
+/**
+ * Deduct inventory stock for billed items in an order (POS or Online)
+ */
+export const deductInventoryForOrder = async (items, reference = '') => {
+  if (!Array.isArray(items) || items.length === 0) return;
+
+  for (const item of items) {
+    const qty = Math.max(1, parseInt(item.quantity || item.qty, 10) || 1);
+    const productId = item.product_id || item.id || null;
+    const sku = item.sku || null;
+    const productName = (item.product_name || item.name || '').trim();
+    const size = item.size || null;
+    const color = item.color || null;
+
+    try {
+      let targetProduct = null;
+
+      if (productId) {
+        const [rows] = await pool.query('SELECT * FROM products WHERE id = ?', [productId]);
+        if (rows.length > 0) targetProduct = rows[0];
+      }
+      if (!targetProduct && sku) {
+        const [rows] = await pool.query('SELECT * FROM products WHERE base_sku = ? OR product_code = ?', [sku, sku]);
+        if (rows.length > 0) targetProduct = rows[0];
+      }
+      if (!targetProduct && productName) {
+        const [rows] = await pool.query('SELECT * FROM products WHERE title = ? OR barcode_short_name = ?', [productName, productName]);
+        if (rows.length > 0) targetProduct = rows[0];
+      }
+
+      if (!targetProduct) {
+        console.warn(`ℹ️ Inventory check: product "${productName}" (ID: ${productId}, SKU: ${sku}) not in DB catalog.`);
+        continue;
+      }
+
+      const pId = targetProduct.id;
+
+      let variants = [];
+      try {
+        variants = typeof targetProduct.variants === 'string' ? JSON.parse(targetProduct.variants || '[]') : (targetProduct.variants || []);
+      } catch (_) {}
+
+      let variantUpdated = false;
+      let newVariantStock = null;
+
+      if (Array.isArray(variants) && variants.length > 0) {
+        const vIdx = variants.findIndex((v) => {
+          if (sku && v.sku === sku) return true;
+          if (size && color && String(v.size).toLowerCase() === String(size).toLowerCase() && String(v.color).toLowerCase() === String(color).toLowerCase()) return true;
+          if (size && String(v.size).toLowerCase() === String(size).toLowerCase() && !color) return true;
+          return false;
+        });
+
+        if (vIdx !== -1) {
+          const currentVStock = parseInt(variants[vIdx].stock, 10) || 0;
+          variants[vIdx].stock = Math.max(0, currentVStock - qty);
+          newVariantStock = variants[vIdx].stock;
+          variantUpdated = true;
+        }
+      }
+
+      let newTotalStock;
+      if (variantUpdated) {
+        newTotalStock = variants.reduce((sum, v) => sum + (parseInt(v.stock, 10) || 0), 0);
+        await pool.query('UPDATE products SET variants = ?, stock = ? WHERE id = ?', [
+          JSON.stringify(variants),
+          newTotalStock,
+          pId,
+        ]);
+      } else {
+        const currentStock = parseInt(targetProduct.stock, 10) || 0;
+        newTotalStock = Math.max(0, currentStock - qty);
+        await pool.query('UPDATE products SET stock = ? WHERE id = ?', [newTotalStock, pId]);
+      }
+
+      // Deduct godown stock if product_godown_stock table entry exists
+      try {
+        await pool.query(
+          'UPDATE product_godown_stock SET stock = GREATEST(0, stock - ?) WHERE product_id = ? ORDER BY stock DESC LIMIT 1',
+          [qty, pId]
+        );
+      } catch (_) {}
+
+      // Record in inventory_transactions audit log if present
+      try {
+        await pool.query(
+          `INSERT INTO inventory_transactions (product_id, variant_sku, type, change_qty, balance_after, reference, notes)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            pId,
+            sku || (size && color ? `${size}-${color}` : 'DEFAULT'),
+            'Order Sale',
+            -qty,
+            newVariantStock !== null ? newVariantStock : newTotalStock,
+            reference || 'ORDER-SALE',
+            `Deducted ${qty} units for order ${reference}`,
+          ]
+        );
+      } catch (_) {}
+
+      console.log(`📦 Inventory auto-deducted for "${targetProduct.title}" (ID: ${pId}): -${qty} units. New stock: ${newTotalStock}`);
+    } catch (err) {
+      console.warn(`⚠️ Inventory reduction failed for "${productName}":`, err.message);
+    }
+  }
+};
+
+/**
+ * Restore inventory stock for cancelled / refunded orders
+ */
+export const restoreInventoryForOrder = async (items, reference = '') => {
+  if (!Array.isArray(items) || items.length === 0) return;
+
+  for (const item of items) {
+    const qty = Math.max(1, parseInt(item.quantity || item.qty, 10) || 1);
+    const productId = item.product_id || item.id || null;
+    const sku = item.sku || null;
+    const productName = (item.product_name || item.name || '').trim();
+    const size = item.size || null;
+    const color = item.color || null;
+
+    try {
+      let targetProduct = null;
+
+      if (productId) {
+        const [rows] = await pool.query('SELECT * FROM products WHERE id = ?', [productId]);
+        if (rows.length > 0) targetProduct = rows[0];
+      }
+      if (!targetProduct && sku) {
+        const [rows] = await pool.query('SELECT * FROM products WHERE base_sku = ? OR product_code = ?', [sku, sku]);
+        if (rows.length > 0) targetProduct = rows[0];
+      }
+      if (!targetProduct && productName) {
+        const [rows] = await pool.query('SELECT * FROM products WHERE title = ? OR barcode_short_name = ?', [productName, productName]);
+        if (rows.length > 0) targetProduct = rows[0];
+      }
+      if (!targetProduct && productName) {
+        const cleanTitle = productName.split('(')[0].split('-')[0].trim();
+        if (cleanTitle.length > 1) {
+          const [rows] = await pool.query('SELECT * FROM products WHERE title LIKE ? OR ? LIKE CONCAT("%", title, "%") LIMIT 1', [`%${cleanTitle}%`, productName]);
+          if (rows.length > 0) targetProduct = rows[0];
+        }
+      }
+
+      if (!targetProduct) continue;
+
+      const pId = targetProduct.id;
+
+      let variants = [];
+      try {
+        variants = typeof targetProduct.variants === 'string' ? JSON.parse(targetProduct.variants || '[]') : (targetProduct.variants || []);
+      } catch (_) {}
+
+      let variantUpdated = false;
+      let newVariantStock = null;
+
+      if (Array.isArray(variants) && variants.length > 0) {
+        let vIdx = variants.findIndex((v) => {
+          if (sku && v.sku === sku) return true;
+          if (size && color && String(v.size).toLowerCase() === String(size).toLowerCase() && String(v.color).toLowerCase() === String(color).toLowerCase()) return true;
+          if (size && String(v.size).toLowerCase() === String(size).toLowerCase()) return true;
+          return false;
+        });
+
+        // Fallback: if no variant matched directly, update first variant so variants JSON total increases
+        if (vIdx === -1) vIdx = 0;
+
+        const currentVStock = parseInt(variants[vIdx].stock, 10) || 0;
+        variants[vIdx].stock = currentVStock + qty;
+        newVariantStock = variants[vIdx].stock;
+        variantUpdated = true;
+      }
+
+      let newTotalStock;
+      if (variantUpdated) {
+        newTotalStock = variants.reduce((sum, v) => sum + (parseInt(v.stock, 10) || 0), 0);
+        await pool.query('UPDATE products SET variants = ?, stock = ? WHERE id = ?', [
+          JSON.stringify(variants),
+          newTotalStock,
+          pId,
+        ]);
+      } else {
+        const currentStock = parseInt(targetProduct.stock, 10) || 0;
+        newTotalStock = currentStock + qty;
+        await pool.query('UPDATE products SET stock = ? WHERE id = ?', [newTotalStock, pId]);
+      }
+
+      try {
+        await pool.query(
+          'UPDATE product_godown_stock SET stock = stock + ? WHERE product_id = ? ORDER BY godown_id ASC LIMIT 1',
+          [qty, pId]
+        );
+      } catch (_) {}
+
+      try {
+        await pool.query(
+          `INSERT INTO inventory_transactions (product_id, variant_sku, type, change_qty, balance_after, reference, notes)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            pId,
+            sku || (size && color ? `${size}-${color}` : 'DEFAULT'),
+            'Order Cancel Restock',
+            qty,
+            newVariantStock !== null ? newVariantStock : newTotalStock,
+            reference || 'CANCEL-RESTOCK',
+            `Restocked ${qty} units for cancelled order ${reference}`,
+          ]
+        );
+      } catch (_) {}
+
+      console.log(`📦 Inventory restocked for "${targetProduct.title}" (ID: ${pId}): +${qty} units. New stock: ${newTotalStock}`);
+    } catch (err) {
+      console.warn(`⚠️ Inventory restock failed for "${productName}":`, err.message);
+    }
+  }
+};
+

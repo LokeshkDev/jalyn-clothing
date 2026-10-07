@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Header from '../components/Header';
 import PosBillingModal from '../components/PosBillingModal';
+import ReturnReplaceModal from '../components/ReturnReplaceModal';
+import EditBillModal from '../components/EditBillModal';
 import api from '../services/api';
 import {
   ShoppingBasket, Search, RefreshCw, Plus, Loader2, Eye, Trash2, X,
@@ -82,6 +84,27 @@ export default function OrdersPage() {
   // Detail edit state
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({});
+
+  // Edit bill modal & Return/Replace modal states
+  const [showEditBill, setShowEditBill] = useState(false);
+  const [showReturnReplace, setShowReturnReplace] = useState(false);
+  const [targetOrder, setTargetOrder] = useState(null);
+  const [selectedEditPosOrder, setSelectedEditPosOrder] = useState(null);
+
+  const openEditBillModal = (order) => {
+    if (isWalkinOrder(order)) {
+      setSelectedEditPosOrder(order);
+      setShowCreate(true);
+    } else {
+      setTargetOrder(order);
+      setShowEditBill(true);
+    }
+  };
+
+  const openReturnReplaceModal = (order) => {
+    setTargetOrder(order);
+    setShowReturnReplace(true);
+  };
 
   const [toast, setToast] = useState(null);
   const showToast = (message, type = 'success') => {
@@ -485,6 +508,16 @@ export default function OrdersPage() {
                               <Globe className="w-2.5 h-2.5" /> Online
                             </span>
                           )}
+                          {(['returned', 'replaced', 'partially_returned'].includes(order.order_status) || (order.returns && order.returns.length > 0)) && (
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold border ${
+                              order.order_status === 'replaced'
+                                ? 'bg-blue-100 text-blue-800 border-blue-300'
+                                : 'bg-purple-100 text-purple-800 border-purple-300'
+                            }`}>
+                              <Undo2 className="w-2.5 h-2.5" />
+                              {order.order_status === 'replaced' ? 'Replaced' : 'Returned'}
+                            </span>
+                          )}
                         </div>
                         <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(order.created_at)}</p>
                       </td>
@@ -540,6 +573,32 @@ export default function OrdersPage() {
 
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openEditBillModal(order); }}
+                            className="p-1.5 rounded-lg text-gray-600 hover:text-[#AD4A85] hover:bg-pink-50 transition"
+                            title="Edit Bill Particulars / Items"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                {(() => {
+                  const isReturnedOrReplaced = ['returned', 'replaced', 'partially_returned'].includes(order.order_status) || (Array.isArray(order.returns) && order.returns.length > 0);
+                  return (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openReturnReplaceModal(order);
+                      }}
+                      className={`p-1.5 rounded-lg transition cursor-pointer ${
+                        isReturnedOrReplaced
+                          ? 'text-purple-700 bg-purple-100 hover:bg-purple-200'
+                          : 'text-gray-600 hover:text-purple-600 hover:bg-purple-50'
+                      }`}
+                      title={isReturnedOrReplaced ? 'Return / Replace processed (Click to manage/process additional return)' : 'Return & Replace Items (Restock Stock)'}
+                    >
+                      <Undo2 className="w-4 h-4" />
+                    </button>
+                  );
+                })()}
                           <button
                             onClick={(e) => { e.stopPropagation(); handlePrintTaxInvoice(order); }}
                             className="p-1.5 rounded-lg text-gray-600 hover:text-[#AD4A85] hover:bg-pink-50 transition"
@@ -616,6 +675,29 @@ export default function OrdersPage() {
               <div className="flex flex-wrap items-center gap-2">
                 {!editing && (
                   <>
+                    <button
+                      onClick={() => openEditBillModal(detailOrder)}
+                      className="text-[11px] font-semibold bg-[#AD4A85] text-white hover:bg-[#8E3466] px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> Edit Bill
+                    </button>
+                    {(() => {
+                      const isDetailReturned = ['returned', 'replaced', 'partially_returned'].includes(detailOrder.order_status) || (Array.isArray(detailOrder.returns) && detailOrder.returns.length > 0);
+                      return (
+                        <button
+                          onClick={() => openReturnReplaceModal(detailOrder)}
+                          className={`text-[11px] font-semibold px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 shadow-xs cursor-pointer ${
+                            isDetailReturned
+                              ? 'bg-purple-100 text-purple-900 hover:bg-purple-200 border border-purple-300 font-bold'
+                              : 'bg-purple-700 text-white hover:bg-purple-800'
+                          }`}
+                          title={isDetailReturned ? 'Return / Replace already processed (Click to manage/process additional return)' : 'Return / Replace Items'}
+                        >
+                          <Undo2 className="w-3.5 h-3.5" />
+                          {isDetailReturned ? 'Return Processed (Manage)' : 'Return / Replace'}
+                        </button>
+                      );
+                    })()}
                     <a
                       href={`mailto:${detailOrder.customer_email}`}
                       className="text-[11px] font-semibold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5"
@@ -857,6 +939,83 @@ export default function OrdersPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Return & Replacement Audit Details Box */}
+                  {((detailOrder.returns && detailOrder.returns.length > 0) || ['returned', 'replaced', 'partially_returned'].includes(detailOrder.order_status)) && (
+                    <div className="p-4 bg-purple-50/90 rounded-xl border border-purple-200 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-bold text-xs text-purple-900 flex items-center gap-1.5">
+                          <Undo2 className="w-4 h-4 text-purple-700" /> Return & Replacement Details
+                        </h4>
+                        <span className="text-[10px] font-extrabold bg-purple-200 text-purple-900 px-2 py-0.5 rounded-full uppercase">
+                          {detailOrder.order_status === 'replaced' ? 'Replaced' : 'Returned'}
+                        </span>
+                      </div>
+
+                      {(detailOrder.returns && detailOrder.returns.length > 0) ? (
+                        detailOrder.returns.map((ret, rIdx) => (
+                          <div key={rIdx} className="p-3 bg-white rounded-lg border border-purple-100 space-y-2 text-xs">
+                            <div className="flex items-center justify-between border-b border-gray-100 pb-1.5">
+                              <span className="font-bold text-purple-800 uppercase text-[10px]">
+                                {ret.return_type === 'replace' ? '🔀 Replacement Transaction' : '🔄 Item Return'}
+                              </span>
+                              <span className="text-[10px] text-gray-400">{formatDate(ret.created_at)}</span>
+                            </div>
+
+                            {/* Returned Items with Reason */}
+                            <div className="space-y-1">
+                              <p className="text-[11px] font-bold text-gray-700">Returned Items & Mandatory Reason:</p>
+                              {(ret.returned_items || []).map((it, iIdx) => (
+                                <div key={iIdx} className="p-2 bg-gray-50 rounded border border-gray-200 text-[11px] flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                                  <span className="font-semibold text-gray-900">• {it.product_name} (Qty: {it.quantity}) @ ₹{Number(it.price || 0).toLocaleString('en-IN')}</span>
+                                  <span className="text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded text-[10px] border border-purple-200">
+                                    Reason: {it.reason || 'Not specified'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Replacement Products Purchased */}
+                            {ret.return_type === 'replace' && (ret.replacement_items || []).length > 0 && (
+                              <div className="space-y-1 pt-1.5 border-t border-gray-100">
+                                <p className="text-[11px] font-bold text-blue-800">Another Product Purchased / Replacement:</p>
+                                {(ret.replacement_items || []).map((rp, pIdx) => (
+                                  <div key={pIdx} className="p-2 bg-blue-50/70 rounded border border-blue-200 text-[11px] flex items-center justify-between">
+                                    <span className="font-semibold text-blue-950">🛍️ {rp.product_name} (Qty: {rp.quantity})</span>
+                                    <span className="font-extrabold text-blue-800">₹{Number(rp.price || 0).toLocaleString('en-IN')}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Refund & Balance Summary */}
+                            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-purple-100 text-[11px] font-bold">
+                              <div>
+                                {Number(ret.total_refund_amount) > 0 ? (
+                                  <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                    💰 Amount Refunded: ₹{Number(ret.total_refund_amount).toLocaleString('en-IN')}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-600 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                                    No Refund Issued (₹0)
+                                  </span>
+                                )}
+                              </div>
+                              {Number(ret.balance_collected) > 0 && (
+                                <span className="text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                  💵 Extra Balance Collected: ₹{Number(ret.balance_collected).toLocaleString('en-IN')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-3 bg-white rounded-lg border border-purple-100 text-xs text-purple-900 font-semibold">
+                          Order status set to {detailOrder.order_status}. Returned items have been restocked to inventory.
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1168,9 +1327,44 @@ export default function OrdersPage() {
       {/* ─── POS BILLING & CREATE ORDER MODAL ─── */}
       <PosBillingModal
         isOpen={showCreate}
-        onClose={() => setShowCreate(false)}
-        onOrderCreated={loadOrders}
+        onClose={() => {
+          setShowCreate(false);
+          setSelectedEditPosOrder(null);
+        }}
+        editOrder={selectedEditPosOrder}
+        onOrderCreated={() => {
+          setSelectedEditPosOrder(null);
+          loadOrders();
+        }}
         showToast={showToast}
+      />
+
+      {/* ─── EDIT BILL MODAL ─── */}
+      <EditBillModal
+        isOpen={showEditBill}
+        onClose={() => {
+          setShowEditBill(false);
+          setTargetOrder(null);
+        }}
+        order={targetOrder}
+        onSuccess={(msg) => {
+          showToast(msg || 'Bill updated successfully');
+          loadOrders();
+        }}
+      />
+
+      {/* ─── RETURN & REPLACE MODAL (RESTOCK STOCK) ─── */}
+      <ReturnReplaceModal
+        isOpen={showReturnReplace}
+        onClose={() => {
+          setShowReturnReplace(false);
+          setTargetOrder(null);
+        }}
+        order={targetOrder}
+        onSuccess={(msg) => {
+          showToast(msg || 'Return & replace completed successfully. Inventory restocked.');
+          loadOrders();
+        }}
       />
     </div>
   );

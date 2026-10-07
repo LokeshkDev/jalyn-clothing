@@ -1020,9 +1020,18 @@ export const formatLuxuryWhatsAppInvoice = (order, options = {}) => {
       `*Balance / Change Returned:* ₹${balanceAmount.toLocaleString('en-IN')}`
     ] : []),
     `*Order Status:* ${(order.order_status || 'DELIVERED').toUpperCase()}`,
-    ``,
-    `📄 *Luxury PDF Tax Bill:*`,
-    `Your computer-generated official GST Invoice PDF is recorded under Invoice #${order.order_number || order.id}.`,
+    ...(order.returns && order.returns.length > 0 ? [
+      ``,
+      `🔄 *RETURN & REPLACEMENT DETAILS:*`,
+      ...order.returns.map((ret) => {
+        const retItems = (ret.returned_items || []).map(i => `${i.product_name} (Qty:${i.quantity}) [Reason: ${i.reason || 'N/A'}]`).join(', ');
+        const repItems = (ret.replacement_items || []).map(i => `${i.product_name} (Qty:${i.quantity})`).join(', ');
+        const retType = ret.return_type === 'replace' ? 'Replacement' : 'Return';
+        const refundTxt = Number(ret.total_refund_amount) > 0 ? `Refund Issued: ₹${Number(ret.total_refund_amount).toLocaleString('en-IN')}` : 'No Refund';
+        const extraTxt = Number(ret.balance_collected) > 0 ? ` | Additional Purchase Paid: ₹${Number(ret.balance_collected).toLocaleString('en-IN')}` : '';
+        return `• *${retType}:* ${retItems}${repItems ? `\n   └ Replacement Purchased: ${repItems}` : ''}\n   └ ${refundTxt}${extraTxt}`;
+      })
+    ] : []),
     ``,
     `*Exchange & Store Policy:*`,
     ...(Array.isArray(cfg.termsAndConditions) && cfg.termsAndConditions.length > 0
@@ -1047,9 +1056,10 @@ export const formatLuxuryWhatsAppInvoice = (order, options = {}) => {
 };
 
 /**
- * Send Luxury Invoice directly to customer WhatsApp
+ * Send Luxury Invoice directly to customer WhatsApp as a detailed text message bill
  */
 export const sendLuxuryWhatsAppInvoice = (order, options = {}) => {
+  const opts = { includeSocial: true, ...options };
   let rawPhone = String(order.customer_phone || '').replace(/\D/g, '');
   if (!rawPhone || rawPhone.length < 10) {
     const input = window.prompt('Enter customer 10-digit WhatsApp phone number:', '');
@@ -1061,8 +1071,11 @@ export const sendLuxuryWhatsAppInvoice = (order, options = {}) => {
     return false;
   }
   const phone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
-  const message = formatLuxuryWhatsAppInvoice(order, options);
+  const message = formatLuxuryWhatsAppInvoice(order, opts);
+
+  // Directly open WhatsApp Web / App with pre-filled message including Google, Insta, and Website links
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   return true;
 };
+
 

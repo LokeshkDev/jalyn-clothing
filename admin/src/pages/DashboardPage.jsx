@@ -20,6 +20,7 @@ import {
 import Header from '../components/Header';
 import BiTaxReport from '../components/BiTaxReport';
 import ThermalSettingsModal from '../components/ThermalSettingsModal';
+import SalesBarChart from '../components/SalesBarChart';
 import api from '../services/api';
 import { openGlobalPosBilling } from '../utils/billingEvents';
 
@@ -160,6 +161,9 @@ export default function DashboardPage() {
             );
           })}
         </div>
+
+        {/* Multi-Period POS & Online Sales Bar Chart */}
+        <SalesBarChart orders={orders} />
 
         {/* Alerts & Updates */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
